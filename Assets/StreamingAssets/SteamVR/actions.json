@@ -1,0 +1,70 @@
+{
+  "default_bindings": [
+    {
+      "controller_type": "knuckles",
+      "binding_url": "bindings_knuckles.json"
+    },
+    {
+      "controller_type": "oculus_touch",
+      "binding_url": "bindings_oculus_touch.json"
+    },
+    {
+      "controller_type": "vive_controller",
+      "binding_url": "bindings_vive_controller.json"
+    }
+  ],
+  "actions": [
+    {
+      "name": "/actions/keyboard/in/rightstick",
+      "type": "vector2"
+    },
+    {
+      "name": "/actions/keyboard/in/leftstick",
+      "type": "vector2"
+    },
+    {
+      "name": "/actions/keyboard/in/righttrigger",
+      "type": "boolean"
+    },
+    {
+      "name": "/actions/keyboard/in/lefttrigger",
+      "type": "boolean"
+    },
+    {
+      "name": "/actions/keyboard/in/rightgrip",
+      "type": "boolean"
+    },
+    {
+      "name": "/actions/keyboard/in/leftgrip",
+      "type": "boolean"
+    },
+    {
+      "name": "/actions/keyboard/out/hapticright",
+      "type": "vibration"
+    },
+    {
+      "name": "/actions/keyboard/out/hapticleft",
+      "type": "vibration"
+    }
+  ],
+  "action_sets": [
+    {
+      "name": "/actions/keyboard",
+      "usage": "single"
+    }
+  ],
+  "localization": [
+    {
+      "language_tag": "en_US",
+      "/actions/keyboard": "VR Keyboard",
+      "/actions/keyboard/in/rightstick": "Right Stick",
+      "/actions/keyboard/in/leftstick": "Left Stick",
+      "/actions/keyboard/in/righttrigger": "Right Trigger",
+      "/actions/keyboard/in/lefttrigger": "Left Trigger",
+      "/actions/keyboard/in/rightgrip": "Right Grip",
+      "/actions/keyboard/in/leftgrip": "Left Grip",
+      "/actions/keyboard/out/hapticright": "Haptic Right",
+      "/actions/keyboard/out/hapticleft": "Haptic Left"
+    }
+  ]
+}

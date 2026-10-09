@@ -1,0 +1,76 @@
+{
+  "action_manifest_version": 0,
+  "controller_type": "oculus_touch",
+  "name": "VR Keyboard spike (oculus_touch)",
+  "description": "Spike2 default bindings",
+  "bindings": {
+    "/actions/keyboard": {
+      "sources": [
+        {
+          "path": "/user/hand/right/input/joystick",
+          "mode": "joystick",
+          "inputs": {
+            "position": {
+              "output": "/actions/keyboard/in/rightstick"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/joystick",
+          "mode": "joystick",
+          "inputs": {
+            "position": {
+              "output": "/actions/keyboard/in/leftstick"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/trigger",
+          "mode": "button",
+          "inputs": {
+            "click": {
+              "output": "/actions/keyboard/in/righttrigger"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/trigger",
+          "mode": "button",
+          "inputs": {
+            "click": {
+              "output": "/actions/keyboard/in/lefttrigger"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/grip",
+          "mode": "button",
+          "inputs": {
+            "click": {
+              "output": "/actions/keyboard/in/rightgrip"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/grip",
+          "mode": "button",
+          "inputs": {
+            "click": {
+              "output": "/actions/keyboard/in/leftgrip"
+            }
+          }
+        }
+      ],
+      "haptics": [
+        {
+          "path": "/user/hand/right/output/haptic",
+          "output": "/actions/keyboard/out/hapticright"
+        },
+        {
+          "path": "/user/hand/left/output/haptic",
+          "output": "/actions/keyboard/out/hapticleft"
+        }
+      ]
+    }
+  }
+}
