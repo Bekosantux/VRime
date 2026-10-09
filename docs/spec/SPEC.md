@@ -59,13 +59,14 @@ VRKeyboard.exe（Unity）
 - Unity 自身のウィンドウは見えないようにする（最小化・非表示）。
 
 ### 3.2 試作から流用するコード
-| 試作のファイル | 用途 |
-|---|---|
-| `Spike2.InputPriority/FlipInput.cs` | グリップ入力の判定・かなの組み立て・小゛゜の切り替え |
-| `Spike2.InputPriority/Input/*.json` | アクションマニフェストと既定のバインディング |
-| `Spike2.InputPriority/TextOutput.cs` | 出力先の振り分けとデスクトップへの送信 |
-| `Spike3.Osc/Osc.cs` | OSC のエンコード |
-| `Spike2.InputPriority/OpenVR/openvr_api.cs` | OpenVR の C# バインディング（Valve 配布） |
+| 試作のファイル | 用途 | 移植先 |
+|---|---|---|
+| `Spike2.InputPriority/FlipInput.cs` | グリップ入力の判定・かなの組み立て・小゛゜の切り替え | `Assets/VRKeyboard/Core/`（`GripInputMethod` ほか） |
+| `Spike2.InputPriority/Input/*.json` | アクションマニフェストと既定のバインディング | `Assets/StreamingAssets/SteamVR/` |
+| `Spike2.InputPriority/Program.cs`（OpenVR の初期化・入力の優先度・振動・オーバーレイ） | OpenVR との接続 | `Assets/VRKeyboard/App/SteamVR/` |
+| `Spike2.InputPriority/TextOutput.cs` | 出力先の振り分けとデスクトップへの送信 | `Assets/VRKeyboard/App/Output/` |
+| `Spike3.Osc/Osc.cs` | OSC のエンコード | `Assets/VRKeyboard/Core/`（`OscCodec`） |
+| `Spike2.InputPriority/OpenVR/openvr_api.cs` | OpenVR の C# バインディング（Valve 配布） | `Assets/VRKeyboard/ThirdParty/OpenVR/` |
 
 試作のコードは C# 9 で書いてあり、Unity 6.3 にそのまま持ち込める。ただし試作は .NET 10 の標準ライブラリでビルドしているため、Unity（Mono）にない API を使っている箇所は移植時に置き換える。
 
@@ -96,6 +97,16 @@ VRKeyboard.exe（Unity）
 | VSync / フレームレート | `vSyncCount = 0`、`targetFrameRate` は 90 前後 | 隠したウィンドウがモニターの VSync に縛られず、スティック入力を取りこぼさないようにする |
 | スクリプトバックエンド | Mono（M1）。IL2CPP は配布時に検討 | デバッグしやすさを優先 |
 
+#### 入力元の選択 【暫定】
+- ビルドは常に OpenVR（SteamVR）に接続する。SteamVR が起動していない、または HMD が見つからないなど、接続に失敗したときは例外で停止し、PC のキーボード入力へ自動では切り替えない。
+- エディターでは `KeyboardApp` の `Editor Device` で入力元を選ぶ。既定は `DebugKeyboard`（PC のキーボードで両手を模す。VR 機器なしで開発できる）。`OpenVR` を選ぶと SteamVR に接続する。
+- OpenVR のときも、Game ビューの確認表示（オーバーレイのテクスチャ）は使える。
+
+#### Windows ビルド 【暫定】
+- 出力先はプロジェクト直下の `Builds/`（Git の管理対象外）。Windows 64bit・非 Development ビルド。
+- 実行には `openvr_api.dll`（`<名前>_Data/Plugins/x86_64/`）と `<名前>_Data/StreamingAssets/SteamVR/*.json` が必要。
+- Player Settings はウィンドウモード・小さな解像度（640×480）にして、ウィンドウが画面を覆わないようにする。ウィンドウの非表示は 3.1 のとおり別途対応する。
+
 #### 追加するパッケージ
 - `com.unity.nuget.newtonsoft-json`: Google API の応答（入れ子の配列）を読むため。Unity 標準の `JsonUtility` では読めない。
 
@@ -105,6 +116,7 @@ VRKeyboard.exe（Unity）
 
 ### 4.1 表示位置 【暫定】
 - 開いた時点で、**視界の下部**（HMD 基準で下 約0.26m・前 約0.85m・こちら向きに約17°傾ける）に表示する。【確定（試作2の値）】
+- この位置の基準は、テクスチャの中心ではなく**キーボードの本体（盤面）の中心**とする。テクスチャの上部には候補欄などの透明な領域があるため、テクスチャの中心を基準にすると盤面が下にずれる。オーバーレイの幅は 0.45m。【暫定】
 - 位置（上下・前後・左右）、角度、大きさを設定で調整できる。
 - 表示モードを選べる:
   - **頭部固定**: 頭の動きに追従する。グリップ入力の既定。
@@ -147,6 +159,14 @@ VRKeyboard.exe（Unity）
   - レーザー方式（QWERTY / フリック）: キーボード上に「言語」キーを置く。【暫定】
   - 日本語と英語で別の入力方式を設定している場合は、切り替えるとその方式のキーボードに変わる。【暫定】
 - 操作の区切り（キーやセルの移動、入力）でコントローラーを短く振動させる。強さは設定で変えられる。
+- 振動の値（長さ・周波数・強さ）は種類ごとに決める。【暫定】
+
+  | 種類 | 長さ | 周波数 | 強さ | 由来 |
+  |---|---|---|---|---|
+  | Move（セル・候補の移動） | 0.01秒 | 160Hz | 0.6 | 試作2の値 |
+  | OpenClose（開閉） | 0.08秒 | 160Hz | 0.6 | 試作2の値 |
+  | Input（文字の入力・確定など） | 0.03秒 | 160Hz | 0.8 | 試作にないため仮置き。Move より強く短い |
+  | Invalid（無効な操作） | 0.12秒 | 60Hz | 0.8 | 試作にないため仮置き。低い周波数で長めにして区別する |
 
 ### 5.2 グリップ入力
 レーザーポインターを使わない独自の入力方式。フリック入力の考え方を踏襲する。

@@ -4,6 +4,7 @@
     "references": [
         "VRKeyboard.Core",
         "VRKeyboard.App",
+        "Valve.OpenVR",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

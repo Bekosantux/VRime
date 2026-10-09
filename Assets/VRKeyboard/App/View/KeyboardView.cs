@@ -27,7 +27,7 @@ namespace VRKeyboard.App.View
 
             // 盤面は候補欄の下から最下部まで。候補欄は盤面の外（透明）に重ならない位置にある。
             RectTransform root = UiBuilder.Rect(canvasRoot, "Keyboard", 0f, 0f, KeyboardTheme.Width, KeyboardTheme.Height);
-            UiBuilder.Image(root, "Board", 0f, KeyboardTheme.BoardTop, KeyboardTheme.Width, KeyboardTheme.Height - KeyboardTheme.BoardTop, KeyboardTheme.Board);
+            UiBuilder.Image(root, "Board", 0f, KeyboardTheme.BoardTop, KeyboardTheme.Width, KeyboardTheme.BoardHeight, KeyboardTheme.Board);
 
             _input = new InputAreaView(root, fonts);
             _panels = new GripPanelView(root, fonts, settings.ConsonantHand);

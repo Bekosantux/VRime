@@ -1,18 +1,29 @@
 using System;
 using UnityEngine;
 using VRKeyboard.App.Conversion;
-using VRKeyboard.App.Input;
 using VRKeyboard.App.Output;
+using VRKeyboard.App.Platform;
+using VRKeyboard.App.SteamVR;
 using VRKeyboard.App.View;
 using VRKeyboard.Core;
 using VRKeyboard.Core.Input;
 
 namespace VRKeyboard.App
 {
+    /// <summary>エディタで使う入力元。ビルドでは常に <see cref="OpenVR"/>。</summary>
+    public enum EditorDevice
+    {
+        /// <summary>PC のキーボードで両手を模す。VR 機器なしで開発できる。</summary>
+        DebugKeyboard,
+
+        /// <summary>SteamVR に接続する。SteamVR が起動していないと、起動時に例外になる。</summary>
+        OpenVR,
+    }
+
     /// <summary>
-    /// 起動の根。部品を組み立て、毎フレーム「入力を読む → Core を進める → 表示を更新する → 出力を進める」を行う。
-    /// Core からの通知（<see cref="IKeyboardEffects"/>）を、振動・変換の通信・送信へ振り分ける。
-    /// 入力元と振動の出力先は <see cref="SetDevices"/> で差し替えられる（既定は PC のキーボードによる開発用）。
+    /// 起動の根。部品を組み立て、毎フレーム「環境のイベント → 入力を読む → Core を進める → 表示を更新する → 出力を進める」を行う。
+    /// Core からの通知（<see cref="IKeyboardEffects"/>）を、振動・変換の通信・送信・環境の切り替えへ振り分ける。
+    /// 実行環境（OpenVR / 開発用のキーボード）は <see cref="IKeyboardPlatform"/> の差し替えで切り替える。
     /// </summary>
     public sealed class KeyboardApp : MonoBehaviour, IKeyboardEffects
     {
@@ -22,18 +33,21 @@ namespace VRKeyboard.App
         [Tooltip("Noto Sans JP Bold。Include Font Data を有効にしたフォント。")]
         [SerializeField] Font _boldFont;
 
+        [Tooltip("エディタでの入力元（開発用）。ビルドでは常に OpenVR。")]
+        [SerializeField] EditorDevice _editorDevice = EditorDevice.DebugKeyboard;
+
         const int TargetFrameRate = 90;
 
         KeyboardSettings _settings;
         KeyboardSession _session;
-        IControllerSource _source;
-        IHapticOutput _haptics;
+        IKeyboardPlatform _platform;
         KeyboardFonts _fonts;
         OverlayRenderTarget _overlay;
         KeyboardView _view;
         ConversionRunner _runner;
         VRChatChatbox _chatbox;
         TextOutputRouter _router;
+        bool _quitting;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         KeyboardPreview _preview;
@@ -44,17 +58,21 @@ namespace VRKeyboard.App
         /// <summary>キーボードの描画先。OpenVR のオーバーレイのテクスチャとして渡す。</summary>
         public OverlayRenderTarget Overlay => _overlay;
 
-        /// <summary>入力元と振動の出力先を差し替える（OpenVR 実機・検証用）。</summary>
-        public void SetDevices(IControllerSource source, IHapticOutput haptics)
+        void Awake()
         {
-            _source = source ?? throw new ArgumentNullException(nameof(source));
-            _haptics = haptics ?? throw new ArgumentNullException(nameof(haptics));
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            RecreatePreview();
-#endif
+            try
+            {
+                Initialize();
+            }
+            catch
+            {
+                // 組み立てに失敗した状態で Update が回り続け、同じ例外が毎フレーム出るのを防ぐ。
+                enabled = false;
+                throw;
+            }
         }
 
-        void Awake()
+        void Initialize()
         {
             if (_regularFont == null) throw new InvalidOperationException("Regular フォントが設定されていません。");
             if (_boldFont == null) throw new InvalidOperationException("Bold フォントが設定されていません。");
@@ -74,10 +92,25 @@ namespace VRKeyboard.App
             _chatbox = new VRChatChatbox(appSettings);
             _router = TextOutputRouter.Create(appSettings, _chatbox, new DesktopTextSender());
 
-            _source = new DebugKeyboardControllerSource();
-            _haptics = new DebugHapticOutput();
+            // 環境の作成は、描画先が揃ったあとに行う。OpenVR の初期化に失敗した場合は例外にする（別の環境へは切り替えない）。
+            _platform = CreatePlatform();
+            _platform.QuitRequested += OnQuitRequested;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            RecreatePreview();
+            _preview = new KeyboardPreview(_session, _overlay.Texture, (_platform as DebugKeyboardPlatform)?.DebugHaptics);
+#endif
+        }
+
+        IKeyboardPlatform CreatePlatform()
+        {
+#if UNITY_EDITOR
+            switch (_editorDevice)
+            {
+                case EditorDevice.DebugKeyboard: return new DebugKeyboardPlatform();
+                case EditorDevice.OpenVR: return new OpenVRPlatform(_overlay);
+                default: throw new InvalidOperationException("未知の入力元: " + _editorDevice);
+            }
+#else
+            return new OpenVRPlatform(_overlay);
 #endif
         }
 
@@ -86,7 +119,14 @@ namespace VRKeyboard.App
             // 時刻は Time.timeScale に影響されないものを使う。
             double now = Time.realtimeSinceStartupAsDouble;
 
-            _session.Tick(_source.Read(), now);
+            _platform.BeginFrame();
+            // 終了を求められたあとは、環境の API を呼ばない。
+            if (_quitting) return;
+
+            // ダッシュボードの表示中は、手動で閉じるのと同じ処理でキーボードを閉じる（SPEC 4.4）。
+            _session.SetDashboardVisible(_platform.IsDashboardVisible);
+
+            _session.Tick(_platform.Controller.Read(), now);
             _runner.CancelUnlessWaiting();
 
             // 閉じている間は描かない。開いた時点で表示の版が変わるため、そのとき描かれる。
@@ -102,30 +142,39 @@ namespace VRKeyboard.App
         {
             _preview?.Draw();
         }
-
-        void RecreatePreview()
-        {
-            if (_session == null) return;
-            _preview = new KeyboardPreview(_session, _overlay.Texture, _haptics as DebugHapticOutput);
-        }
 #endif
 
         void OnDestroy()
         {
             _runner?.Dispose();
             _chatbox?.Dispose();
+            // オーバーレイ（OpenVR 側）が描画先のテクスチャを参照しているため、先に環境を閉じる。
+            if (_platform != null) _platform.QuitRequested -= OnQuitRequested;
+            _platform?.Dispose();
             _overlay?.Dispose();
             _fonts?.Dispose();
         }
 
+        void OnQuitRequested()
+        {
+            _quitting = true;
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
         void IKeyboardEffects.OnOpenChanged(bool isOpen)
         {
-            // 表示の切り替えはフレームの描画に任せる（開いた時点で表示の版が変わる）。OpenVR のオーバーレイの表示切替はここで行う。
+            // 表示の描き直しはフレームの描画に任せる（開いた時点で表示の版が変わる）。
+            // オーバーレイの表示切り替えと入力の優先度は、環境が行う。
+            _platform.OnOpenChanged(isOpen);
         }
 
         void IKeyboardEffects.OnHaptic(Hand hand, HapticKind kind)
         {
-            _haptics.Play(hand, kind);
+            _platform.Haptics.Play(hand, kind);
         }
 
         void IKeyboardEffects.OnConversionRequested(int requestId, string reading)

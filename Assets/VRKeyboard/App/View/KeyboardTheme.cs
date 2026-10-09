@@ -15,6 +15,10 @@ namespace VRKeyboard.App.View
         public const float CandidateAreaHeight = 336f;
         public const float BoardTop = 344f;
 
+        /// <summary>キーボード本体（盤面）。候補欄の下から最下部まで。オーバーレイの位置はこの中心を基準にする。</summary>
+        public const float BoardHeight = Height - BoardTop;
+        public const float BoardCenterY = BoardTop + BoardHeight / 2f;
+
         public const float Margin = 20f;
         public const float InputTop = BoardTop + 12f;
         public const float InputHeight = 224f;

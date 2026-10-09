@@ -23,6 +23,7 @@ namespace VRKeyboard.App.View
         GUIStyle _label;
         GUIStyle _closed;
 
+        /// <param name="haptics">開発用の振動の出力先。OpenVR のとき（実機が振動する）は null。</param>
         public KeyboardPreview(KeyboardSession session, RenderTexture texture, DebugHapticOutput haptics)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
@@ -49,7 +50,8 @@ namespace VRKeyboard.App.View
             }
             else
             {
-                GUI.Label(area, "キーボードは閉じています\n両手のグリップ（Space）を\n素早く 2回押すと開きます", _closed);
+                string grip = _haptics != null ? "両手のグリップ（Space）" : "両手のグリップ";
+                GUI.Label(area, "キーボードは閉じています\n" + grip + "を\n素早く 2回押すと開きます", _closed);
             }
 
             DrawSide(new Rect(size + 16f, 12f, Screen.width - size - 28f, Screen.height - 24f));
@@ -57,7 +59,10 @@ namespace VRKeyboard.App.View
 
         void DrawSide(Rect rect)
         {
-            string text = "操作（旧 Input Manager）\n"
+            // 振動の表示先がない（OpenVR）ときは、コントローラーで操作するため PC のキーの案内を出さない。
+            string text = _haptics == null
+                ? "SteamVR のコントローラーで操作します"
+                : "操作（旧 Input Manager）\n"
                 + "左手: WASD = スティック / Q = トリガー / E = グリップ\n"
                 + "右手: IJKL = スティック / U = トリガー / O = グリップ\n"
                 + "Space = 両手のグリップ\n\n"
