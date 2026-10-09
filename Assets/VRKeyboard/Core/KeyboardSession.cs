@@ -247,7 +247,7 @@ namespace VRKeyboard.Core
             }
         }
 
-        // 確定キー（SPEC 7.1）: 未確定があればそのまま確定し、なければ送信を要求する。
+        // 確定キー（SPEC 7.1）: 未確定があればそのまま確定し、なければ送信を要求する。送信に失敗したらバッファを残す。
         void PressCommitKey(Hand hand)
         {
             if (_buffer.HasComposition)
@@ -257,10 +257,15 @@ namespace VRKeyboard.Core
             }
             else if (_buffer.Committed.Length > 0)
             {
-                string text = _buffer.Committed;
-                _buffer.Clear();
-                _haptics.Add(new HapticEvent(hand, HapticKind.Input));
-                _effects.OnSendRequested(text);
+                if (_effects.OnSendRequested(_buffer.Committed))
+                {
+                    _buffer.Clear();
+                    _haptics.Add(new HapticEvent(hand, HapticKind.Input));
+                }
+                else
+                {
+                    _haptics.Add(new HapticEvent(hand, HapticKind.Invalid));
+                }
             }
             else
             {

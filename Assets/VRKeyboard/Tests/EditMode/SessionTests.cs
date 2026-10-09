@@ -337,6 +337,36 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
+        public void 送信に失敗したらバッファを残して振動で知らせる()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.VowelFunction(Commit);
+            rig.Effects.SendSucceeds = false;
+            rig.Effects.Haptics.Clear();
+            rig.VowelFunction(Commit);
+            CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
+            Assert.AreEqual("あ", rig.Session.Committed);
+            Assert.AreEqual(1, rig.Session.CommittedCursor);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
+        }
+
+        [Test]
+        public void 送信に失敗した後に再送信できる()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.VowelFunction(Commit);
+            rig.Effects.SendSucceeds = false;
+            rig.VowelFunction(Commit);
+            rig.Effects.SendSucceeds = true;
+            rig.VowelFunction(Commit);
+            CollectionAssert.AreEqual(new[] { "あ", "あ" }, rig.Effects.Sends);
+            Assert.AreEqual("", rig.Session.Committed);
+        }
+
+        [Test]
         public void 確定キーはバッファが空なら何もせず振動で知らせる()
         {
             var rig = new Rig();

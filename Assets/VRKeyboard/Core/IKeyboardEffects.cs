@@ -16,7 +16,11 @@ namespace VRKeyboard.Core
         /// <summary>変換の要求。結果は同じ requestId で CompleteConversion / FailConversion に返す。</summary>
         void OnConversionRequested(int requestId, string reading);
 
-        /// <summary>入力バッファの内容の送信の要求。</summary>
-        void OnSendRequested(string text);
+        /// <summary>
+        /// 入力バッファの内容の送信の要求。送信を同期的に試み、成否を返す。
+        /// true のときだけ Core は入力バッファを空にする。false のときは内容を残し、振動で失敗を知らせる。
+        /// 失敗の理由の表示は App が行う（Core は理由を知らない）。
+        /// </summary>
+        bool OnSendRequested(string text);
     }
 }

@@ -16,7 +16,8 @@ namespace VRKeyboard.Core.Tests
         public void OnOpenChanged(bool isOpen) { OpenChanges.Add(isOpen); }
         public void OnHaptic(Hand hand, HapticKind kind) { Haptics.Add(new HapticEvent(hand, kind)); }
         public void OnConversionRequested(int requestId, string reading) { ConversionRequests.Add(new KeyValuePair<int, string>(requestId, reading)); }
-        public void OnSendRequested(string text) { Sends.Add(text); }
+        public bool SendSucceeds = true;
+        public bool OnSendRequested(string text) { Sends.Add(text); return SendSucceeds; }
 
         public int CountHaptics(HapticKind kind)
         {

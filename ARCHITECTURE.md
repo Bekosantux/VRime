@@ -44,7 +44,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | 種別 | クラス | 責務 |
 |---|---|---|
 | 状態機械 | `KeyboardSession` | 全体の状態機械。開閉・ダッシュボードによる一時停止・モード（入力 / 応答待ち / 変換中）を持ち、操作を `GripInputMethod` と `ConversionController` に振り分ける。グリップの押下エッジは常に追跡し、開いた直後・変換の開始・取り消しの直後に握っていたグリップは離すまで無視する。変換結果は `CompleteConversion` / `FailConversion` で受け取り、リクエスト ID が古いものは捨てる |
-| | `IKeyboardEffects` | Core から App への通知（開閉・振動・変換の要求・送信の要求）。Core は結果をここへ出すだけで、通信や描画は知らない |
+| | `IKeyboardEffects` | Core から App への通知（開閉・振動・変換の要求・送信の要求）。Core は結果をここへ出すだけで、通信や描画は知らない。送信の要求（`OnSendRequested`）だけは成否を `bool` で同期的に返し、`true` のときだけ Core が入力バッファを空にする（失敗時は内容を残して `Invalid` の振動を出す） |
 | | `KeyboardSettings` | 設定値（子音の手・スティックの閾値・同時押しの窓・最大長）。不正な値は例外 |
 | 入力 | `ControllerFrame` / `HandState` / `StickValue` | 1フレーム分の両手の状態（スティック・トリガー・グリップ） |
 | | `EdgeTracker` / `FrameEdges` | 前フレームとの差から押下エッジを出す |
@@ -62,3 +62,20 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 - 表示用の状態は `ViewVersion`（セッション全体）と各クラスの `Version` で変化を検出できる。App は変化したときだけ描き直す。
 - 時刻・スティックの傾き・押下状態はすべて引数で受け取るため、Core のテストでは時間の経過を決め打ちで再現できる。
+
+## VRKeyboard.App の構成
+
+`Assets/VRKeyboard/App/` のうち、変換の通信と出力の部分。asmdef は Editor と Windows 64bit に限定する。テストは `Assets/VRKeyboard/Tests/EditModeApp/`（`VRKeyboard.App.Tests`）にある。
+
+| 場所 | クラス | 責務 |
+|---|---|---|
+| `Conversion/` | `GoogleTransliterateClient` | `TransliterateApi` の URL に `UnityWebRequest` で GET し、文節の一覧を返す（`Awaitable`・メインスレッド専用）。制限時間は 2秒で、自前の時計で測る。ログや例外に読みを含めない |
+| | `ConversionFailedException` | 失敗の種類（接続・タイムアウト・HTTP エラー・応答の形式）と、入力欄に出す短い日本語（`UserMessage`）を持つ。キャンセルは `OperationCanceledException` |
+| `Output/` | `TextOutputRouter` | 送信時点の前面ウィンドウで出力先を決める。前面なし・自プロセスは送らず、VRChat は `VRChatChatbox`、それ以外は `DesktopTextSender`。結果は `OutputResult`（成否・失敗の種類・通知文）で返す |
+| | `VRChatChatbox` | OSC（UDP）の送信。`Send` で `ChatboxRateLimiter` のキューに積み、毎フレームの `Update(now)` で間隔を守って送る。`SetTyping` は値が変わったときだけ送る。接続しないソケットを使う（接続済みだと宛先未起動の ICMP が次の送信の例外になる） |
+| | `DesktopTextSender` | `SendInput` + `KEYEVENTF_UNICODE`。送信前に `ProcessElevation` で対象の昇格状態を調べ、届かない相手には送らない |
+| | `ProcessElevation` / `Win32` | トークンの昇格状態の照会と、Win32 API の宣言（`INPUT` は x64 の 40 バイト前提） |
+| | `ForegroundWindowInfo` | 前面ウィンドウのハンドル・プロセス ID・プロセス名・表示名・タイトル。タイトルは内容を含みうるため、ログに出さない |
+| | `AppSettings` | App 層の設定値（通知音・Enter・OSC の宛先）。不正な値は例外 |
+
+- 出力の `TextOutputRouter` はウィンドウの取得・チャットボックス・デスクトップ送信を差し替えられるため、振り分けの規則は Win32 なしでテストできる。
