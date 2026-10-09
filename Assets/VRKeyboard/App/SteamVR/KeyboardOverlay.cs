@@ -6,7 +6,7 @@ namespace VRKeyboard.App.SteamVR
 {
     /// <summary>
     /// キーボードを SteamVR のオーバーレイとして表示する。HMD に対する相対位置で置く頭部固定（位置は <see cref="OverlayPlacement"/>）。
-    /// テクスチャは Unity の RenderTexture（Direct3D11）をそのまま渡す。
+    /// テクスチャは Unity の RenderTexture（Direct3D11）をそのまま渡す。渡す処理はレンダースレッドで行う（<see cref="OverlayTextureSubmitter"/>）。
     /// </summary>
     public sealed class KeyboardOverlay : IDisposable
     {
@@ -15,22 +15,16 @@ namespace VRKeyboard.App.SteamVR
 
         public const string FriendlyName = "VR Keyboard";
 
-        // 描画の直後に何フレーム続けてテクスチャを渡し直すか（描画したフレームを含む）。
-        // Unity の描画はレンダースレッドで遅れて実行されるため、描画を要求した直後に渡すと、
-        // 描画の完了前の内容を SteamVR が参照する可能性がある。数フレーム渡し直して、最後に完成した内容が反映されるようにする。
-        const int SubmitFrames = 3;
-
-        readonly IntPtr _nativeTexture;
+        OverlayTextureSubmitter _submitter;
         ulong _handle;
-        int _pendingSubmits;
         bool _visible;
 
         public KeyboardOverlay(RenderTexture texture)
         {
             if (texture == null) throw new ArgumentNullException(nameof(texture));
             if (!texture.IsCreated()) throw new ArgumentException("RenderTexture が作成されていません。", nameof(texture));
-            _nativeTexture = texture.GetNativeTexturePtr();
-            if (_nativeTexture == IntPtr.Zero) throw new InvalidOperationException("RenderTexture のネイティブハンドルを取得できません。");
+            IntPtr nativeTexture = texture.GetNativeTexturePtr();
+            if (nativeTexture == IntPtr.Zero) throw new InvalidOperationException("RenderTexture のネイティブハンドルを取得できません。");
 
             CVROverlay overlay = OpenVR.Overlay;
             OpenVRErrors.Check(overlay.CreateOverlay(OverlayKey, FriendlyName, ref _handle), "CreateOverlay(" + OverlayKey + ")");
@@ -57,6 +51,8 @@ namespace VRKeyboard.App.SteamVR
                 OpenVRErrors.Check(
                     overlay.SetOverlayTransformTrackedDeviceRelative(_handle, OpenVR.k_unTrackedDeviceIndex_Hmd, ref transform),
                     "SetOverlayTransformTrackedDeviceRelative");
+
+                _submitter = new OverlayTextureSubmitter(_handle, nativeTexture);
             }
             catch
             {
@@ -84,34 +80,21 @@ namespace VRKeyboard.App.SteamVR
             _visible = false;
         }
 
-        /// <summary>テクスチャの内容が新しく描かれた。直ちに渡し、続く数フレームも渡し直す。</summary>
+        /// <summary>
+        /// テクスチャの内容が新しく描かれた。テクスチャを渡す処理をレンダースレッドに依頼する。
+        /// 依頼は描画コマンドの後ろに積まれるため、渡されるテクスチャには描画が完了した内容が入っている。
+        /// </summary>
         public void NotifyRendered()
         {
             ThrowIfDisposed();
-            _pendingSubmits = SubmitFrames;
-            SubmitTexture();
+            _submitter.Enqueue();
         }
 
-        /// <summary>毎フレーム呼ぶ。描画の直後の渡し直しを行う。</summary>
+        /// <summary>毎フレーム呼ぶ。レンダースレッドでテクスチャを渡す処理が失敗していれば、例外にして送出する。</summary>
         public void Update()
         {
             ThrowIfDisposed();
-            if (_pendingSubmits > 0) SubmitTexture();
-        }
-
-        void SubmitTexture()
-        {
-            _pendingSubmits--;
-            // 色空間: RenderTexture はリニア色空間のプロジェクトでは sRGB 形式（R8G8B8A8_SRGB）で、
-            // 書き込まれたバイト列はすでにガンマ（sRGB）符号化されている。ディスプレイにそのまま出せる値のため Gamma を指定する。
-            // Linear はバイト列がリニア値のときの指定で、ここで指定すると符号化済みの値をさらに符号化して白っぽくなる。
-            var texture = new Texture_t
-            {
-                handle = _nativeTexture,
-                eType = ETextureType.DirectX,
-                eColorSpace = EColorSpace.Gamma,
-            };
-            OpenVRErrors.Check(OpenVR.Overlay.SetOverlayTexture(_handle, ref texture), "SetOverlayTexture");
+            _submitter.ThrowIfFailed();
         }
 
         /// <summary>オーバーレイを破棄する。<see cref="OpenVRRuntime"/> を閉じる前に呼ぶこと。</summary>
@@ -121,6 +104,9 @@ namespace VRKeyboard.App.SteamVR
             ulong handle = _handle;
             _handle = 0;
             _visible = false;
+            // 先にレンダースレッドからの参照を断つ。これが戻った後はテクスチャを渡す処理がこのオーバーレイに触れないため、破棄してよい。
+            _submitter?.Dispose();
+            _submitter = null;
             OpenVRErrors.Check(OpenVR.Overlay.DestroyOverlay(handle), "DestroyOverlay");
         }
 

@@ -84,6 +84,7 @@ VRKeyboard.exe（Unity）
 
 #### 描画 【暫定】
 - uGUI を専用のカメラで RenderTexture に描き、`SetOverlayTexture` で SteamVR に渡す。
+- `SetOverlayTexture` は Unity のレンダースレッドで呼ぶ（`GL.IssuePluginEvent`）。呼び出したスレッドで D3D11 のイミディエイトコンテキストを使ってコピーし、このコンテキストは複数のスレッドから同時に使えない。メインスレッドから呼ぶと、レンダースレッドとの同時使用になり、GPU ドライバー内でクラッシュする。
 - カメラは常時オフにし、表示が変わったときだけ `RenderPipeline.SubmitRenderRequest`（または `Camera.Render()`）で描く（10章の描画負荷）。
 - 背景を透明にするため、カメラは Solid Color (0,0,0,0) で塗りつぶし、ポストプロセス・HDR・MSAA を切る。
 - D3D11 の RenderTexture は上下が逆になるため、`SetOverlayTextureBounds` で `vMin=1, vMax=0` を指定する。
