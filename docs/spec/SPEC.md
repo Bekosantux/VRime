@@ -87,6 +87,7 @@ VRKeyboard.exe（Unity）
 - カメラは常時オフにし、表示が変わったときだけ `RenderPipeline.SubmitRenderRequest`（または `Camera.Render()`）で描く（10章の描画負荷）。
 - 背景を透明にするため、カメラは Solid Color (0,0,0,0) で塗りつぶし、ポストプロセス・HDR・MSAA を切る。
 - D3D11 の RenderTexture は上下が逆になるため、`SetOverlayTextureBounds` で `vMin=1, vMax=0` を指定する。
+- URP は Render Graph で描く。URP Global Settings の互換モード（Compatibility Mode）はオフにする。Unity 6.3 では、互換モードがオンのままだとビルドが失敗する。
 
 #### Player Settings 【暫定】
 | 項目 | 設定 | 理由 |

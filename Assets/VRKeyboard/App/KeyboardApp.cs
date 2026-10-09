@@ -33,8 +33,12 @@ namespace VRKeyboard.App
         [Tooltip("Noto Sans JP Bold。Include Font Data を有効にしたフォント。")]
         [SerializeField] Font _boldFont;
 
+        // 値はエディタでしか読まないが、シリアライズの構造をエディタとビルドで揃えるためフィールドは常に残す。
+        // そのためビルドでは未使用の警告（CS0414）になるので抑止する。
+#pragma warning disable CS0414
         [Tooltip("エディタでの入力元（開発用）。ビルドでは常に OpenVR。")]
         [SerializeField] EditorDevice _editorDevice = EditorDevice.DebugKeyboard;
+#pragma warning restore CS0414
 
         const int TargetFrameRate = 90;
 
