@@ -65,11 +65,21 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 ## VRKeyboard.App の構成
 
-`Assets/VRKeyboard/App/` のうち、変換の通信と出力の部分。asmdef は Editor と Windows 64bit に限定する。テストは `Assets/VRKeyboard/Tests/EditModeApp/`（`VRKeyboard.App.Tests`）にある。
+`Assets/VRKeyboard/App/`。asmdef は Editor と Windows 64bit に限定する。テストは `Assets/VRKeyboard/Tests/EditModeApp/`（`VRKeyboard.App.Tests`）にある。
 
 | 場所 | クラス | 責務 |
 |---|---|---|
-| `Conversion/` | `GoogleTransliterateClient` | `TransliterateApi` の URL に `UnityWebRequest` で GET し、文節の一覧を返す（`Awaitable`・メインスレッド専用）。制限時間は 2秒で、自前の時計で測る。ログや例外に読みを含めない |
+| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「入力を読む → `Tick` → 変換の中止判定 → 表示の更新 → `/chatbox/typing` → チャットボックスの送信」を行う。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元と振動の出力先は `SetDevices` で差し替える。フォント（Regular・Bold）はシリアライズフィールドで受け取り、未設定は例外 |
+| `Input/` | `IControllerSource` / `IHapticOutput` | 入力元（1フレーム分の `ControllerFrame` を返す）と振動の出力先の境界。OpenVR 実装はこの境界に差す |
+| | `DebugKeyboardControllerSource` / `DebugHapticOutput` | PC のキーボード（旧 Input Manager）で両手を模す開発用の入力元と、直近の振動を保持して表示に渡す出力先。**キー割り当ては `DebugKeyboardControllerSource.Read` が唯一の定義**（画面への表示は `KeyboardPreview`） |
+| `View/` | `KeyboardView` | 表示の根。盤面・入力欄・グリップパネル・候補欄を組み立て、`RefreshIfChanged()` で `ViewVersion` が変わったときだけ各部を更新する |
+| | `GripPanelView` / `InputAreaView` / `CandidateAreaView` | それぞれグリップのパネル（母音側・子音側、ページ・全半角・大小のチップ）、入力欄（確定・未確定・カーソル・残り文字数・通知）、候補欄（応答待ち・文節と候補・失敗の理由）。いずれも `KeyboardSession` の状態を読むだけで、操作は持たない |
+| | `OverlayRenderTarget` | 専用の無効なカメラと透明な RenderTexture、Screen Space - Camera のキャンバス。`Render()` を呼んだときだけ 1回描き、`Rendered` イベントで通知する。`Texture` が OpenVR のオーバーレイへ渡すもの |
+| | `KeyboardFonts` | 日本語フォント（Regular・Bold）から TMP の動的フォントアセットを実行時に生成する（アセットとして保存しない）。atlas は満杯になると増える（multi atlas） |
+| | `KeyboardTheme` / `UiBuilder` | 寸法と色の定数（テクスチャは 1024×1024）と、uGUI をコードで組み立てる補助 |
+| | `KeyboardPreview` | エディターと開発ビルド専用。メインカメラを使わず OnGUI で、テクスチャ・振動・操作キーを表示する |
+| `Conversion/` | `ConversionRunner` | 変換の要求を `GoogleTransliterateClient` に渡し、結果を `CompleteConversion` / `FailConversion` で返す。通信は同時に 1件で、新しい要求・応答待ちの終了・破棄のときは前の通信を中止する |
+| | `GoogleTransliterateClient` | `TransliterateApi` の URL に `UnityWebRequest` で GET し、文節の一覧を返す（`Awaitable`・メインスレッド専用）。制限時間は 2秒で、自前の時計で測る。ログや例外に読みを含めない |
 | | `ConversionFailedException` | 失敗の種類（接続・タイムアウト・HTTP エラー・応答の形式）と、入力欄に出す短い日本語（`UserMessage`）を持つ。キャンセルは `OperationCanceledException` |
 | `Output/` | `TextOutputRouter` | 送信時点の前面ウィンドウで出力先を決める。前面なし・自プロセスは送らず、VRChat は `VRChatChatbox`、それ以外は `DesktopTextSender`。結果は `OutputResult`（成否・失敗の種類・通知文）で返す |
 | | `VRChatChatbox` | OSC（UDP）の送信。`Send` で `ChatboxRateLimiter` のキューに積み、毎フレームの `Update(now)` で間隔を守って送る。`SetTyping` は値が変わったときだけ送る。接続しないソケットを使う（接続済みだと宛先未起動の ICMP が次の送信の例外になる） |
@@ -79,3 +89,11 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `AppSettings` | App 層の設定値（通知音・Enter・OSC の宛先）。不正な値は例外 |
 
 - 出力の `TextOutputRouter` はウィンドウの取得・チャットボックス・デスクトップ送信を差し替えられるため、振り分けの規則は Win32 なしでテストできる。
+
+**描画の流れと構成**
+
+- 描画は `KeyboardApp.Update` が `KeyboardView.RefreshIfChanged()` で `ViewVersion` の変化を検出したときだけ `OverlayRenderTarget.Render()` を呼ぶ。閉じている間は描かない（開いた時点で版が変わるため、そのとき描かれる）。
+- `Render()` は `Canvas.ForceUpdateCanvases()` でレイアウトと TMP のメッシュを確定してから、`RenderPipeline.SubmitRenderRequest`（URP の `SingleCameraRequest`）で無効なカメラを 1回描く。`Camera.Render()` と違い、出力先を要求に含められ、対応していないパイプラインでは例外にできる。カメラの `targetTexture` は常に設定しておく（Screen Space - Camera のキャンバスの大きさがテクスチャのピクセルに一致するため）。
+- オーバーレイ専用のレイヤー `VRKeyboardOverlay` を Tags and Layers に登録している。カメラはこのレイヤーだけを映す。TMP の `Mobile/Distance Field` シェーダーは Always Included Shaders に登録している（ビルドで除外されないため）。
+- TMP の `Ellipsis` は、レイアウトで幅が決まる文字では描かれなくなるため、候補欄は文字列を自前で切って省略記号を付ける。
+- シーン `Assets/VRKeyboard/Scenes/Main.unity` は `KeyboardApp` を持つ 1つのオブジェクトだけで構成し、フォントを設定する。Build Settings の先頭に登録している。

@@ -419,6 +419,84 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
+        public void 通知は入力バッファの内容が変わると消える()
+        {
+            var rig = new Rig();
+            rig.Session.SetNotice("通知");
+            rig.TickMany(5);
+            Assert.AreEqual("通知", rig.Session.Notice);
+
+            int version = rig.Session.ViewVersion;
+            rig.Type(0, StickDirection.Center);
+            Assert.AreEqual(string.Empty, rig.Session.Notice);
+            Assert.Greater(rig.Session.ViewVersion, version);
+        }
+
+        [Test]
+        public void 通知は操作が無効で入力バッファが変わらないときは消えない()
+        {
+            var rig = new Rig();
+            rig.Session.SetNotice("通知");
+            rig.VowelFunction(Commit);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
+            Assert.AreEqual("通知", rig.Session.Notice);
+        }
+
+        [Test]
+        public void 通知はキーボードを開くと消える()
+        {
+            var rig = new Rig();
+            rig.ChordTwice();
+            Assert.IsFalse(rig.Session.IsOpen);
+            rig.Session.SetNotice("通知");
+            rig.ChordTwice();
+            Assert.IsTrue(rig.Session.IsOpen);
+            Assert.AreEqual(string.Empty, rig.Session.Notice);
+        }
+
+        [Test]
+        public void 通知は閉じても残りダッシュボードからの再開で消える()
+        {
+            var rig = new Rig();
+            rig.Session.SetNotice("通知");
+            rig.Session.SetDashboardVisible(true);
+            Assert.AreEqual("通知", rig.Session.Notice);
+            rig.Session.SetDashboardVisible(false);
+            Assert.IsTrue(rig.Session.IsOpen);
+            Assert.AreEqual(string.Empty, rig.Session.Notice);
+        }
+
+        [Test]
+        public void 送信の成功で入力バッファが空になっても送信結果の通知は残る()
+        {
+            var rig = new Rig();
+            rig.Effects.SendHook = text => rig.Session.SetNotice("送信しました");
+            rig.Type(0, StickDirection.Center);
+            rig.VowelFunction(Commit);
+            rig.VowelFunction(Commit);
+            Assert.AreEqual(1, rig.Effects.Sends.Count);
+            Assert.AreEqual(string.Empty, rig.Session.Committed);
+            Assert.AreEqual("送信しました", rig.Session.Notice);
+
+            // 次に入力すると消える。
+            rig.Type(0, StickDirection.Center);
+            Assert.AreEqual(string.Empty, rig.Session.Notice);
+        }
+
+        [Test]
+        public void 送信の失敗の通知は入力バッファが変わらないので残る()
+        {
+            var rig = new Rig();
+            rig.Effects.SendSucceeds = false;
+            rig.Type(0, StickDirection.Center);
+            rig.VowelFunction(Commit);
+            rig.Session.SetNotice("送信できません");
+            rig.VowelFunction(Commit);
+            Assert.AreEqual("送信できません", rig.Session.Notice);
+            Assert.AreEqual("あ", rig.Session.Committed);
+        }
+
+        [Test]
         public void 引数が不正なら例外()
         {
             var rig = new Rig();

@@ -50,6 +50,7 @@ namespace VRKeyboard.Core
         ConversionSession _conversion;
         string _conversionFailureReason;
         string _notice = string.Empty;
+        int _noticeBufferVersion;
 
         int _viewVersion;
         int _observedSubVersions;
@@ -82,7 +83,7 @@ namespace VRKeyboard.Core
         /// <summary>変換に失敗して代わりの候補を出しているときの理由。それ以外は null。</summary>
         public string ConversionFailureReason => _conversionFailureReason;
 
-        /// <summary>送信結果などの表示用の文字列。</summary>
+        /// <summary>送信結果などの表示用の文字列。入力バッファの内容が変わるか、キーボードを開くと消える。</summary>
         public string Notice => _notice;
 
         public GripInputMethod GripInput => _grip;
@@ -150,6 +151,7 @@ namespace VRKeyboard.Core
                 default:
                     throw new InvalidOperationException("未知のモード: " + _mode);
             }
+            ClearNoticeIfBufferChanged();
             foreach (HapticEvent haptic in _haptics) _effects.OnHaptic(haptic.Hand, haptic.Kind);
             _haptics.Clear();
         }
@@ -199,8 +201,24 @@ namespace VRKeyboard.Core
         public void SetNotice(string notice)
         {
             if (notice == null) throw new ArgumentNullException(nameof(notice));
+            // 通知を出した時点のバッファの版を覚え、その後に内容が変わったら消す。
+            _noticeBufferVersion = _buffer.Version;
             if (notice == _notice) return;
             _notice = notice;
+            _viewVersion++;
+        }
+
+        void ClearNoticeIfBufferChanged()
+        {
+            if (_notice.Length == 0 || _buffer.Version == _noticeBufferVersion) return;
+            _notice = string.Empty;
+            _viewVersion++;
+        }
+
+        void ClearNotice()
+        {
+            if (_notice.Length == 0) return;
+            _notice = string.Empty;
             _viewVersion++;
         }
 
@@ -211,6 +229,7 @@ namespace VRKeyboard.Core
 
         void Open()
         {
+            ClearNotice();
             _isOpen = true;
             _mode = KeyboardMode.Input;
             _ignoreLeftGrip = _lastFrame.Left.Grip;
@@ -260,6 +279,8 @@ namespace VRKeyboard.Core
                 if (_effects.OnSendRequested(_buffer.Committed))
                 {
                     _buffer.Clear();
+                    // 送信によるバッファの消去では、送信結果の通知（OnSendRequested の中で設定される）を消さない。
+                    _noticeBufferVersion = _buffer.Version;
                     _haptics.Add(new HapticEvent(hand, HapticKind.Input));
                 }
                 else
