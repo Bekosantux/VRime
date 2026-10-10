@@ -22,6 +22,8 @@ namespace VRKeyboard.Core.Tests
         const int CursorRight = 5;
         const int Language = 6;
 
+        static readonly string[] NoHints = { "", "", "", "", "", "", "", "", "" };
+
         static void ToEnglish(Rig rig)
         {
             rig.VowelFunction(Language);
@@ -610,6 +612,50 @@ namespace VRKeyboard.Core.Tests
             Assert.AreEqual("A", rig.Session.GripView.ConsonantCells[1].Label);
             rig.VowelFunction(ToggleWidth);
             Assert.AreEqual("Ａ", rig.Session.GripView.ConsonantCells[1].Label);
+        }
+
+        [Test]
+        public void 通常のページには機能ページのキーをヒントとして示す()
+        {
+            var rig = new Rig();
+            GripViewState view = rig.Session.GripView;
+            string[] consonant = { "", "", "消", "", "", "空", "小", "わ", "記" };
+            string[] vowel = { "全", "", "数", "←", "↑", "→", "言", "変", "確" };
+            CollectionAssert.AreEqual(consonant, view.ConsonantHints);
+            CollectionAssert.AreEqual(vowel, view.VowelHints);
+        }
+
+        [Test]
+        public void 機能ページを表示している側にはヒントがない()
+        {
+            var rig = new Rig();
+            rig.SetGrip(rig.Consonant, true);
+            rig.Tick();
+            GripViewState view = rig.Session.GripView;
+            CollectionAssert.AreEqual(NoHints, view.ConsonantHints);
+            Assert.AreEqual("確", view.VowelHints[8]);
+
+            rig.SetGrip(rig.Consonant, false);
+            rig.SetGrip(rig.Vowel, true);
+            rig.Tick();
+            view = rig.Session.GripView;
+            Assert.AreEqual("消", view.ConsonantHints[Erase]);
+            CollectionAssert.AreEqual(NoHints, view.VowelHints);
+        }
+
+        [Test]
+        public void ヒントはページと全角を反映する()
+        {
+            var rig = new Rig();
+            ToEnglish(rig);
+            Assert.AreEqual("", rig.Session.GripView.ConsonantHints[Modifier]);
+            Assert.AreEqual(",", rig.Session.GripView.ConsonantHints[Symbol]);
+            rig.VowelFunction(ToggleWidth);
+            Assert.AreEqual("，", rig.Session.GripView.ConsonantHints[Symbol]);
+
+            rig.VowelFunction(NumberPage);
+            Assert.AreEqual("－", rig.Session.GripView.ConsonantHints[Modifier]);
+            Assert.AreEqual("０", rig.Session.GripView.ConsonantHints[Wa]);
         }
 
         [Test]

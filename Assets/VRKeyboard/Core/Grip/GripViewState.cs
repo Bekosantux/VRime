@@ -33,7 +33,9 @@ namespace VRKeyboard.Core.Grip
             IReadOnlyList<GripCellView> consonantCells,
             int consonantSelected,
             IReadOnlyList<GripCellView> vowelCells,
-            int vowelSelected)
+            int vowelSelected,
+            IReadOnlyList<string> consonantHints,
+            IReadOnlyList<string> vowelHints)
         {
             Page = page;
             ConsonantFunctionPage = consonantFunctionPage;
@@ -42,6 +44,19 @@ namespace VRKeyboard.Core.Grip
             ConsonantSelected = consonantSelected;
             VowelCells = vowelCells ?? throw new ArgumentNullException(nameof(vowelCells));
             VowelSelected = vowelSelected;
+            ConsonantHints = ValidateHints(consonantHints, nameof(consonantHints));
+            VowelHints = ValidateHints(vowelHints, nameof(vowelHints));
+        }
+
+        static IReadOnlyList<string> ValidateHints(IReadOnlyList<string> hints, string name)
+        {
+            if (hints == null) throw new ArgumentNullException(name);
+            if (hints.Count != GripLayout.CellCount) throw new ArgumentException("ヒントは " + GripLayout.CellCount + " マス分が必要です。", name);
+            foreach (string hint in hints)
+            {
+                if (hint == null) throw new ArgumentException("ヒントのない位置は空文字列にします。", name);
+            }
+            return hints;
         }
 
         public GripPage Page { get; }
@@ -66,5 +81,17 @@ namespace VRKeyboard.Core.Grip
 
         /// <summary>選択中のマス。機能ページでは 0..8、それ以外は StickDirection の値。</summary>
         public int VowelSelected { get; }
+
+        /// <summary>
+        /// 子音パネルが通常のページのとき、各マス（行優先の9マス）に重ねて示す、同じ位置の機能ページのキーの頭文字（1文字）。
+        /// 機能ページの空きマスと、機能ページを表示している間は空文字列。
+        /// </summary>
+        public IReadOnlyList<string> ConsonantHints { get; }
+
+        /// <summary>
+        /// 母音パネルが通常のページのとき、3×3 の各位置（行優先の9マス。5方向のマスがない四隅を含む）に示す、
+        /// 同じ位置の機能ページのキーの頭文字（1文字）。機能ページの空きマスと、機能ページを表示している間は空文字列。
+        /// </summary>
+        public IReadOnlyList<string> VowelHints { get; }
     }
 }

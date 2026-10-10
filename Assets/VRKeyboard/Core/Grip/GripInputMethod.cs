@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using VRKeyboard.Core.Input;
 using VRKeyboard.Core.Text;
 
@@ -358,8 +359,22 @@ namespace VRKeyboard.Core.Grip
                 vowelSelected = (int)_direction;
             }
 
+            var consonantHints = new string[GripLayout.CellCount];
+            var vowelHints = new string[GripLayout.CellCount];
+            for (int i = 0; i < GripLayout.CellCount; i++)
+            {
+                consonantHints[i] = _consonantFunction ? string.Empty : ToHint(GripLayout.GetConsonantCell(page, true, i));
+                vowelHints[i] = _vowelFunction ? string.Empty : ToHint(GripLayout.GetVowelFunctionCell(i));
+            }
+
             return new GripViewState(page, _consonantFunction, _vowelFunction,
-                consonantCells, _cell, vowelCells, vowelSelected);
+                consonantCells, _cell, vowelCells, vowelSelected, consonantHints, vowelHints);
+        }
+
+        /// <summary>通常のページに重ねて示す、機能ページのセルの表示名の頭文字（1文字）。空きセルには示さない。</summary>
+        string ToHint(GripCell functionCell)
+        {
+            return functionCell.Kind == GripCellKind.Empty ? string.Empty : StringInfo.GetNextTextElement(ToView(functionCell).Label);
         }
 
         GripCellView ToView(GripCell cell)

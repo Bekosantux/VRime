@@ -52,7 +52,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | グリップ入力 | `GripInputMethod` | セル・方向の選択、機能ページ、トリガーによる入力と直前の文字の切り替え（手ごとの役割は SPEC 5.2）。バッファを更新し、変換・確定は要求（`GripRequest`）として返す。ページは言語と数字ページの有無から導出する |
 | | `GripLayout` / `GripCell` | SPEC 5.2 の表をデータとして持つ |
 | | `StickClassifier` / `StickDirectionTracker` | スティックの 8方向（3×3 のセル）・4方向への分類（ヒステリシス付き）と、中央から倒した瞬間の検出。候補欄のスティック操作でも使う |
-| | `GripViewState` | 描画用のスナップショット（ラベル・無効・点灯・選択位置）。App はこれを描くだけにする |
+| | `GripViewState` | 描画用のスナップショット（ラベル・無効・点灯・選択位置と、通常のページに重ねる機能ページのヒント）。App はこれを描くだけにする |
 | テキスト | `InputBuffer` | 確定済みと未確定の文字列とそれぞれのカーソル、上限の検査。操作の結果は `EditResult` で返す |
 | | `CharacterModifier` / `CharacterWidth` / `Katakana` | 直前の文字の切り替え（かなの小゛゜の巡回・英字の大文字/小文字）・全角化・ひらがな→カタカナの変換表 |
 | 変換 | `TransliterateApi` | Google CGI API のリクエスト URL の組み立てと応答 JSON の解析（通信は App が行う） |
@@ -84,7 +84,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `OverlayPlacement` | SPEC 4.1 の位置を、`KeyboardTheme` の寸法から 3×4 の行列にする。基準は盤面の中心（テクスチャの中心ではない） |
 | | `OpenVRErrors` | `EVRInputError` / `EVROverlayError` の検査。失敗は操作名とエラー名を含む例外にする |
 | `View/` | `KeyboardView` | 表示の根。盤面・入力欄・グリップパネル・候補欄を組み立て、`RefreshIfChanged()` で `ViewVersion` が変わったときだけ各部を更新する |
-| | `GripPanelView` / `InputAreaView` / `CandidateAreaView` | それぞれグリップのパネル（母音側・子音側、ページ・全半角・大小のチップ）、入力欄（確定・未確定・カーソル・残り文字数・通知）、候補欄（応答待ち・文節と候補・失敗の理由）。いずれも `KeyboardSession` の状態を読むだけで、操作は持たない |
+| | `GripPanelView` / `InputAreaView` / `CandidateAreaView` | それぞれグリップのパネル（母音側・子音側、機能ページのヒント、ページ・全半角・大小のチップ）、入力欄（確定・未確定・カーソル・残り文字数・通知）、候補欄（応答待ち・文節と候補・失敗の理由）。いずれも `KeyboardSession` の状態を読むだけで、操作は持たない |
 | | `OverlayRenderTarget` | 専用の無効なカメラと透明な RenderTexture、Screen Space - Camera のキャンバス。`Render()` を呼んだときだけ 1回描き、`Rendered` イベントで通知する。`Texture` が OpenVR のオーバーレイへ渡すもの |
 | | `KeyboardFonts` | 日本語フォント（Regular・Bold）から TMP の動的フォントアセットを実行時に生成する（アセットとして保存しない）。atlas は満杯になると増える（multi atlas） |
 | | `KeyboardTheme` / `UiBuilder` | 寸法と色の定数（テクスチャは 1024×1024）と、uGUI をコードで組み立てる補助 |

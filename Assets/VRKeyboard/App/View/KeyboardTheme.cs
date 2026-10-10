@@ -45,6 +45,11 @@ namespace VRKeyboard.App.View
         public const float CellFontSize = 56f;
         public const float CellFunctionFontSize = 40f;
 
+        /// <summary>セルの右下に示す機能ページのキーの頭文字。主の文字を妨げないよう、読める範囲で小さくする。</summary>
+        public const float CellHintFontSize = 22f;
+        public const float CellHintPaddingX = 8f;
+        public const float CellHintPaddingY = 4f;
+
         public static readonly Color Transparent = new Color(0f, 0f, 0f, 0f);
         public static readonly Color Board = new Color(0.06f, 0.07f, 0.09f, 0.90f);
         public static readonly Color Field = new Color(0.13f, 0.15f, 0.19f, 1f);
@@ -59,6 +64,9 @@ namespace VRKeyboard.App.View
         public static readonly Color CellDisabled = new Color(0.11f, 0.12f, 0.15f, 1f);
         public static readonly Color CellSelected = new Color(0.14f, 0.50f, 0.95f, 1f);
         public static readonly Color Lit = new Color(1.00f, 0.78f, 0.20f, 1f);
+
+        /// <summary>半透明の白。通常・無効・選択中のどの背景の上でも、同じように薄く見える。</summary>
+        public static readonly Color CellHint = new Color(0.96f, 0.97f, 0.98f, 0.40f);
 
         public static readonly Color Chip = new Color(0.17f, 0.20f, 0.26f, 0.96f);
         public static readonly Color ChipSelected = new Color(0.14f, 0.50f, 0.95f, 0.98f);
