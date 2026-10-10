@@ -181,8 +181,19 @@ namespace VRKeyboard.Core.Grip
             // 両手のグリップを押している間は、開閉の操作と区別するためトリガーを受け付けない。
             if (!edges.AnyTrigger || (consonant.Grip && vowel.Grip)) return default;
 
-            Hand pressedHand = edges.LeftTrigger ? Hand.Left : Hand.Right;
-            return Press(pressedHand, haptics);
+            // 機能ページでは、左右どちらのトリガーでもセルを実行する。
+            if (consonantFunction || vowelFunction)
+            {
+                Hand pressedHand = edges.LeftTrigger ? Hand.Left : Hand.Right;
+                return Press(pressedHand, haptics);
+            }
+
+            // 通常のページでは、母音側のトリガーで入力し、子音側のトリガーで直前の文字を切り替える。
+            // 同じフレームで両方を引いたときは、入力してから切り替える。
+            GripRequest request = default;
+            if (edges.TriggerPressed(vowelHand)) request = Press(vowelHand, haptics);
+            if (edges.TriggerPressed(consonantHand)) Report(_buffer.ApplyCharacterModifier(), consonantHand, haptics);
+            return request;
         }
 
         GripRequest Press(Hand pressedHand, List<HapticEvent> haptics)
@@ -228,8 +239,8 @@ namespace VRKeyboard.Core.Grip
                 case GripAction.Space:
                     Report(InsertSpace(), pressedHand, haptics);
                     break;
-                case GripAction.KanaModifier:
-                    Report(_buffer.ApplyKanaModifier(), pressedHand, haptics);
+                case GripAction.CharacterModifier:
+                    Report(_buffer.ApplyCharacterModifier(), pressedHand, haptics);
                     break;
                 case GripAction.CursorLeft:
                     Report(_buffer.MoveCursorLeft(), pressedHand, haptics);

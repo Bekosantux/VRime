@@ -151,19 +151,19 @@ namespace VRKeyboard.Core.Text
             return EditResult.Done;
         }
 
-        /// <summary>カーソルの直前の1文字を小゛゜の巡回で切り替える。</summary>
-        public EditResult ApplyKanaModifier()
+        /// <summary>カーソルの直前の1文字を切り替える（<see cref="CharacterModifier"/>）。</summary>
+        public EditResult ApplyCharacterModifier()
         {
             if (_composition.Length > 0)
             {
                 if (_compositionCursor == 0) return EditResult.NothingToDo;
-                if (!KanaModifier.TryNext(_composition[_compositionCursor - 1], out char next)) return EditResult.NothingToDo;
+                if (!CharacterModifier.TryNext(_composition[_compositionCursor - 1], out char next)) return EditResult.NothingToDo;
                 _composition = Replace(_composition, _compositionCursor - 1, next);
             }
             else
             {
                 if (_committedCursor == 0) return EditResult.NothingToDo;
-                if (!KanaModifier.TryNext(_committed[_committedCursor - 1], out char next)) return EditResult.NothingToDo;
+                if (!CharacterModifier.TryNext(_committed[_committedCursor - 1], out char next)) return EditResult.NothingToDo;
                 _committed = Replace(_committed, _committedCursor - 1, next);
             }
             Version++;

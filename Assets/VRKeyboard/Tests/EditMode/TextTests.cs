@@ -4,7 +4,7 @@ using VRKeyboard.Core.Text;
 
 namespace VRKeyboard.Core.Tests
 {
-    public class KanaModifierTests
+    public class CharacterModifierTests
     {
         static string Cycle(char start, int steps)
         {
@@ -12,7 +12,7 @@ namespace VRKeyboard.Core.Tests
             char current = start;
             for (int i = 0; i < steps; i++)
             {
-                Assert.IsTrue(KanaModifier.TryNext(current, out current));
+                Assert.IsTrue(CharacterModifier.TryNext(current, out current));
                 result.Append(current);
             }
             return result.ToString();
@@ -54,13 +54,25 @@ namespace VRKeyboard.Core.Tests
             Assert.AreEqual("ゃや", Cycle('や', 2));
         }
 
+        [TestCase('a', 'A')]
+        [TestCase('Z', 'z')]
+        [TestCase('ａ', 'Ａ')]
+        [TestCase('Ｚ', 'ｚ')]
+        public void 英字は大文字と小文字を切り替える(char c, char expected)
+        {
+            Assert.IsTrue(CharacterModifier.TryNext(c, out char next));
+            Assert.AreEqual(expected, next);
+        }
+
         [TestCase('な')]
         [TestCase('ん')]
         [TestCase('ー')]
-        [TestCase('A')]
-        public void 対象外の文字は巡回しない(char c)
+        [TestCase('1')]
+        [TestCase('@')]
+        [TestCase('ア')]
+        public void 対象外の文字は切り替えない(char c)
         {
-            Assert.IsFalse(KanaModifier.TryNext(c, out char next));
+            Assert.IsFalse(CharacterModifier.TryNext(c, out char next));
             Assert.AreEqual(c, next);
         }
     }
@@ -260,38 +272,38 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 小濁点半濁点は未確定の中で動作する()
+        public void 文字の切り替えは未確定の中で動作する()
         {
             var buffer = new InputBuffer(144);
             buffer.InsertCommitted("か");
             buffer.InsertComposition("は");
-            Assert.AreEqual(EditResult.Done, buffer.ApplyKanaModifier());
+            Assert.AreEqual(EditResult.Done, buffer.ApplyCharacterModifier());
             Assert.AreEqual("ば", buffer.Composition);
-            buffer.ApplyKanaModifier();
+            buffer.ApplyCharacterModifier();
             Assert.AreEqual("ぱ", buffer.Composition);
             Assert.AreEqual("か", buffer.Committed);
         }
 
         [Test]
-        public void 小濁点半濁点は未確定がなければ確定済みで動作する()
+        public void 文字の切り替えは未確定がなければ確定済みで動作する()
         {
             var buffer = new InputBuffer(144);
             buffer.InsertCommitted("かつ");
-            buffer.ApplyKanaModifier();
+            buffer.ApplyCharacterModifier();
             Assert.AreEqual("かっ", buffer.Committed);
-            buffer.ApplyKanaModifier();
+            buffer.ApplyCharacterModifier();
             Assert.AreEqual("かづ", buffer.Committed);
-            buffer.ApplyKanaModifier();
+            buffer.ApplyCharacterModifier();
             Assert.AreEqual("かつ", buffer.Committed);
         }
 
         [Test]
-        public void 小濁点半濁点は対象がなければ何もしない()
+        public void 文字の切り替えは対象がなければ何もしない()
         {
             var buffer = new InputBuffer(144);
-            Assert.AreEqual(EditResult.NothingToDo, buffer.ApplyKanaModifier());
+            Assert.AreEqual(EditResult.NothingToDo, buffer.ApplyCharacterModifier());
             buffer.InsertComposition("な");
-            Assert.AreEqual(EditResult.NothingToDo, buffer.ApplyKanaModifier());
+            Assert.AreEqual(EditResult.NothingToDo, buffer.ApplyCharacterModifier());
             Assert.AreEqual("な", buffer.Composition);
         }
 

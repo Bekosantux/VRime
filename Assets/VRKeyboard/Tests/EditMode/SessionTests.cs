@@ -231,7 +231,7 @@ namespace VRKeyboard.Core.Tests
             var rig = new Rig();
             rig.Session.SetDashboardVisible(true);
             rig.SetStick(rig.Consonant, Sticks.Cell(0));
-            rig.SetTrigger(rig.Consonant, true);
+            rig.SetTrigger(rig.Vowel, true);
             rig.Tick();
             rig.Session.SetDashboardVisible(false);
             rig.Tick();

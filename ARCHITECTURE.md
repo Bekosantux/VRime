@@ -38,7 +38,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
   （開閉の判定）                 │   （入力中）            （変換中）
                                ├─ GripLayout（表のデータ）      └─ ConversionSession
                                ├─ StickClassifier                    （文節・候補の選択状態）
-                               └─ InputBuffer ←── Text/*（KanaModifier・CharacterWidth・Katakana）
+                               └─ InputBuffer ←── Text/*（CharacterModifier・CharacterWidth・Katakana）
 ```
 
 | 種別 | クラス | 責務 |
@@ -49,12 +49,12 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | 入力 | `ControllerFrame` / `HandState` / `StickValue` | 1フレーム分の両手の状態（スティック・トリガー・グリップ） |
 | | `EdgeTracker` / `FrameEdges` | 前フレームとの差から押下エッジを出す |
 | 開閉 | `DoubleChordDetector` | 両手グリップの2回続けての同時押しを検出する（時刻は引数で受け取り、時計に依存しない） |
-| グリップ入力 | `GripInputMethod` | セル・方向の選択、機能ページ、トリガーによる入力。バッファを更新し、変換・確定は要求（`GripRequest`）として返す。ページは言語と数字ページの有無から導出する |
+| グリップ入力 | `GripInputMethod` | セル・方向の選択、機能ページ、トリガーによる入力と直前の文字の切り替え（手ごとの役割は SPEC 5.2）。バッファを更新し、変換・確定は要求（`GripRequest`）として返す。ページは言語と数字ページの有無から導出する |
 | | `GripLayout` / `GripCell` | SPEC 5.2 の表をデータとして持つ |
 | | `StickClassifier` / `StickDirectionTracker` | スティックの 8方向（3×3 のセル）・4方向への分類（ヒステリシス付き）と、中央から倒した瞬間の検出。候補欄のスティック操作でも使う |
 | | `GripViewState` | 描画用のスナップショット（ラベル・無効・点灯・選択位置）。App はこれを描くだけにする |
 | テキスト | `InputBuffer` | 確定済みと未確定の文字列とそれぞれのカーソル、上限の検査。操作の結果は `EditResult` で返す |
-| | `KanaModifier` / `CharacterWidth` / `Katakana` | 小゛゜の巡回・全角化・ひらがな→カタカナの変換表 |
+| | `CharacterModifier` / `CharacterWidth` / `Katakana` | 直前の文字の切り替え（かなの小゛゜の巡回・英字の大文字/小文字）・全角化・ひらがな→カタカナの変換表 |
 | 変換 | `TransliterateApi` | Google CGI API のリクエスト URL の組み立てと応答 JSON の解析（通信は App が行う） |
 | | `ConversionSession` / `ConversionSegment` | 文節ごとの候補と選択状態。失敗時の代わりの候補（`CreateFallback`）も作る |
 | | `ConversionController` | 変換中のスティック・トリガー・グリップ操作を、移動・確定・取り消しに変換する |

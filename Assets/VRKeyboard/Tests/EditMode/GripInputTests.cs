@@ -10,7 +10,7 @@ namespace VRKeyboard.Core.Tests
         // 機能ページのセル番号（SPEC 5.2）
         const int Erase = 2;
         const int Space = 5;
-        const int KanaModifier = 6;
+        const int Modifier = 6;
         const int Wa = 7;
         const int Symbol = 8;
 
@@ -53,6 +53,9 @@ namespace VRKeyboard.Core.Tests
             var rig = new Rig(new KeyboardSettings(consonantHand: Hand.Left));
             rig.Type(1, StickDirection.Up);
             Assert.AreEqual("く", rig.Session.Composition);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(Hand.Right, HapticKind.Input));
+            rig.Modify();
+            Assert.AreEqual("ぐ", rig.Session.Composition);
             Assert.AreEqual(1, rig.Effects.CountHaptics(Hand.Left, HapticKind.Input));
         }
 
@@ -66,35 +69,125 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 小濁点半濁点の巡回()
+        public void 子音側のトリガーで直前のかなを巡回する()
         {
             var rig = new Rig();
             rig.Type(5, StickDirection.Center); // は
-            rig.ConsonantFunction(KanaModifier);
+            rig.Modify();
             Assert.AreEqual("ば", rig.Session.Composition);
-            rig.ConsonantFunction(KanaModifier);
+            rig.Modify();
             Assert.AreEqual("ぱ", rig.Session.Composition);
-            rig.ConsonantFunction(KanaModifier);
+            rig.Modify();
             Assert.AreEqual("は", rig.Session.Composition);
         }
 
         [Test]
-        public void 小濁点半濁点は直前の文字にだけ作用する()
+        public void 子音側のトリガーは直前の文字にだけ作用する()
         {
             var rig = new Rig();
             rig.Type(1, StickDirection.Center); // か
             rig.Type(5, StickDirection.Down);   // ほ。直前の文字だけが対象で、手前の「か」には作用しない
-            rig.ConsonantFunction(KanaModifier);
+            rig.Modify();
             Assert.AreEqual("かぼ", rig.Session.Composition);
         }
 
         [Test]
-        public void 小濁点半濁点の対象がなければ振動で知らせる()
+        public void 子音側のトリガーは選んでいる文字を入力しない()
         {
             var rig = new Rig();
-            rig.ConsonantFunction(KanaModifier);
-            Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
+            rig.SetStick(rig.Consonant, Sticks.Cell(1));
+            rig.Tick();
+            rig.Modify();
             Assert.AreEqual("", rig.Session.Composition);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Invalid));
+        }
+
+        [Test]
+        public void 子音側のトリガーで英字の大文字と小文字を切り替える()
+        {
+            var rig = new Rig();
+            ToEnglish(rig);
+            rig.Type(1, StickDirection.Center); // a
+            rig.Modify();
+            Assert.AreEqual("A", rig.Session.Committed);
+            rig.Modify();
+            Assert.AreEqual("a", rig.Session.Committed);
+
+            rig.VowelFunction(ToggleWidth);
+            rig.Type(2, StickDirection.Center); // ｄ
+            rig.Modify();
+            Assert.AreEqual("aＤ", rig.Session.Committed);
+        }
+
+        [Test]
+        public void 切り替えの対象がなければ振動で知らせる()
+        {
+            var rig = new Rig();
+            rig.Modify();
+            Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Invalid));
+
+            rig.VowelFunction(NumberPage);
+            rig.Type(0, StickDirection.Center); // 1
+            rig.Modify();
+            Assert.AreEqual("1", rig.Session.Committed);
+            Assert.AreEqual(2, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Invalid));
+        }
+
+        [Test]
+        public void 両方のトリガーを同時に引くと入力してから切り替える()
+        {
+            var rig = new Rig();
+            rig.SetStick(rig.Consonant, Sticks.Cell(1));
+            rig.Tick();
+            rig.SetTrigger(rig.Consonant, true);
+            rig.SetTrigger(rig.Vowel, true);
+            rig.Tick();
+            Assert.AreEqual("が", rig.Session.Composition);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Vowel, HapticKind.Input));
+            Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Input));
+        }
+
+        [Test]
+        public void 機能ページの小濁点半濁点は子音側のトリガーと同じ切り替えをする()
+        {
+            var rig = new Rig();
+            rig.Type(3, StickDirection.Up); // つ
+            rig.ConsonantFunction(Modifier);
+            Assert.AreEqual("っ", rig.Session.Composition);
+
+            // 英字を入れてからかなページへ戻ると、直前の英字が対象になる。
+            ToEnglish(rig);
+            rig.Type(1, StickDirection.Center); // a（未確定の「っ」を先に確定する）
+            ToEnglish(rig);
+            rig.ConsonantFunction(Modifier);
+            Assert.AreEqual("っA", rig.Session.Committed);
+        }
+
+        [Test]
+        public void 機能ページでは左右どちらのトリガーでも実行する()
+        {
+            var rig = new Rig();
+            rig.Type(1, StickDirection.Center); // か
+
+            // 子音側の機能ページを、子音側のトリガーで実行する（切り替えにはならない）。
+            rig.SetGrip(rig.Consonant, true);
+            rig.SetStick(rig.Consonant, Sticks.Cell(Space));
+            rig.Tick();
+            rig.Pull(rig.Consonant);
+            rig.SetGrip(rig.Consonant, false);
+            rig.SetStick(rig.Consonant, StickValue.Zero);
+            rig.Tick();
+            Assert.AreEqual("か　", rig.Session.Committed);
+
+            // 母音側の機能ページを、母音側のトリガーで実行する。
+            rig.SetGrip(rig.Vowel, true);
+            rig.SetStick(rig.Vowel, Sticks.Cell(Language));
+            rig.Tick();
+            rig.Pull(rig.Vowel);
+            rig.SetGrip(rig.Vowel, false);
+            rig.SetStick(rig.Vowel, StickValue.Zero);
+            rig.Tick();
+            Assert.AreEqual(GripPage.Alpha, rig.Session.GripView.Page);
         }
 
         [Test]
@@ -408,7 +501,7 @@ namespace VRKeyboard.Core.Tests
             rig.SetStick(rig.Consonant, Sticks.Cell(5));
             rig.Tick();
             Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage);
-            rig.Pull(rig.Consonant);
+            rig.Pull(rig.Vowel);
             Assert.AreEqual("は", rig.Session.Composition);
 
             // 一度離して握り直せば機能ページになる。
@@ -439,12 +532,14 @@ namespace VRKeyboard.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Vowel, HapticKind.Input));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Input));
+
+            // 母音側の機能ページを子音側のトリガーで実行すると、子音側に出る。
+            rig.Effects.ClearAll();
+            rig.VowelFunction(CursorLeft);
             Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Input));
             Assert.AreEqual(0, rig.Effects.CountHaptics(rig.Vowel, HapticKind.Input));
-
-            rig.Effects.ClearAll();
-            rig.ConsonantFunction(Space);
-            Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Vowel, HapticKind.Input));
         }
 
         [Test]
@@ -474,7 +569,7 @@ namespace VRKeyboard.Core.Tests
             rig.Tick();
             GripViewState view = rig.Session.GripView;
             Assert.IsTrue(view.ConsonantFunctionPage);
-            Assert.AreEqual(GripLayout.GetConsonantCell(GripPage.Kana, true, KanaModifier).Label, view.ConsonantCells[KanaModifier].Label);
+            Assert.AreEqual(GripLayout.GetConsonantCell(GripPage.Kana, true, Modifier).Label, view.ConsonantCells[Modifier].Label);
 
             rig.SetGrip(rig.Consonant, false);
             rig.SetGrip(rig.Vowel, true);

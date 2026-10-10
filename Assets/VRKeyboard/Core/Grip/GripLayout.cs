@@ -37,7 +37,7 @@ namespace VRKeyboard.Core.Grip
         static readonly GripCell Space = GripCell.ForAction(GripAction.Space, "空白");
 
         static readonly GripCell[] KanaFunctionCells = BuildFunctionCells(
-            GripCell.ForAction(GripAction.KanaModifier, "小゛゜"),
+            GripCell.ForAction(GripAction.CharacterModifier, "小゛゜"),
             Group("わをんー〜", "わ"),
             Group("、。？！…", "記号"));
 

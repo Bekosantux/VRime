@@ -9,8 +9,8 @@ namespace VRKeyboard.Core.Grip
         /// <summary>空白。</summary>
         Space,
 
-        /// <summary>小゛゜。</summary>
-        KanaModifier,
+        /// <summary>小゛゜（直前の文字の切り替え。子音側のトリガーと同じ動作）。</summary>
+        CharacterModifier,
 
         /// <summary>全/半。</summary>
         ToggleWidth,

@@ -92,7 +92,7 @@ namespace VRKeyboard.Core.Tests
         {
             GripCell modifier = GripLayout.GetConsonantCell(GripPage.Kana, true, 6);
             Assert.AreEqual(GripCellKind.Action, modifier.Kind);
-            Assert.AreEqual(GripAction.KanaModifier, modifier.Action);
+            Assert.AreEqual(GripAction.CharacterModifier, modifier.Action);
             Assert.AreEqual("小゛゜", modifier.Label);
 
             GripCell wa = GripLayout.GetConsonantCell(GripPage.Kana, true, 7);

@@ -145,16 +145,22 @@ namespace VRKeyboard.Core.Tests
             SetTrigger(hand, false); Tick();
         }
 
-        /// <summary>通常ページ: 子音のセルと母音の方向を選んで、子音側のトリガーで入力する。</summary>
+        /// <summary>通常ページ: 子音のセルと母音の方向を選んで、母音側のトリガーで入力する。</summary>
         public void Type(int cell, StickDirection direction)
         {
             SetStick(Consonant, Sticks.Cell(cell));
             SetStick(Vowel, Sticks.Dir(direction));
             Tick();
-            Pull(Consonant);
+            Pull(Vowel);
             SetStick(Consonant, StickValue.Zero);
             SetStick(Vowel, StickValue.Zero);
             Tick();
+        }
+
+        /// <summary>通常ページ: 子音側のトリガーで直前の文字を切り替える。</summary>
+        public void Modify()
+        {
+            Pull(Consonant);
         }
 
         /// <summary>子音側の機能ページ: 子音側のグリップを握ったまま、セルと母音の方向を選んでトリガーで実行する。</summary>
