@@ -1,5 +1,6 @@
 using System;
 using NUnit.Framework;
+using VRKeyboard.App.Settings;
 using VRKeyboard.App.SteamVR;
 using VRKeyboard.App.View;
 using VRKeyboard.Core;
@@ -13,24 +14,64 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 盤面の中心がHMD基準の指定位置に来る()
         {
-            float[] matrix = OverlayPlacement.ComputeOverlayToHmd();
+            KeyboardPlacement placement = KeyboardPlacement.Default;
+            float[] matrix = OverlayPlacement.ComputeOverlayToHmd(placement);
 
             // テクスチャの中心から盤面の中心までの、オーバーレイ面内の下向きの距離。
-            float metersPerPixel = OverlayPlacement.WidthMeters / KeyboardTheme.Width;
+            float metersPerPixel = placement.WidthMeters / KeyboardTheme.Width;
             float down = (KeyboardTheme.BoardCenterY - KeyboardTheme.Height / 2f) * metersPerPixel;
             Assert.Greater(down, 0f, "盤面の中心はテクスチャの中心より下にある");
+            Assert.AreEqual(down, OverlayPlacement.BoardOffsetDownMeters(placement), Epsilon);
 
             (float x, float y, float z) = OverlayPlacement.Transform(matrix, 0f, -down, 0f);
             Assert.AreEqual(0f, x, Epsilon);
-            Assert.AreEqual(-OverlayPlacement.BoardDownMeters, y, Epsilon);
-            Assert.AreEqual(-OverlayPlacement.BoardForwardMeters, z, Epsilon);
+            Assert.AreEqual(-placement.DownMeters, y, Epsilon);
+            Assert.AreEqual(-placement.ForwardMeters, z, Epsilon);
         }
 
         [Test]
-        public void 盤面の法線は盤面の中心からHMDの方を向く()
+        public void 左右の位置と傾きと幅を変えても盤面の中心が指定位置に来る()
         {
-            float[] matrix = OverlayPlacement.ComputeOverlayToHmd();
-            float down = (KeyboardTheme.BoardCenterY - KeyboardTheme.Height / 2f) * (OverlayPlacement.WidthMeters / KeyboardTheme.Width);
+            var placement = new KeyboardPlacement(0.40f, 0.60f, -0.20f, 35f, 0.70f);
+            float[] matrix = OverlayPlacement.ComputeOverlayToHmd(placement);
+            float down = OverlayPlacement.BoardOffsetDownMeters(placement);
+
+            (float x, float y, float z) = OverlayPlacement.Transform(matrix, 0f, -down, 0f);
+            Assert.AreEqual(-0.20f, x, Epsilon, "左へ 20cm");
+            Assert.AreEqual(-0.40f, y, Epsilon);
+            Assert.AreEqual(-0.60f, z, Epsilon);
+        }
+
+        [Test]
+        public void 幅に比例して盤面の中心までの距離が変わる()
+        {
+            float narrow = OverlayPlacement.BoardOffsetDownMeters(KeyboardPlacement.Default.WithWidth(0.30f));
+            float wide = OverlayPlacement.BoardOffsetDownMeters(KeyboardPlacement.Default.WithWidth(0.60f));
+            Assert.AreEqual(narrow * 2f, wide, Epsilon);
+        }
+
+        [Test]
+        public void 既定の盤面の法線は盤面の中心からHMDの方を向く()
+        {
+            float angle = NormalToHmdAngle(KeyboardPlacement.Default);
+            Assert.AreEqual(0f, angle, 0.5f, "法線は HMD の方を向く（傾き 17° は atan(0.26/0.85) にほぼ等しい）");
+        }
+
+        [Test]
+        public void 傾き0では盤面がHMDの正面に垂直に立つ()
+        {
+            float[] matrix = OverlayPlacement.ComputeOverlayToHmd(KeyboardPlacement.Default.WithTilt(0f));
+            (float cx, float cy, float cz) = OverlayPlacement.Transform(matrix, 0f, 0f, 0f);
+            (float nx, float ny, float nz) = OverlayPlacement.Transform(matrix, 0f, 0f, 1f);
+            Assert.AreEqual(0f, nx - cx, Epsilon);
+            Assert.AreEqual(0f, ny - cy, Epsilon);
+            Assert.AreEqual(1f, nz - cz, Epsilon, "法線は +Z（HMD の後ろ向き。盤面の表が HMD を向く）");
+        }
+
+        static float NormalToHmdAngle(KeyboardPlacement placement)
+        {
+            float[] matrix = OverlayPlacement.ComputeOverlayToHmd(placement);
+            float down = OverlayPlacement.BoardOffsetDownMeters(placement);
             (float cx, float cy, float cz) = OverlayPlacement.Transform(matrix, 0f, -down, 0f);
             (float nx, float ny, float nz) = OverlayPlacement.Transform(matrix, 0f, -down, 1f);
 
@@ -41,8 +82,7 @@ namespace VRKeyboard.App.Tests
             float lengths = (float)(Math.Sqrt(Dot(normal)) * Math.Sqrt(Dot(toHmd)));
             // 浮動小数点の誤差で 1 をわずかに超えると Acos が NaN になるため丸める。
             float cosine = Math.Max(-1f, Math.Min(1f, dot / lengths));
-            float angle = (float)(Math.Acos(cosine) * 180.0 / Math.PI);
-            Assert.AreEqual(0f, angle, 0.5f, "法線は HMD の方を向く（傾き 17° は atan(0.26/0.85) にほぼ等しい）");
+            return (float)(Math.Acos(cosine) * 180.0 / Math.PI);
         }
 
         static float Dot(float[] v) => v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
@@ -50,10 +90,16 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 行列は右手系の回転と平行移動()
         {
-            float[] m = OverlayPlacement.ComputeOverlayToHmd();
+            float[] m = OverlayPlacement.ComputeOverlayToHmd(new KeyboardPlacement(0.1f, 1.0f, 0.3f, 50f, 0.5f));
             // 回転部分の直交性: 各列の長さが 1。
             for (int col = 0; col < 3; col++)
                 Assert.AreEqual(1f, m[col] * m[col] + m[4 + col] * m[4 + col] + m[8 + col] * m[8 + col], Epsilon);
+        }
+
+        [Test]
+        public void 位置がないと例外()
+        {
+            Assert.Throws<ArgumentNullException>(() => OverlayPlacement.ComputeOverlayToHmd(null));
         }
     }
 

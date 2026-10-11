@@ -1,8 +1,10 @@
 using System;
+using System.IO;
 using UnityEngine;
 using VRKeyboard.App.Conversion;
 using VRKeyboard.App.Output;
 using VRKeyboard.App.Platform;
+using VRKeyboard.App.Settings;
 using VRKeyboard.App.SteamVR;
 using VRKeyboard.App.View;
 using VRKeyboard.Core;
@@ -24,6 +26,7 @@ namespace VRKeyboard.App
     /// 起動の根。部品を組み立て、毎フレーム「環境のイベント → 入力を読む → Core を進める → 表示を更新する → 出力を進める」を行う。
     /// Core からの通知（<see cref="IKeyboardEffects"/>）を、振動・変換の通信・送信・環境の切り替えへ振り分ける。
     /// 実行環境（OpenVR / 開発用のキーボード）は <see cref="IKeyboardPlatform"/> の差し替えで切り替える。
+    /// 設定画面で変えた値は、キーボードの動作と表示位置へ随時反映し、確定したときに保存する。
     /// </summary>
     public sealed class KeyboardApp : MonoBehaviour, IKeyboardEffects
     {
@@ -42,12 +45,21 @@ namespace VRKeyboard.App
 
         const int TargetFrameRate = 90;
 
-        KeyboardSettings _settings;
+        // 描画先ごとのレイヤー。Project Settings の Tags and Layers に登録されている必要がある。
+        const string KeyboardLayer = "VRKeyboardOverlay";
+        const string SettingsLayer = "VRKeyboardSettings";
+
         KeyboardSession _session;
         IKeyboardPlatform _platform;
         KeyboardFonts _fonts;
         OverlayRenderTarget _overlay;
         KeyboardView _view;
+        bool _keyboardShown;
+        SettingsStore _settingsStore;
+        SettingsForm _settingsForm;
+        OverlayRenderTarget _settingsOverlay;
+        SettingsView _settingsView;
+        string _loadNotice;
         ConversionRunner _runner;
         VRChatChatbox _chatbox;
         TextOutputRouter _router;
@@ -85,11 +97,24 @@ namespace VRKeyboard.App
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = TargetFrameRate;
 
-            _settings = new KeyboardSettings();
-            _session = new KeyboardSession(_settings, this);
+            _settingsStore = new SettingsStore(SettingsStore.DefaultPath);
+            SettingsLoadResult loaded = _settingsStore.Load();
+            if (loaded.Error != null)
+                Debug.LogWarning("設定ファイルの内容が正しくないため、既定の設定で起動します: " + loaded.Error.Message);
+            _loadNotice = loaded.Notice;
+
+            KeyboardSettings settings = loaded.Settings.ToKeyboardSettings();
+            _session = new KeyboardSession(settings, this);
             _fonts = new KeyboardFonts(_regularFont, _boldFont);
-            _overlay = new OverlayRenderTarget(KeyboardTheme.Width, KeyboardTheme.Height);
-            _view = new KeyboardView(_session, _settings, _fonts, _overlay.Canvas.transform);
+            _overlay = new OverlayRenderTarget("VRKeyboard Overlay", KeyboardTheme.Width, KeyboardTheme.Height, KeyboardLayer);
+            _view = new KeyboardView(_session, settings, _fonts, _overlay.Canvas.transform);
+
+            _settingsForm = new SettingsForm(new SettingsLayout(SettingsCatalog.Groups), loaded.Settings);
+            _settingsForm.SetNotice(_loadNotice);
+            _settingsForm.Changed += OnSettingsChanged;
+            _settingsForm.Committed += OnSettingsCommitted;
+            _settingsOverlay = new OverlayRenderTarget("VRKeyboard Settings", SettingsLayout.Width, SettingsLayout.Height, SettingsLayer);
+            _settingsView = new SettingsView(_settingsForm, _fonts, _settingsOverlay.Canvas.transform);
             _runner = new ConversionRunner(_session, new GoogleTransliterateClient());
 
             var appSettings = new AppSettings();
@@ -100,7 +125,9 @@ namespace VRKeyboard.App
             _platform = CreatePlatform();
             _platform.QuitRequested += OnQuitRequested;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            _preview = new KeyboardPreview(_session, _overlay.Texture, (_platform as DebugKeyboardPlatform)?.DebugHaptics);
+            var debugPlatform = _platform as DebugKeyboardPlatform;
+            _preview = new KeyboardPreview(_session, _platform, _overlay.Texture, _settingsOverlay.Texture,
+                debugPlatform?.DebugHaptics, debugPlatform != null ? _settingsForm : null);
 #endif
         }
 
@@ -110,12 +137,17 @@ namespace VRKeyboard.App
             switch (_editorDevice)
             {
                 case EditorDevice.DebugKeyboard: return new DebugKeyboardPlatform();
-                case EditorDevice.OpenVR: return new OpenVRPlatform(_overlay);
+                case EditorDevice.OpenVR: return CreateOpenVRPlatform();
                 default: throw new InvalidOperationException("未知の入力元: " + _editorDevice);
             }
 #else
-            return new OpenVRPlatform(_overlay);
+            return CreateOpenVRPlatform();
 #endif
+        }
+
+        OpenVRPlatform CreateOpenVRPlatform()
+        {
+            return new OpenVRPlatform(_overlay, _settingsOverlay, _settingsForm, _settingsForm.Settings.Placement);
         }
 
         void Update()
@@ -133,8 +165,12 @@ namespace VRKeyboard.App
             _session.Tick(_platform.Controller.Read(), now);
             _runner.CancelUnlessWaiting();
 
-            // 閉じている間は描かない。開いた時点で表示の版が変わるため、そのとき描かれる。
-            if (_session.IsOpen && _view.RefreshIfChanged()) _overlay.Render();
+            // キーボードは、開いている間と設定画面の表示中（位置の確認用）だけ描く。
+            // 隠れている間に表示の版が変わっていることがあるため、表示し始めたときは必ず描く。
+            bool keyboardShown = _session.IsOpen || _platform.IsSettingsVisible;
+            if (keyboardShown && (_view.RefreshIfChanged() || !_keyboardShown)) _overlay.Render();
+            _keyboardShown = keyboardShown;
+            if (_settingsView.RefreshIfChanged()) _settingsOverlay.Render();
 
             // 送信先は送信の時点まで決まらないため、入力中の表示は出力先を問わず送る（SPEC 7.3）。
             _chatbox.SetTyping(_session.IsOpen && (_session.Committed.Length > 0 || _session.Composition.Length > 0));
@@ -156,6 +192,7 @@ namespace VRKeyboard.App
             if (_platform != null) _platform.QuitRequested -= OnQuitRequested;
             _platform?.Dispose();
             _overlay?.Dispose();
+            _settingsOverlay?.Dispose();
             _fonts?.Dispose();
         }
 
@@ -167,6 +204,29 @@ namespace VRKeyboard.App
 #else
             Application.Quit();
 #endif
+        }
+
+        // 設定画面の操作中（確定前）も随時反映する。値を変えながら、キーボードの位置と反応を確かめられるようにするため。
+        void OnSettingsChanged(UserSettings settings)
+        {
+            _session.ApplySettings(settings.ToKeyboardSettings());
+            _platform.SetPlacement(settings.Placement);
+        }
+
+        // 保存の失敗ではアプリを止めない。設定画面に通知し、次に保存できたときに通知を戻す。
+        void OnSettingsCommitted(UserSettings settings)
+        {
+            try
+            {
+                _settingsStore.Save(settings);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogException(e);
+                _settingsForm.SetNotice("設定を保存できませんでした: " + e.Message);
+                return;
+            }
+            _settingsForm.SetNotice(_loadNotice);
         }
 
         void IKeyboardEffects.OnOpenChanged(bool isOpen)

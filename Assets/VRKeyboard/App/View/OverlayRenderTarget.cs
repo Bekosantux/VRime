@@ -9,29 +9,31 @@ namespace VRKeyboard.App.View
     /// <summary>
     /// uGUI を専用のカメラで透明な RenderTexture に描く。カメラは常に無効にしておき、<see cref="Render"/> を呼んだときだけ 1回描く。
     /// 描かれたテクスチャ（<see cref="Texture"/>）は、OpenVR のオーバーレイへ渡すもの。
+    /// 描画先ごとに別のレイヤーを使う。カメラは自分のレイヤーだけを映すため、複数の描画先の uGUI が互いに映り込まない。
     /// </summary>
     public sealed class OverlayRenderTarget : IDisposable
     {
-        /// <summary>このレイヤーの描画物だけをカメラに映す。ProjectSettings の Tags and Layers に登録されている必要がある。</summary>
-        public const string LayerName = "VRKeyboardOverlay";
-
         readonly GameObject _root;
         readonly Camera _camera;
         readonly UniversalRenderPipeline.SingleCameraRequest _request;
 
-        public OverlayRenderTarget(int width, int height)
+        /// <param name="name">テクスチャとオブジェクトの名前。</param>
+        /// <param name="layerName">この描画先の uGUI を置くレイヤー。他の描画先と重ならず、Project Settings の Tags and Layers に登録されている必要がある。</param>
+        public OverlayRenderTarget(string name, int width, int height, string layerName)
         {
+            if (string.IsNullOrEmpty(name)) throw new ArgumentException("名前が空です。", nameof(name));
             if (width <= 0) throw new ArgumentOutOfRangeException(nameof(width), width, null);
             if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height), height, null);
+            if (string.IsNullOrEmpty(layerName)) throw new ArgumentException("レイヤー名が空です。", nameof(layerName));
 
-            int layer = LayerMask.NameToLayer(LayerName);
+            int layer = LayerMask.NameToLayer(layerName);
             if (layer < 0)
-                throw new InvalidOperationException("レイヤー '" + LayerName + "' が登録されていません（Project Settings の Tags and Layers）。");
+                throw new InvalidOperationException("レイヤー '" + layerName + "' が登録されていません（Project Settings の Tags and Layers）。");
 
             // HDR・MSAA なし。カラーはリニア色空間では sRGB のテクスチャになる。
             Texture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
             {
-                name = "VRKeyboard Overlay",
+                name = name,
                 antiAliasing = 1,
                 useMipMap = false,
                 autoGenerateMips = false,
@@ -40,7 +42,7 @@ namespace VRKeyboard.App.View
             };
             Texture.Create();
 
-            _root = new GameObject("VRKeyboard Overlay") { layer = layer };
+            _root = new GameObject(name) { layer = layer };
 
             // 他のカメラ・レイヤーに映らないよう、専用レイヤーだけを映す。
             _camera = _root.AddComponent<Camera>();

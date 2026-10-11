@@ -1,11 +1,12 @@
 using System;
 using UnityEngine;
 using Valve.VR;
+using VRKeyboard.App.Settings;
 
 namespace VRKeyboard.App.SteamVR
 {
     /// <summary>
-    /// キーボードを SteamVR のオーバーレイとして表示する。HMD に対する相対位置で置く頭部固定（位置は <see cref="OverlayPlacement"/>）。
+    /// キーボードを SteamVR のオーバーレイとして表示する。HMD に対する相対位置で置く頭部固定（位置は <see cref="OverlayPlacement"/>。設定画面で変えるとすぐに反映する）。
     /// テクスチャは Unity の RenderTexture（Direct3D11）をそのまま渡す。渡す処理はレンダースレッドで行う（<see cref="OverlayTextureSubmitter"/>）。
     /// </summary>
     public sealed class KeyboardOverlay : IDisposable
@@ -19,39 +20,17 @@ namespace VRKeyboard.App.SteamVR
         ulong _handle;
         bool _visible;
 
-        public KeyboardOverlay(RenderTexture texture)
+        public KeyboardOverlay(RenderTexture texture, KeyboardPlacement placement)
         {
-            if (texture == null) throw new ArgumentNullException(nameof(texture));
-            if (!texture.IsCreated()) throw new ArgumentException("RenderTexture が作成されていません。", nameof(texture));
-            IntPtr nativeTexture = texture.GetNativeTexturePtr();
-            if (nativeTexture == IntPtr.Zero) throw new InvalidOperationException("RenderTexture のネイティブハンドルを取得できません。");
+            IntPtr nativeTexture = OverlayTextures.GetNativeTexture(texture, nameof(texture));
+            if (placement == null) throw new ArgumentNullException(nameof(placement));
 
             CVROverlay overlay = OpenVR.Overlay;
             OpenVRErrors.Check(overlay.CreateOverlay(OverlayKey, FriendlyName, ref _handle), "CreateOverlay(" + OverlayKey + ")");
             try
             {
-                OpenVRErrors.Check(overlay.SetOverlayWidthInMeters(_handle, OverlayPlacement.WidthMeters), "SetOverlayWidthInMeters");
-
-                // uGUI の出力は、アルファを乗算済みで RenderTexture に書き込まれる
-                // （UI/Default・TextMeshPro のシェーダーはどちらも Blend One OneMinusSrcAlpha で、アルファ 0.5 の白は RGB 188・A 128 になる）。
-                // SteamVR の既定は乗算済みでない前提のため、フラグで乗算済みであることを伝える。
-                OpenVRErrors.Check(overlay.SetOverlayFlag(_handle, VROverlayFlags.IsPremultiplied, true), "SetOverlayFlag(IsPremultiplied)");
-
-                // D3D11 の RenderTexture は上下が逆になるため、v を反転する（SPEC 3.3）。
-                var bounds = new VRTextureBounds_t { uMin = 0f, uMax = 1f, vMin = 1f, vMax = 0f };
-                OpenVRErrors.Check(overlay.SetOverlayTextureBounds(_handle, ref bounds), "SetOverlayTextureBounds");
-
-                float[] m = OverlayPlacement.ComputeOverlayToHmd();
-                var transform = new HmdMatrix34_t
-                {
-                    m0 = m[0], m1 = m[1], m2 = m[2], m3 = m[3],
-                    m4 = m[4], m5 = m[5], m6 = m[6], m7 = m[7],
-                    m8 = m[8], m9 = m[9], m10 = m[10], m11 = m[11],
-                };
-                OpenVRErrors.Check(
-                    overlay.SetOverlayTransformTrackedDeviceRelative(_handle, OpenVR.k_unTrackedDeviceIndex_Hmd, ref transform),
-                    "SetOverlayTransformTrackedDeviceRelative");
-
+                OverlayTextures.Configure(_handle);
+                ApplyPlacement(placement);
                 _submitter = new OverlayTextureSubmitter(_handle, nativeTexture);
             }
             catch
@@ -78,6 +57,14 @@ namespace VRKeyboard.App.SteamVR
             if (!_visible) return;
             OpenVRErrors.Check(OpenVR.Overlay.HideOverlay(_handle), "HideOverlay");
             _visible = false;
+        }
+
+        /// <summary>位置・傾き・大きさを変える。表示中でもそのまま反映される。</summary>
+        public void SetPlacement(KeyboardPlacement placement)
+        {
+            ThrowIfDisposed();
+            if (placement == null) throw new ArgumentNullException(nameof(placement));
+            ApplyPlacement(placement);
         }
 
         /// <summary>
@@ -108,6 +95,23 @@ namespace VRKeyboard.App.SteamVR
             _submitter?.Dispose();
             _submitter = null;
             OpenVRErrors.Check(OpenVR.Overlay.DestroyOverlay(handle), "DestroyOverlay");
+        }
+
+        void ApplyPlacement(KeyboardPlacement placement)
+        {
+            CVROverlay overlay = OpenVR.Overlay;
+            OpenVRErrors.Check(overlay.SetOverlayWidthInMeters(_handle, placement.WidthMeters), "SetOverlayWidthInMeters");
+
+            float[] m = OverlayPlacement.ComputeOverlayToHmd(placement);
+            var transform = new HmdMatrix34_t
+            {
+                m0 = m[0], m1 = m[1], m2 = m[2], m3 = m[3],
+                m4 = m[4], m5 = m[5], m6 = m[6], m7 = m[7],
+                m8 = m[8], m9 = m[9], m10 = m[10], m11 = m[11],
+            };
+            OpenVRErrors.Check(
+                overlay.SetOverlayTransformTrackedDeviceRelative(_handle, OpenVR.k_unTrackedDeviceIndex_Hmd, ref transform),
+                "SetOverlayTransformTrackedDeviceRelative");
         }
 
         void ThrowIfDisposed()

@@ -75,5 +75,19 @@ namespace VRKeyboard.App.View
 
         /// <summary>変換中はパネルが操作を受けないため暗くする。</summary>
         public const float PanelDimAlpha = 0.35f;
+
+        // 設定画面（SteamVR のダッシュボードのタブ。Settings.SettingsLayout の寸法で描く）。
+        // ダッシュボードの上に表示するため、背景は不透明にする。
+        public const float SettingsTitleFontSize = 44f;
+        public const float SettingsHeaderFontSize = 34f;
+        public const float SettingsNoteFontSize = 26f;
+        public const float SettingsLabelFontSize = 32f;
+        public const float SettingsButtonFontSize = 44f;
+        public const float SettingsNoticeFontSize = 26f;
+        public const float SettingsTrackHeight = 10f;
+        public const float SettingsThumbHeight = 44f;
+
+        public static readonly Color SettingsBackground = new Color(0.06f, 0.07f, 0.09f, 1f);
+        public static readonly Color SettingsButtonHover = new Color(0.27f, 0.31f, 0.39f, 1f);
     }
 }
