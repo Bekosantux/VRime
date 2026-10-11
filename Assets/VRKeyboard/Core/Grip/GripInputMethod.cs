@@ -43,8 +43,8 @@ namespace VRKeyboard.Core.Grip
     /// </summary>
     public sealed class GripInputMethod
     {
-        readonly KeyboardSettings _settings;
         readonly InputBuffer _buffer;
+        KeyboardSettings _settings;
 
         InputLanguage _language = InputLanguage.Japanese;
         bool _numberPage;
@@ -107,6 +107,12 @@ namespace VRKeyboard.Core.Grip
                 }
                 return _view;
             }
+        }
+
+        /// <summary>設定を差し替える。子音の手は変えられない（呼び出し側の <see cref="KeyboardSession.ApplySettings"/> で検査する）。</summary>
+        internal void ApplySettings(KeyboardSettings settings)
+        {
+            _settings = settings;
         }
 
         /// <summary>

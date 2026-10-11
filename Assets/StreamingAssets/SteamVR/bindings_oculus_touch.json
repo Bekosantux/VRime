@@ -26,18 +26,18 @@
         },
         {
           "path": "/user/hand/right/input/trigger",
-          "mode": "button",
+          "mode": "trigger",
           "inputs": {
-            "click": {
+            "pull": {
               "output": "/actions/keyboard/in/righttrigger"
             }
           }
         },
         {
           "path": "/user/hand/left/input/trigger",
-          "mode": "button",
+          "mode": "trigger",
           "inputs": {
-            "click": {
+            "pull": {
               "output": "/actions/keyboard/in/lefttrigger"
             }
           }

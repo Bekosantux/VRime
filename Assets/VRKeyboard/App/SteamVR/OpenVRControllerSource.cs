@@ -49,17 +49,27 @@ namespace VRKeyboard.App.SteamVR
         {
             OpenVRErrors.Check(OpenVR.Input.UpdateActionState(_activeSets, ActionSetSize), "UpdateActionState");
             return new ControllerFrame(
-                new HandState(Analog(_actions.LeftStick, "leftstick"), Digital(_actions.LeftTrigger, "lefttrigger"), Digital(_actions.LeftGrip, "leftgrip")),
-                new HandState(Analog(_actions.RightStick, "rightstick"), Digital(_actions.RightTrigger, "righttrigger"), Digital(_actions.RightGrip, "rightgrip")));
+                new HandState(Stick(_actions.LeftStick, "leftstick"), Trigger(_actions.LeftTrigger, "lefttrigger"), Digital(_actions.LeftGrip, "leftgrip")),
+                new HandState(Stick(_actions.RightStick, "rightstick"), Trigger(_actions.RightTrigger, "righttrigger"), Digital(_actions.RightGrip, "rightgrip")));
         }
 
         // bActive が false のアクション（バインドなし・他のアプリが占有している間）は、0 / 押されていない として扱う。
-        static StickValue Analog(ulong action, string name)
+        static StickValue Stick(ulong action, string name)
         {
-            var data = new InputAnalogActionData_t();
+            return ReadAnalog(action, name, out InputAnalogActionData_t data) ? new StickValue(data.x, data.y) : StickValue.Zero;
+        }
+
+        // vector1 のアクション。引き量は x に入る。押したかの判定は Core がしきい値で行う。
+        static float Trigger(ulong action, string name)
+        {
+            return ReadAnalog(action, name, out InputAnalogActionData_t data) ? data.x : 0f;
+        }
+
+        static bool ReadAnalog(ulong action, string name, out InputAnalogActionData_t data)
+        {
+            data = new InputAnalogActionData_t();
             EVRInputError error = OpenVR.Input.GetAnalogActionData(action, ref data, AnalogDataSize, OpenVR.k_ulInvalidInputValueHandle);
-            if (!OpenVRErrors.CheckAllowingNoData(error, "GetAnalogActionData(" + name + ")") || !data.bActive) return StickValue.Zero;
-            return new StickValue(data.x, data.y);
+            return OpenVRErrors.CheckAllowingNoData(error, "GetAnalogActionData(" + name + ")") && data.bActive;
         }
 
         static bool Digital(ulong action, string name)

@@ -912,4 +912,65 @@ namespace VRKeyboard.Core.Tests
             Assert.Throws<ArgumentNullException>(() => rig.Session.FailConversion(1, null));
         }
     }
+
+    /// <summary>トリガーのしきい値と、実行中の設定の差し替え。</summary>
+    public class SettingsApplyTests
+    {
+        static void SelectA(Rig rig)
+        {
+            rig.SetStick(rig.Consonant, Sticks.Cell(0));
+            rig.SetStick(rig.Vowel, StickValue.Zero);
+            rig.Tick();
+        }
+
+        [Test]
+        public void トリガーはしきい値以上に引くと入力する()
+        {
+            var rig = new Rig(new KeyboardSettings(triggerPressThreshold: 0.6f));
+            SelectA(rig);
+            rig.SetTriggerPull(rig.Vowel, 0.55f); rig.Tick();
+            Assert.AreEqual("", rig.Session.Composition, "しきい値未満では入力しない");
+            rig.SetTriggerPull(rig.Vowel, 0.6f); rig.Tick();
+            Assert.AreEqual("あ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void トリガーのしきい値を差し替えると次のフレームから使われる()
+        {
+            var rig = new Rig();
+            SelectA(rig);
+            rig.SetTriggerPull(rig.Vowel, 0.5f); rig.Tick();
+            Assert.AreEqual("", rig.Session.Composition, "既定のしきい値 0.7 未満");
+            rig.SetTriggerPull(rig.Vowel, 0f); rig.Tick();
+
+            rig.Session.ApplySettings(new KeyboardSettings(triggerPressThreshold: 0.4f));
+            rig.SetTriggerPull(rig.Vowel, 0.5f); rig.Tick();
+            Assert.AreEqual("あ", rig.Session.Composition);
+            Assert.AreEqual(0.4f, rig.Session.Settings.TriggerPressThreshold);
+        }
+
+        [Test]
+        public void スティックのしきい値を差し替えると次のフレームから使われる()
+        {
+            var rig = new Rig();
+            var tilt = new StickValue(0.45f, 0f);
+            rig.SetStick(rig.Consonant, tilt); rig.Tick();
+            Assert.AreEqual(StickClassifier.NeutralCell, rig.Session.GripInput.ConsonantCell, "既定のしきい値 0.5 未満");
+
+            rig.Session.ApplySettings(new KeyboardSettings(stickEnterThreshold: 0.4f));
+            rig.Tick();
+            Assert.AreEqual(5, rig.Session.GripInput.ConsonantCell, "右に倒したセル");
+        }
+
+        [Test]
+        public void しきい値以外の変更は例外()
+        {
+            var rig = new Rig();
+            Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(consonantHand: Hand.Left)));
+            Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(maxLength: 10)));
+            Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(chordWindowSeconds: 0.3)));
+            Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(doubleChordWindowSeconds: 0.8)));
+            Assert.Throws<ArgumentNullException>(() => rig.Session.ApplySettings(null));
+        }
+    }
 }

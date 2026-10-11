@@ -76,7 +76,8 @@ namespace VRKeyboard.Core.Tests
         public double Time;
 
         StickValue _leftStick, _rightStick;
-        bool _leftTrigger, _rightTrigger, _leftGrip, _rightGrip;
+        float _leftTrigger, _rightTrigger;
+        bool _leftGrip, _rightGrip;
 
         public Rig(KeyboardSettings settings = null, bool open = true)
         {
@@ -112,9 +113,15 @@ namespace VRKeyboard.Core.Tests
             if (hand == Hand.Left) _leftGrip = held; else _rightGrip = held;
         }
 
+        /// <summary>トリガーを引き切る（1）か、離す（0）。</summary>
         public void SetTrigger(Hand hand, bool held)
         {
-            if (hand == Hand.Left) _leftTrigger = held; else _rightTrigger = held;
+            SetTriggerPull(hand, held ? 1f : 0f);
+        }
+
+        public void SetTriggerPull(Hand hand, float pull)
+        {
+            if (hand == Hand.Left) _leftTrigger = pull; else _rightTrigger = pull;
         }
 
         public void SetStick(Hand hand, StickValue value)

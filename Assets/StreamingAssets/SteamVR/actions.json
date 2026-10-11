@@ -24,11 +24,11 @@
     },
     {
       "name": "/actions/keyboard/in/righttrigger",
-      "type": "boolean"
+      "type": "vector1"
     },
     {
       "name": "/actions/keyboard/in/lefttrigger",
-      "type": "boolean"
+      "type": "vector1"
     },
     {
       "name": "/actions/keyboard/in/rightgrip",

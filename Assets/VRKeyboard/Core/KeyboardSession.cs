@@ -35,6 +35,7 @@ namespace VRKeyboard.Core
         readonly EdgeTracker _edges = new EdgeTracker();
         readonly List<HapticEvent> _haptics = new List<HapticEvent>();
 
+        KeyboardSettings _settings;
         bool _isOpen;
         bool _dashboardVisible;
         bool _resumeAfterDashboard;
@@ -57,13 +58,15 @@ namespace VRKeyboard.Core
 
         public KeyboardSession(KeyboardSettings settings, IKeyboardEffects effects)
         {
-            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _effects = effects ?? throw new ArgumentNullException(nameof(effects));
             _buffer = new InputBuffer(settings.MaxLength);
             _grip = new GripInputMethod(settings, _buffer);
             _conversionController = new ConversionController(settings);
             _chord = new DoubleChordDetector(settings.ChordWindowSeconds, settings.DoubleChordWindowSeconds);
         }
+
+        public KeyboardSettings Settings => _settings;
 
         public bool IsOpen => _isOpen;
         public bool IsDashboardVisible => _dashboardVisible;
@@ -113,13 +116,13 @@ namespace VRKeyboard.Core
             // 押下エッジは、操作を受け付けない間も追跡する。再開した直後に古い押下状態から誤ったエッジが出るのを防ぐ。
             if (_dashboardVisible)
             {
-                _edges.Update(frame);
+                UpdateEdges(frame);
                 return;
             }
 
             if (toggle)
             {
-                _edges.Update(frame);
+                UpdateEdges(frame);
                 if (_isOpen) Close();
                 else Open();
                 _effects.OnHaptic(Hand.Left, HapticKind.OpenClose);
@@ -129,12 +132,12 @@ namespace VRKeyboard.Core
 
             if (!_isOpen)
             {
-                _edges.Update(frame);
+                UpdateEdges(frame);
                 return;
             }
 
             ControllerFrame effective = ApplyGripIgnore(frame);
-            FrameEdges edges = _edges.Update(effective);
+            FrameEdges edges = UpdateEdges(effective);
             // 両手のグリップを押している間は、無視中のグリップも含めてトリガーを受け付けない。
             if (frame.Left.Grip && frame.Right.Grip) edges = edges.WithoutTriggers();
 
@@ -196,6 +199,26 @@ namespace VRKeyboard.Core
                 Open();
             }
             _viewVersion++;
+        }
+
+        /// <summary>
+        /// 実行中に設定を差し替える。次の <see cref="Tick"/> から新しい値で判定する。
+        /// 実行中に変えられるのはスティックとトリガーのしきい値だけで、それ以外の値が異なる設定は例外にする
+        /// （子音の手は表示の組み立てに、最大長は入力バッファに、同時押しの窓は開閉の判定に、生成時の値が使われているため）。
+        /// </summary>
+        public void ApplySettings(KeyboardSettings settings)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            if (settings.ConsonantHand != _settings.ConsonantHand)
+                throw new NotSupportedException("子音の手は実行中に変更できません。");
+            if (settings.MaxLength != _settings.MaxLength)
+                throw new NotSupportedException("最大長は実行中に変更できません。");
+            if (settings.ChordWindowSeconds != _settings.ChordWindowSeconds
+                || settings.DoubleChordWindowSeconds != _settings.DoubleChordWindowSeconds)
+                throw new NotSupportedException("同時押しの判定時間は実行中に変更できません。");
+            _settings = settings;
+            _grip.ApplySettings(settings);
+            _conversionController.ApplySettings(settings);
         }
 
         public void SetNotice(string notice)
@@ -367,6 +390,11 @@ namespace VRKeyboard.Core
         {
             if (effective.Left.Grip) _ignoreLeftGrip = true;
             if (effective.Right.Grip) _ignoreRightGrip = true;
+        }
+
+        FrameEdges UpdateEdges(ControllerFrame frame)
+        {
+            return _edges.Update(frame, _settings.TriggerPressThreshold, _settings.TriggerReleaseThreshold);
         }
 
         ControllerFrame ApplyGripIgnore(ControllerFrame frame)

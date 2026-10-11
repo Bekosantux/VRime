@@ -23,13 +23,18 @@ namespace VRKeyboard.Core.Conversion
     /// </summary>
     public sealed class ConversionController
     {
-        readonly KeyboardSettings _settings;
         readonly StickDirectionTracker _leftStick = new StickDirectionTracker();
         readonly StickDirectionTracker _rightStick = new StickDirectionTracker();
+        KeyboardSettings _settings;
 
         public ConversionController(KeyboardSettings settings)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        }
+
+        internal void ApplySettings(KeyboardSettings settings)
+        {
+            _settings = settings;
         }
 
         /// <summary>
