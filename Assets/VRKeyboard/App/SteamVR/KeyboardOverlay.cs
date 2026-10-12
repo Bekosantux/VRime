@@ -16,13 +16,17 @@ namespace VRKeyboard.App.SteamVR
 
         public const string FriendlyName = "VR Keyboard";
 
+        readonly OverlayPlacement _placement;
         OverlayTextureSubmitter _submitter;
         ulong _handle;
         bool _visible;
 
-        public KeyboardOverlay(RenderTexture texture, KeyboardPlacement placement)
+        /// <param name="overlayPlacement">位置からオーバーレイの変換を求めるもの（盤面の配置を持つ）。</param>
+        /// <param name="placement">最初の位置。</param>
+        public KeyboardOverlay(RenderTexture texture, OverlayPlacement overlayPlacement, KeyboardPlacement placement)
         {
             IntPtr nativeTexture = OverlayTextures.GetNativeTexture(texture, nameof(texture));
+            _placement = overlayPlacement ?? throw new ArgumentNullException(nameof(overlayPlacement));
             if (placement == null) throw new ArgumentNullException(nameof(placement));
 
             CVROverlay overlay = OpenVR.Overlay;
@@ -102,7 +106,7 @@ namespace VRKeyboard.App.SteamVR
             CVROverlay overlay = OpenVR.Overlay;
             OpenVRErrors.Check(overlay.SetOverlayWidthInMeters(_handle, placement.WidthMeters), "SetOverlayWidthInMeters");
 
-            float[] m = OverlayPlacement.ComputeOverlayToHmd(placement);
+            float[] m = _placement.ComputeOverlayToHmd(placement);
             var transform = new HmdMatrix34_t
             {
                 m0 = m[0], m1 = m[1], m2 = m[2], m3 = m[3],

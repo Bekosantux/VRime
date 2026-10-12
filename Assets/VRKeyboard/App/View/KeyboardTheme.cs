@@ -1,93 +1,107 @@
+using System;
 using UnityEngine;
 
 namespace VRKeyboard.App.View
 {
     /// <summary>
-    /// 表示の寸法と色。寸法はオーバーレイのテクスチャ上のピクセルで、幅 0.45m・0.85m 先に置いたとき
-    /// 1ピクセルが約 0.44mm（0.85m で約 0.03°）になる。文字は 36px（約 1.6cm）以上にして読めるようにしている。
+    /// 状態によって切り替わる色と文字の大きさ。状態によらない見た目（配置・大きさ・固定の色）は、シーンの uGUI に置く。
     /// </summary>
-    public static class KeyboardTheme
+    [CreateAssetMenu(menuName = "VR Keyboard/Theme", fileName = "KeyboardTheme")]
+    public sealed class KeyboardTheme : ScriptableObject
     {
-        public const int Width = 1024;
-        public const int Height = 1024;
+        [Header("グリップのパネルのセル")]
+        [SerializeField] Color _cell = new Color(0.20f, 0.23f, 0.29f, 1f);
+        [SerializeField] Color _cellDisabled = new Color(0.11f, 0.12f, 0.15f, 1f);
+        [SerializeField] Color _cellSelected = new Color(0.14f, 0.50f, 0.95f, 1f);
+        [SerializeField] Color _cellText = new Color(0.96f, 0.97f, 0.98f, 1f);
 
-        // 上から: 候補欄 → 入力欄 → 状態行 → ページ行 → パネル。
-        public const float CandidateAreaHeight = 336f;
-        public const float BoardTop = 344f;
+        [Tooltip("オンの状態を示す点灯中のセルの文字。選択中は背景が変わるため使わない。")]
+        [SerializeField] Color _cellTextLit = new Color(1.00f, 0.78f, 0.20f, 1f);
 
-        /// <summary>キーボード本体（盤面）。候補欄の下から最下部まで。オーバーレイの位置はこの中心を基準にする。</summary>
-        public const float BoardHeight = Height - BoardTop;
-        public const float BoardCenterY = BoardTop + BoardHeight / 2f;
+        [Tooltip("無効なセルと、文字のないセルの文字。")]
+        [SerializeField] Color _cellTextDisabled = new Color(0.36f, 0.39f, 0.44f, 1f);
 
-        public const float Margin = 20f;
-        public const float InputTop = BoardTop + 12f;
-        public const float InputHeight = 224f;
-        public const float StatusTop = InputTop + InputHeight + 8f;
-        public const float StatusHeight = 44f;
-        public const float PageRowTop = StatusTop + StatusHeight + 6f;
-        public const float PageRowHeight = 44f;
-        public const float PanelTop = PageRowTop + PageRowHeight + 8f;
-        public const float CellWidth = 148f;
-        public const float CellHeight = 104f;
-        public const float CellGap = 6f;
-        public const float PanelWidth = CellWidth * 3f + CellGap * 2f;
-        public const float PanelHeight = CellHeight * 3f + CellGap * 2f;
+        [Tooltip("無効なセルと、文字のないセルを選んでいるときの文字。")]
+        [SerializeField] Color _cellTextDisabledSelected = new Color(0.60f, 0.64f, 0.70f, 1f);
 
-        public const float SegmentHeight = 64f;
-        public const float CandidateHeight = 48f;
-        public const float CandidateGap = 4f;
-        public const float BannerHeight = 44f;
+        [Tooltip("1文字のラベル。")]
+        [SerializeField] float _cellFontSize = 56f;
 
-        public const float InputFontSize = 36f;
-        public const float StatusFontSize = 30f;
-        public const float SegmentFontSize = 40f;
-        public const float CandidateFontSize = 36f;
-        public const float CellFontSize = 56f;
-        public const float CellFunctionFontSize = 40f;
+        [Tooltip("2文字以上のラベル（機能ページのキー）。")]
+        [SerializeField] float _cellFunctionFontSize = 40f;
 
-        /// <summary>セルの右下に示す機能ページのキーの頭文字。主の文字を妨げないよう、読める範囲で小さくする。</summary>
-        public const float CellHintFontSize = 22f;
-        public const float CellHintPaddingX = 8f;
-        public const float CellHintPaddingY = 4f;
+        [Tooltip("変換中など、パネルが操作を受けない間の不透明度。")]
+        [Range(0f, 1f)]
+        [SerializeField] float _panelDimAlpha = 0.35f;
 
-        public static readonly Color Transparent = new Color(0f, 0f, 0f, 0f);
-        public static readonly Color Board = new Color(0.06f, 0.07f, 0.09f, 0.90f);
-        public static readonly Color Field = new Color(0.13f, 0.15f, 0.19f, 1f);
-        public static readonly Color Text = new Color(0.96f, 0.97f, 0.98f, 1f);
-        public static readonly Color TextDim = new Color(0.60f, 0.64f, 0.70f, 1f);
-        public static readonly Color TextDisabled = new Color(0.36f, 0.39f, 0.44f, 1f);
-        public static readonly Color Composition = new Color(1.00f, 0.88f, 0.51f, 1f);
-        public static readonly Color Caret = new Color(0.45f, 0.78f, 1.00f, 1f);
-        public static readonly Color Warning = new Color(1.00f, 0.60f, 0.35f, 1f);
+        [Header("ページ行（ページ・全角/半角・大文字/小文字）")]
+        [SerializeField] Color _chip = new Color(0.17f, 0.20f, 0.26f, 0.96f);
+        [SerializeField] Color _chipSelected = new Color(0.14f, 0.50f, 0.95f, 0.98f);
 
-        public static readonly Color Cell = new Color(0.20f, 0.23f, 0.29f, 1f);
-        public static readonly Color CellDisabled = new Color(0.11f, 0.12f, 0.15f, 1f);
-        public static readonly Color CellSelected = new Color(0.14f, 0.50f, 0.95f, 1f);
-        public static readonly Color Lit = new Color(1.00f, 0.78f, 0.20f, 1f);
+        [Tooltip("いまのページで作用する全角/半角・大文字/小文字。")]
+        [SerializeField] Color _chipActive = new Color(0.20f, 0.34f, 0.52f, 1f);
 
-        /// <summary>半透明の白。通常・無効・選択中のどの背景の上でも、同じように薄く見える。</summary>
-        public static readonly Color CellHint = new Color(0.96f, 0.97f, 0.98f, 0.40f);
+        [SerializeField] Color _chipText = new Color(0.96f, 0.97f, 0.98f, 1f);
+        [SerializeField] Color _chipTextInactive = new Color(0.36f, 0.39f, 0.44f, 1f);
 
-        public static readonly Color Chip = new Color(0.17f, 0.20f, 0.26f, 0.96f);
-        public static readonly Color ChipSelected = new Color(0.14f, 0.50f, 0.95f, 0.98f);
-        public static readonly Color ChipActive = new Color(0.20f, 0.34f, 0.52f, 1f);
-        public static readonly Color BannerBackground = new Color(0.30f, 0.16f, 0.10f, 0.96f);
+        [Header("入力欄")]
+        [Tooltip("未確定のかな（下線を付ける）。")]
+        [SerializeField] Color _composition = new Color(1.00f, 0.88f, 0.51f, 1f);
 
-        /// <summary>変換中はパネルが操作を受けないため暗くする。</summary>
-        public const float PanelDimAlpha = 0.35f;
+        [SerializeField] Color _remaining = new Color(0.60f, 0.64f, 0.70f, 1f);
 
-        // 設定画面（SteamVR のダッシュボードのタブ。Settings.SettingsLayout の寸法で描く）。
-        // ダッシュボードの上に表示するため、背景は不透明にする。
-        public const float SettingsTitleFontSize = 44f;
-        public const float SettingsHeaderFontSize = 34f;
-        public const float SettingsNoteFontSize = 26f;
-        public const float SettingsLabelFontSize = 32f;
-        public const float SettingsButtonFontSize = 44f;
-        public const float SettingsNoticeFontSize = 26f;
-        public const float SettingsTrackHeight = 10f;
-        public const float SettingsThumbHeight = 44f;
+        [Tooltip("残りの文字数が 0 のとき。")]
+        [SerializeField] Color _remainingExhausted = new Color(1.00f, 0.60f, 0.35f, 1f);
 
-        public static readonly Color SettingsBackground = new Color(0.06f, 0.07f, 0.09f, 1f);
-        public static readonly Color SettingsButtonHover = new Color(0.27f, 0.31f, 0.39f, 1f);
+        [Header("候補欄")]
+        [SerializeField] Color _candidate = new Color(0.17f, 0.20f, 0.26f, 0.96f);
+        [SerializeField] Color _candidateSelected = new Color(0.14f, 0.50f, 0.95f, 0.98f);
+
+        [Header("設定画面")]
+        [SerializeField] Color _settingsButton = new Color(0.20f, 0.23f, 0.29f, 1f);
+        [SerializeField] Color _settingsButtonHover = new Color(0.27f, 0.31f, 0.39f, 1f);
+        [SerializeField] Color _settingsButtonPressed = new Color(0.14f, 0.50f, 0.95f, 1f);
+        [SerializeField] Color _settingsThumb = new Color(0.96f, 0.97f, 0.98f, 1f);
+
+        [Tooltip("つまんでいる・指しているスライダーのつまみ。")]
+        [SerializeField] Color _settingsThumbActive = new Color(0.45f, 0.78f, 1.00f, 1f);
+
+        public Color Cell => _cell;
+        public Color CellDisabled => _cellDisabled;
+        public Color CellSelected => _cellSelected;
+        public Color CellText => _cellText;
+        public Color CellTextLit => _cellTextLit;
+        public Color CellTextDisabled => _cellTextDisabled;
+        public Color CellTextDisabledSelected => _cellTextDisabledSelected;
+        public float CellFontSize => _cellFontSize;
+        public float CellFunctionFontSize => _cellFunctionFontSize;
+        public float PanelDimAlpha => _panelDimAlpha;
+
+        public Color Chip => _chip;
+        public Color ChipSelected => _chipSelected;
+        public Color ChipActive => _chipActive;
+        public Color ChipText => _chipText;
+        public Color ChipTextInactive => _chipTextInactive;
+
+        public Color Composition => _composition;
+        public Color Remaining => _remaining;
+        public Color RemainingExhausted => _remainingExhausted;
+
+        public Color Candidate => _candidate;
+        public Color CandidateSelected => _candidateSelected;
+
+        public Color SettingsButton => _settingsButton;
+        public Color SettingsButtonHover => _settingsButtonHover;
+        public Color SettingsButtonPressed => _settingsButtonPressed;
+        public Color SettingsThumb => _settingsThumb;
+        public Color SettingsThumbActive => _settingsThumbActive;
+
+        /// <summary>値が使えない範囲にあれば例外にする。</summary>
+        public void Validate()
+        {
+            if (!(_cellFontSize > 0f)) throw new InvalidOperationException(name + " の文字の大きさ（1文字）が正ではありません: " + _cellFontSize);
+            if (!(_cellFunctionFontSize > 0f)) throw new InvalidOperationException(name + " の文字の大きさ（2文字以上）が正ではありません: " + _cellFunctionFontSize);
+            if (!(_panelDimAlpha >= 0f && _panelDimAlpha <= 1f)) throw new InvalidOperationException(name + " の暗くしたパネルの不透明度が 0〜1 ではありません: " + _panelDimAlpha);
+        }
     }
 }

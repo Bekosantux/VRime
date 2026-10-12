@@ -8,30 +8,59 @@ namespace VRKeyboard.App.View
     /// <summary>
     /// <see cref="KeyboardSession"/> の状態を uGUI に反映する。表示の内容は Core の状態だけで決まり、入力の判断は持たない。
     /// 毎フレーム <see cref="RefreshIfChanged"/> を呼ぶと、<see cref="KeyboardSession.ViewVersion"/> が変わったときだけ uGUI を更新する。
-    /// 上から候補欄・入力欄・状態行・ページ行・グリップのパネルを置く。盤面の外側は完全に透明にする。
+    /// キーボードのキャンバスに置く。部品の配置はシーンで決め、盤面（<see cref="_board"/>）の外側は透明にする。
     /// </summary>
-    public sealed class KeyboardView
+    public sealed class KeyboardView : MonoBehaviour
     {
-        readonly KeyboardSession _session;
-        readonly CandidateAreaView _candidates;
-        readonly InputAreaView _input;
-        readonly GripPanelView _panels;
+        [Tooltip("キーボード本体（盤面）。オーバーレイの位置はこの中心を基準にする。")]
+        [SerializeField] RectTransform _board;
+
+        [SerializeField] InputAreaView _input;
+        [SerializeField] GripPanelView _panels;
+        [SerializeField] CandidateAreaView _candidates;
+
+        KeyboardSession _session;
         int _renderedVersion = -1;
 
-        public KeyboardView(KeyboardSession session, KeyboardSettings settings, KeyboardFonts fonts, Transform canvasRoot)
+        /// <summary>
+        /// テクスチャの中心から盤面の中心までの下向きの距離を、テクスチャの幅で割った値。
+        /// オーバーレイの位置を盤面の中心に合わせるのに使う（<see cref="SteamVR.OverlayPlacement"/>）。
+        /// </summary>
+        public float BoardCenterOffset
         {
+            get
+            {
+                var canvas = (RectTransform)transform;
+                Vector2 size = canvas.rect.size;
+                Rect board = UiRects.RectIn(_board, canvas);
+                return (board.center.y - size.y / 2f) / size.x;
+            }
+        }
+
+        public void Validate()
+        {
+            SceneChecks.Require(_board, this, nameof(_board));
+            SceneChecks.Require(_input, this, nameof(_input));
+            SceneChecks.Require(_panels, this, nameof(_panels));
+            SceneChecks.Require(_candidates, this, nameof(_candidates));
+            SceneChecks.RequireUnder(_board, this, this, nameof(_board));
+            SceneChecks.RequireUnder(_input, this, this, nameof(_input));
+            SceneChecks.RequireUnder(_panels, this, this, nameof(_panels));
+            SceneChecks.RequireUnder(_candidates, this, this, nameof(_candidates));
+            _input.Validate();
+            _panels.Validate();
+            _candidates.Validate();
+        }
+
+        public void Initialize(KeyboardSession session, Hand consonantHand, KeyboardTheme theme)
+        {
+            Validate();
             _session = session ?? throw new ArgumentNullException(nameof(session));
-            if (settings == null) throw new ArgumentNullException(nameof(settings));
-            if (fonts == null) throw new ArgumentNullException(nameof(fonts));
-            if (canvasRoot == null) throw new ArgumentNullException(nameof(canvasRoot));
-
-            // 盤面は候補欄の下から最下部まで。候補欄は盤面の外（透明）に重ならない位置にある。
-            RectTransform root = UiBuilder.Rect(canvasRoot, "Keyboard", 0f, 0f, KeyboardTheme.Width, KeyboardTheme.Height);
-            UiBuilder.Image(root, "Board", 0f, KeyboardTheme.BoardTop, KeyboardTheme.Width, KeyboardTheme.BoardHeight, KeyboardTheme.Board);
-
-            _input = new InputAreaView(root, fonts);
-            _panels = new GripPanelView(root, fonts, settings.ConsonantHand);
-            _candidates = new CandidateAreaView(root, fonts);
+            if (theme == null) throw new ArgumentNullException(nameof(theme));
+            _input.Initialize(theme);
+            _panels.Initialize(consonantHand, theme);
+            _candidates.Initialize(theme);
+            _renderedVersion = -1;
         }
 
         /// <summary>表示に関わる状態が変わっていれば uGUI を更新して true を返す。</summary>

@@ -2,7 +2,6 @@ using System;
 using NUnit.Framework;
 using VRKeyboard.App.Settings;
 using VRKeyboard.App.SteamVR;
-using VRKeyboard.App.View;
 using VRKeyboard.Core;
 
 namespace VRKeyboard.App.Tests
@@ -11,17 +10,20 @@ namespace VRKeyboard.App.Tests
     {
         const float Epsilon = 1e-4f;
 
+        // 1024px 四方のテクスチャで、盤面の中心が中心から 172px 下にある配置（シーンの既定の配置と同じ）。
+        const float BoardCenterOffset = 172f / 1024f;
+
+        static readonly OverlayPlacement Overlay = new OverlayPlacement(BoardCenterOffset);
+
         [Test]
         public void 盤面の中心がHMD基準の指定位置に来る()
         {
             KeyboardPlacement placement = KeyboardPlacement.Default;
-            float[] matrix = OverlayPlacement.ComputeOverlayToHmd(placement);
+            float[] matrix = Overlay.ComputeOverlayToHmd(placement);
 
             // テクスチャの中心から盤面の中心までの、オーバーレイ面内の下向きの距離。
-            float metersPerPixel = placement.WidthMeters / KeyboardTheme.Width;
-            float down = (KeyboardTheme.BoardCenterY - KeyboardTheme.Height / 2f) * metersPerPixel;
-            Assert.Greater(down, 0f, "盤面の中心はテクスチャの中心より下にある");
-            Assert.AreEqual(down, OverlayPlacement.BoardOffsetDownMeters(placement), Epsilon);
+            float down = BoardCenterOffset * placement.WidthMeters;
+            Assert.AreEqual(down, Overlay.BoardOffsetDownMeters(placement), Epsilon);
 
             (float x, float y, float z) = OverlayPlacement.Transform(matrix, 0f, -down, 0f);
             Assert.AreEqual(0f, x, Epsilon);
@@ -33,8 +35,8 @@ namespace VRKeyboard.App.Tests
         public void 左右の位置と傾きと幅を変えても盤面の中心が指定位置に来る()
         {
             var placement = new KeyboardPlacement(0.40f, 0.60f, -0.20f, 35f, 0.70f);
-            float[] matrix = OverlayPlacement.ComputeOverlayToHmd(placement);
-            float down = OverlayPlacement.BoardOffsetDownMeters(placement);
+            float[] matrix = Overlay.ComputeOverlayToHmd(placement);
+            float down = Overlay.BoardOffsetDownMeters(placement);
 
             (float x, float y, float z) = OverlayPlacement.Transform(matrix, 0f, -down, 0f);
             Assert.AreEqual(-0.20f, x, Epsilon, "左へ 20cm");
@@ -45,8 +47,8 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 幅に比例して盤面の中心までの距離が変わる()
         {
-            float narrow = OverlayPlacement.BoardOffsetDownMeters(KeyboardPlacement.Default.WithWidth(0.30f));
-            float wide = OverlayPlacement.BoardOffsetDownMeters(KeyboardPlacement.Default.WithWidth(0.60f));
+            float narrow = Overlay.BoardOffsetDownMeters(KeyboardPlacement.Default.WithWidth(0.30f));
+            float wide = Overlay.BoardOffsetDownMeters(KeyboardPlacement.Default.WithWidth(0.60f));
             Assert.AreEqual(narrow * 2f, wide, Epsilon);
         }
 
@@ -60,7 +62,7 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 傾き0では盤面がHMDの正面に垂直に立つ()
         {
-            float[] matrix = OverlayPlacement.ComputeOverlayToHmd(KeyboardPlacement.Default.WithTilt(0f));
+            float[] matrix = Overlay.ComputeOverlayToHmd(KeyboardPlacement.Default.WithTilt(0f));
             (float cx, float cy, float cz) = OverlayPlacement.Transform(matrix, 0f, 0f, 0f);
             (float nx, float ny, float nz) = OverlayPlacement.Transform(matrix, 0f, 0f, 1f);
             Assert.AreEqual(0f, nx - cx, Epsilon);
@@ -70,8 +72,8 @@ namespace VRKeyboard.App.Tests
 
         static float NormalToHmdAngle(KeyboardPlacement placement)
         {
-            float[] matrix = OverlayPlacement.ComputeOverlayToHmd(placement);
-            float down = OverlayPlacement.BoardOffsetDownMeters(placement);
+            float[] matrix = Overlay.ComputeOverlayToHmd(placement);
+            float down = Overlay.BoardOffsetDownMeters(placement);
             (float cx, float cy, float cz) = OverlayPlacement.Transform(matrix, 0f, -down, 0f);
             (float nx, float ny, float nz) = OverlayPlacement.Transform(matrix, 0f, -down, 1f);
 
@@ -90,7 +92,7 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 行列は右手系の回転と平行移動()
         {
-            float[] m = OverlayPlacement.ComputeOverlayToHmd(new KeyboardPlacement(0.1f, 1.0f, 0.3f, 50f, 0.5f));
+            float[] m = Overlay.ComputeOverlayToHmd(new KeyboardPlacement(0.1f, 1.0f, 0.3f, 50f, 0.5f));
             // 回転部分の直交性: 各列の長さが 1。
             for (int col = 0; col < 3; col++)
                 Assert.AreEqual(1f, m[col] * m[col] + m[4 + col] * m[4 + col] + m[8 + col] * m[8 + col], Epsilon);
@@ -99,7 +101,14 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 位置がないと例外()
         {
-            Assert.Throws<ArgumentNullException>(() => OverlayPlacement.ComputeOverlayToHmd(null));
+            Assert.Throws<ArgumentNullException>(() => Overlay.ComputeOverlayToHmd(null));
+        }
+
+        [Test]
+        public void 盤面の中心までの比が有限でないと例外()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OverlayPlacement(float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OverlayPlacement(float.PositiveInfinity));
         }
     }
 

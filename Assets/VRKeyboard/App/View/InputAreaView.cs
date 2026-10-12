@@ -2,7 +2,6 @@ using System;
 using System.Text;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using VRKeyboard.Core;
 
 namespace VRKeyboard.App.View
@@ -11,50 +10,48 @@ namespace VRKeyboard.App.View
     /// 入力欄（確定済みの文字列・未確定のかな・キャレット）と、その下の状態行（通知・残り文字数）。
     /// 未確定のかなは色と下線で確定済みと区別する。行数が入力欄を超えるときは、キャレットの行が見える位置までずらす。
     /// </summary>
-    public sealed class InputAreaView
+    public sealed class InputAreaView : MonoBehaviour
     {
-        const float Padding = 16f;
-        const float CaretWidth = 3f;
+        [Tooltip("入力欄の文字を表示する範囲。はみ出した行は隠す。")]
+        [SerializeField] RectTransform _viewport;
 
-        readonly TextMeshProUGUI _text;
-        readonly RectTransform _textRect;
-        readonly RectTransform _caret;
-        readonly TextMeshProUGUI _notice;
-        readonly TextMeshProUGUI _remaining;
-        readonly float _viewportHeight;
-        readonly string _compositionOpenTag;
+        [Tooltip("入力した文字。_viewport の子で、リッチテキストを有効にする（未確定のかなの色と下線に使う）。")]
+        [SerializeField] TextMeshProUGUI _text;
+
+        [Tooltip("キャレット。_text の子。幅はシーンの値を使い、位置と高さは文字に合わせる。")]
+        [SerializeField] RectTransform _caret;
+
+        [SerializeField] TextMeshProUGUI _notice;
+        [SerializeField] TextMeshProUGUI _remaining;
+
+        KeyboardTheme _theme;
+        RectTransform _textRect;
+        float _caretWidth;
+        string _compositionOpenTag;
         readonly StringBuilder _builder = new StringBuilder();
 
-        public InputAreaView(Transform parent, KeyboardFonts fonts)
+        public void Validate()
         {
-            if (fonts == null) throw new ArgumentNullException(nameof(fonts));
-            _compositionOpenTag = "<color=#" + ColorUtility.ToHtmlStringRGB(KeyboardTheme.Composition) + "><u>";
+            SceneChecks.Require(_viewport, this, nameof(_viewport));
+            SceneChecks.Require(_text, this, nameof(_text));
+            SceneChecks.Require(_caret, this, nameof(_caret));
+            SceneChecks.Require(_notice, this, nameof(_notice));
+            SceneChecks.Require(_remaining, this, nameof(_remaining));
+            if (_text.transform.parent != _viewport)
+                throw new InvalidOperationException(SceneChecks.PathOf(_text.transform) + " は " + SceneChecks.PathOf(_viewport) + " の直下に置く必要があります。");
+            if (_caret.parent != _text.transform)
+                throw new InvalidOperationException(SceneChecks.PathOf(_caret) + " は " + SceneChecks.PathOf(_text.transform) + " の直下に置く必要があります。");
+            if (!_text.richText)
+                throw new InvalidOperationException(SceneChecks.PathOf(_text.transform) + " のリッチテキストが無効です。");
+        }
 
-            float fieldWidth = KeyboardTheme.Width - KeyboardTheme.Margin * 2f;
-            UiBuilder.Image(parent, "InputField", KeyboardTheme.Margin, KeyboardTheme.InputTop, fieldWidth, KeyboardTheme.InputHeight, KeyboardTheme.Field);
-
-            float viewportWidth = fieldWidth - Padding * 2f;
-            _viewportHeight = KeyboardTheme.InputHeight - Padding * 2f;
-            RectTransform viewport = UiBuilder.Rect(parent, "InputViewport",
-                KeyboardTheme.Margin + Padding, KeyboardTheme.InputTop + Padding, viewportWidth, _viewportHeight);
-            viewport.gameObject.AddComponent<RectMask2D>();
-
-            _textRect = UiBuilder.Rect(viewport, "InputText", 0f, 0f, viewportWidth, _viewportHeight);
-            _text = UiBuilder.AddText(_textRect.gameObject, fonts.Regular, KeyboardTheme.InputFontSize, KeyboardTheme.Text, TextAlignmentOptions.TopLeft);
-            _text.richText = true;
-            _text.textWrappingMode = TextWrappingModes.Normal;
-
-            _caret = UiBuilder.Image(_textRect, "Caret", 0f, 0f, CaretWidth, KeyboardTheme.InputFontSize, KeyboardTheme.Caret).rectTransform;
-
-            float statusWidth = KeyboardTheme.Width - KeyboardTheme.Margin * 2f;
-            const float remainingWidth = 250f;
-            _notice = UiBuilder.Text(parent, "Notice", KeyboardTheme.Margin, KeyboardTheme.StatusTop,
-                statusWidth - remainingWidth, KeyboardTheme.StatusHeight,
-                fonts.Regular, KeyboardTheme.StatusFontSize, KeyboardTheme.Composition, TextAlignmentOptions.MidlineLeft);
-            _notice.overflowMode = TextOverflowModes.Ellipsis;
-            _remaining = UiBuilder.Text(parent, "Remaining", KeyboardTheme.Width - KeyboardTheme.Margin - remainingWidth, KeyboardTheme.StatusTop,
-                remainingWidth, KeyboardTheme.StatusHeight,
-                fonts.Regular, KeyboardTheme.StatusFontSize, KeyboardTheme.TextDim, TextAlignmentOptions.MidlineRight);
+        public void Initialize(KeyboardTheme theme)
+        {
+            Validate();
+            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _textRect = _text.rectTransform;
+            _caretWidth = _caret.sizeDelta.x;
+            _compositionOpenTag = "<color=#" + ColorUtility.ToHtmlStringRGBA(theme.Composition) + "><u>";
         }
 
         public void Refresh(KeyboardSession session)
@@ -65,7 +62,7 @@ namespace VRKeyboard.App.View
             if (_notice.text != session.Notice) _notice.text = session.Notice;
             string remaining = "あと " + session.RemainingLength + " 文字";
             if (_remaining.text != remaining) _remaining.text = remaining;
-            _remaining.color = session.RemainingLength == 0 ? KeyboardTheme.Warning : KeyboardTheme.TextDim;
+            _remaining.color = session.RemainingLength == 0 ? _theme.RemainingExhausted : _theme.Remaining;
         }
 
         void RefreshText(KeyboardSession session)
@@ -126,10 +123,10 @@ namespace VRKeyboard.App.View
                 bottom = line.descender;
             }
 
-            UiBuilder.Place(_caret, x, -top, CaretWidth, top - bottom);
+            UiRects.Place(_caret, x, -top, _caretWidth, top - bottom);
 
             // キャレットの行の下端が見える位置まで、ただし行の上端は隠さない範囲でずらす。
-            float scroll = Mathf.Clamp(-bottom - _viewportHeight, 0f, -top);
+            float scroll = Mathf.Clamp(-bottom - _viewport.rect.height, 0f, -top);
             _textRect.anchoredPosition = new Vector2(0f, scroll);
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using TMPro;
 using UnityEngine;
 using VRKeyboard.App.Conversion;
 using VRKeyboard.App.Output;
@@ -27,14 +28,30 @@ namespace VRKeyboard.App
     /// Core からの通知（<see cref="IKeyboardEffects"/>）を、振動・変換の通信・送信・環境の切り替えへ振り分ける。
     /// 実行環境（OpenVR / 開発用のキーボード）は <see cref="IKeyboardPlatform"/> の差し替えで切り替える。
     /// 設定画面で変えた値は、キーボードの動作と表示位置へ随時反映し、確定したときに保存する。
+    /// キーボードと設定画面の uGUI はシーンに置き、起動時に検証してから組み立てる（<see cref="ValidateScene"/>）。
     /// </summary>
     public sealed class KeyboardApp : MonoBehaviour, IKeyboardEffects
     {
-        [Tooltip("Noto Sans JP Regular。Include Font Data を有効にしたフォント。")]
-        [SerializeField] Font _regularFont;
+        [Tooltip("Noto Sans JP Regular の編集用のフォントアセット（Dynamic）。シーンの文字はこれか Bold を使い、起動時に実行用のアセットへ差し替える。")]
+        [SerializeField] TMP_FontAsset _regularFont;
 
-        [Tooltip("Noto Sans JP Bold。Include Font Data を有効にしたフォント。")]
-        [SerializeField] Font _boldFont;
+        [Tooltip("Noto Sans JP Bold の編集用のフォントアセット（Dynamic）。")]
+        [SerializeField] TMP_FontAsset _boldFont;
+
+        [Tooltip("状態によって切り替わる色と文字の大きさ。")]
+        [SerializeField] KeyboardTheme _theme;
+
+        [Tooltip("キーボードの描画先。")]
+        [SerializeField] OverlayRenderTarget _keyboardTarget;
+
+        [Tooltip("キーボードの表示。_keyboardTarget のキャンバスと同じオブジェクトに置く。")]
+        [SerializeField] KeyboardView _keyboardView;
+
+        [Tooltip("設定画面の描画先。")]
+        [SerializeField] OverlayRenderTarget _settingsTarget;
+
+        [Tooltip("設定画面の表示。_settingsTarget のキャンバスと同じオブジェクトに置く。")]
+        [SerializeField] SettingsView _settingsView;
 
         // 値はエディタでしか読まないが、シリアライズの構造をエディタとビルドで揃えるためフィールドは常に残す。
         // そのためビルドでは未使用の警告（CS0414）になるので抑止する。
@@ -52,13 +69,9 @@ namespace VRKeyboard.App
         KeyboardSession _session;
         IKeyboardPlatform _platform;
         KeyboardFonts _fonts;
-        OverlayRenderTarget _overlay;
-        KeyboardView _view;
         bool _keyboardShown;
         SettingsStore _settingsStore;
         SettingsForm _settingsForm;
-        OverlayRenderTarget _settingsOverlay;
-        SettingsView _settingsView;
         string _loadNotice;
         ConversionRunner _runner;
         VRChatChatbox _chatbox;
@@ -70,9 +83,6 @@ namespace VRKeyboard.App
 #endif
 
         public KeyboardSession Session => _session;
-
-        /// <summary>キーボードの描画先。OpenVR のオーバーレイのテクスチャとして渡す。</summary>
-        public OverlayRenderTarget Overlay => _overlay;
 
         void Awake()
         {
@@ -88,10 +98,41 @@ namespace VRKeyboard.App
             }
         }
 
+        /// <summary>
+        /// シーンの構成を検証する。足りない参照・誤った設定は、どこが誤っているかを示す例外にする。シーンの状態は変えない。
+        /// </summary>
+        public void ValidateScene()
+        {
+            SceneChecks.Require(_theme, this, nameof(_theme));
+            SceneChecks.Require(_keyboardTarget, this, nameof(_keyboardTarget));
+            SceneChecks.Require(_keyboardView, this, nameof(_keyboardView));
+            SceneChecks.Require(_settingsTarget, this, nameof(_settingsTarget));
+            SceneChecks.Require(_settingsView, this, nameof(_settingsView));
+            KeyboardFonts.ValidateEditFont(_regularFont, SceneChecks.PathOf(transform) + " の " + nameof(_regularFont));
+            KeyboardFonts.ValidateEditFont(_boldFont, SceneChecks.PathOf(transform) + " の " + nameof(_boldFont));
+            _theme.Validate();
+
+            _keyboardTarget.Validate(KeyboardLayer);
+            _settingsTarget.Validate(SettingsLayer);
+            RequireOnCanvas(_keyboardView, _keyboardTarget, nameof(_keyboardView));
+            RequireOnCanvas(_settingsView, _settingsTarget, nameof(_settingsView));
+
+            _keyboardView.Validate();
+            _settingsView.CreateLayout(SettingsCatalog.Items);
+            KeyboardFonts.ValidateTexts(_keyboardTarget.transform, _regularFont, _boldFont);
+            KeyboardFonts.ValidateTexts(_settingsTarget.transform, _regularFont, _boldFont);
+        }
+
+        void RequireOnCanvas(Component view, OverlayRenderTarget target, string field)
+        {
+            if (view.transform != target.Canvas.transform)
+                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + field + " は " +
+                    SceneChecks.PathOf(target.Canvas.transform) + " に置く必要があります（" + SceneChecks.PathOf(view.transform) + " に置かれています）。");
+        }
+
         void Initialize()
         {
-            if (_regularFont == null) throw new InvalidOperationException("Regular フォントが設定されていません。");
-            if (_boldFont == null) throw new InvalidOperationException("Bold フォントが設定されていません。");
+            ValidateScene();
 
             // 非表示のウィンドウでも入力を取りこぼさないよう、VSync を切って一定のフレームレートで回す（SPEC 3.3）。
             QualitySettings.vSyncCount = 0;
@@ -105,16 +146,21 @@ namespace VRKeyboard.App
 
             KeyboardSettings settings = loaded.Settings.ToKeyboardSettings();
             _session = new KeyboardSession(settings, this);
-            _fonts = new KeyboardFonts(_regularFont, _boldFont);
-            _overlay = new OverlayRenderTarget("VRKeyboard Overlay", KeyboardTheme.Width, KeyboardTheme.Height, KeyboardLayer);
-            _view = new KeyboardView(_session, settings, _fonts, _overlay.Canvas.transform);
 
-            _settingsForm = new SettingsForm(new SettingsLayout(SettingsCatalog.Groups), loaded.Settings);
+            // 文字を描く前にフォントを差し替える。編集用のアセットのアトラスに、実行中の文字が追加されないようにするため。
+            _fonts = new KeyboardFonts(_regularFont, _boldFont);
+            _fonts.Apply(_keyboardTarget.transform);
+            _fonts.Apply(_settingsTarget.transform);
+
+            _keyboardTarget.Initialize(KeyboardLayer);
+            _settingsTarget.Initialize(SettingsLayer);
+            _keyboardView.Initialize(_session, settings.ConsonantHand, _theme);
+
+            _settingsForm = new SettingsForm(_settingsView.CreateLayout(SettingsCatalog.Items), loaded.Settings);
             _settingsForm.SetNotice(_loadNotice);
             _settingsForm.Changed += OnSettingsChanged;
             _settingsForm.Committed += OnSettingsCommitted;
-            _settingsOverlay = new OverlayRenderTarget("VRKeyboard Settings", SettingsLayout.Width, SettingsLayout.Height, SettingsLayer);
-            _settingsView = new SettingsView(_settingsForm, _fonts, _settingsOverlay.Canvas.transform);
+            _settingsView.Initialize(_settingsForm, _theme);
             _runner = new ConversionRunner(_session, new GoogleTransliterateClient());
 
             var appSettings = new AppSettings();
@@ -126,7 +172,7 @@ namespace VRKeyboard.App
             _platform.QuitRequested += OnQuitRequested;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             var debugPlatform = _platform as DebugKeyboardPlatform;
-            _preview = new KeyboardPreview(_session, _platform, _overlay.Texture, _settingsOverlay.Texture,
+            _preview = new KeyboardPreview(_session, _platform, _keyboardTarget.Texture, _settingsTarget.Texture,
                 debugPlatform?.DebugHaptics, debugPlatform != null ? _settingsForm : null);
 #endif
         }
@@ -147,7 +193,8 @@ namespace VRKeyboard.App
 
         OpenVRPlatform CreateOpenVRPlatform()
         {
-            return new OpenVRPlatform(_overlay, _settingsOverlay, _settingsForm, _settingsForm.Settings.Placement);
+            var overlayPlacement = new OverlayPlacement(_keyboardView.BoardCenterOffset);
+            return new OpenVRPlatform(_keyboardTarget, _settingsTarget, _settingsForm, overlayPlacement, _settingsForm.Settings.Placement);
         }
 
         void Update()
@@ -168,9 +215,9 @@ namespace VRKeyboard.App
             // キーボードは、開いている間と設定画面の表示中（位置の確認用）だけ描く。
             // 隠れている間に表示の版が変わっていることがあるため、表示し始めたときは必ず描く。
             bool keyboardShown = _session.IsOpen || _platform.IsSettingsVisible;
-            if (keyboardShown && (_view.RefreshIfChanged() || !_keyboardShown)) _overlay.Render();
+            if (keyboardShown && (_keyboardView.RefreshIfChanged() || !_keyboardShown)) _keyboardTarget.Render();
             _keyboardShown = keyboardShown;
-            if (_settingsView.RefreshIfChanged()) _settingsOverlay.Render();
+            if (_settingsView.RefreshIfChanged()) _settingsTarget.Render();
 
             // 送信先は送信の時点まで決まらないため、入力中の表示は出力先を問わず送る（SPEC 7.3）。
             _chatbox.SetTyping(_session.IsOpen && (_session.Committed.Length > 0 || _session.Composition.Length > 0));
@@ -191,8 +238,9 @@ namespace VRKeyboard.App
             // オーバーレイ（OpenVR 側）が描画先のテクスチャを参照しているため、先に環境を閉じる。
             if (_platform != null) _platform.QuitRequested -= OnQuitRequested;
             _platform?.Dispose();
-            _overlay?.Dispose();
-            _settingsOverlay?.Dispose();
+            // シーンの終了時は、描画先のオブジェクトが先に破棄されていることがある。テクスチャはオブジェクトとは別に破棄する。
+            if (_keyboardTarget is not null) _keyboardTarget.Release();
+            if (_settingsTarget is not null) _settingsTarget.Release();
             _fonts?.Dispose();
         }
 

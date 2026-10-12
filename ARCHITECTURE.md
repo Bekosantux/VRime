@@ -24,7 +24,7 @@ VRKeyboard.App  ──→  VRKeyboard.Core
 |---|---|---|
 | `Assets/VRKeyboard/ThirdParty/OpenVR/` | Valve 配布の `openvr_api.cs`・`LICENSE`、`Plugins/x86_64/openvr_api.dll` | Valve 配布のまま変更しない。asmdef は Editor と Windows 64bit に限定し、自動参照しない（`VRKeyboard.App` から明示参照する） |
 | `Assets/StreamingAssets/SteamVR/` | SteamVR アクションマニフェスト（`actions.json`）とコントローラー別の既定バインディング（`bindings_*.json`）、ダッシュボードのタブのアイコン（`dashboard_icon.png`。自作） | ビルド後も実ファイルとして配置される必要があるため StreamingAssets に置く。SteamVR にはこのファイルのパスを渡す |
-| `Assets/VRKeyboard/Fonts/` | Noto Sans JP（Regular・Bold の静的 OTF）と `OFL.txt` | TMP のフォントアセットは置かず、実行時に生成する（Play 中に atlas が書き換わり、アセットに差分が出るのを避けるため）。ライセンス文は再配布に必要なため同梱する |
+| `Assets/VRKeyboard/Fonts/` | Noto Sans JP（Regular・Bold の静的 OTF）と `OFL.txt`、編集用の TMP フォントアセット（`NotoSansJP-* SDF.asset`） | ライセンス文は再配布に必要なため同梱する。OTF は Include Font Data を有効にしておく（実行用のフォントアセットの元になる）。編集用のフォントアセットは Dynamic・atlas 512・Clear Dynamic Data On Build。エディターでシーンを開くと表示した文字が atlas に追加され、アセットに差分が出る（Play 中は実行用のアセットに差し替えるため出ない） |
 
 ## VRKeyboard.Core の構成
 
@@ -69,7 +69,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 | 場所 | クラス | 責務 |
 |---|---|---|
-| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「環境のイベント（`BeginFrame`）→ ダッシュボードの状態を渡す → 入力を読む → `Tick` → 変換の中止判定 → 表示の更新 → `/chatbox/typing` → チャットボックスの送信」を行う。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない。フォント（Regular・Bold）はシリアライズフィールドで受け取り、未設定は例外 |
+| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「環境のイベント（`BeginFrame`）→ ダッシュボードの状態を渡す → 入力を読む → `Tick` → 変換の中止判定 → 表示の更新 → `/chatbox/typing` → チャットボックスの送信」を行う。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない。編集用のフォントアセット・`KeyboardTheme`・2つの描画先とビューはシリアライズフィールドで受け取り、起動時に `ValidateScene()` でシーンの構成を検証する（誤りは場所を示す例外） |
 | `Input/` | `IControllerSource` / `IHapticOutput` | 入力元（1フレーム分の `ControllerFrame` を返す）と振動の出力先の境界。OpenVR 実装はこの境界に差す |
 | | `DebugKeyboardControllerSource` / `DebugHapticOutput` | PC のキーボード（旧 Input Manager）で両手を模す開発用の入力元と、直近の振動を保持して表示に渡す出力先。**キー割り当ては `DebugKeyboardControllerSource.Read` が唯一の定義**（画面への表示は `KeyboardPreview`） |
 | `Platform/` | `IKeyboardPlatform` | 実行環境の境界。`Controller`・`Haptics`・`IsDashboardVisible`・`IsSettingsVisible`・`QuitRequested`、毎フレームの `BeginFrame()`（環境のイベントの処理）、開閉の通知 `OnOpenChanged(bool)`、キーボードの位置の変更 `SetPlacement` を持つ。実装は `OpenVRPlatform` と `DebugKeyboardPlatform` |
@@ -83,19 +83,22 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `OverlayTextureSubmitter` | `SetOverlayTexture` を Unity のレンダースレッドで呼ぶ。`SetOverlayTexture` は呼び出したスレッドで、テクスチャの D3D11 デバイスのイミディエイトコンテキストを使ってコピーする。このコンテキストは Unity のレンダースレッドも使うため、メインスレッドから呼ぶと同時使用になり、GPU ドライバー内でクラッシュした。`GL.IssuePluginEvent` で描画コマンドの直後に実行を依頼するため、渡すテクスチャには描画が完了した内容が入る。コールバックは静的な登録簿（id → インスタンス）を引き、未登録なら何もしない。`Dispose` は同じロックの下で登録を解除するため、戻った後は `DestroyOverlay` と `VR_Shutdown` を安全に呼べる。コールバックは例外を出さず、最初の失敗を記録して、メインスレッドの `ThrowIfFailed` で送出する |
 | | `SettingsDashboardOverlay` | 設定画面のダッシュボードオーバーレイ（タブ）とアイコン。入力方式はマウスで、マウスの座標の範囲をテクスチャのピクセル数にする。毎フレームの `Update` でオーバーレイのイベントを読み、マウスの移動・左ボタンを `ISettingsPointer` へ渡す（OpenVR の座標は左下が原点のため上下を反転する）。フォーカスを失う・隠れる・ダッシュボードが閉じるときは `PointerLeave` を呼ぶ。表示の状態は `IsOverlayVisible` で読む。テクスチャは `KeyboardOverlay` と同じく `OverlayTextureSubmitter` で渡す |
 | | `OverlayTextures` | RenderTexture をオーバーレイに渡すための共通の処理（ネイティブテクスチャの取得、乗算済みアルファ、D3D11 の上下反転のためのテクスチャの範囲 `vMin=1, vMax=0`） |
-| | `OverlayPlacement` | `KeyboardPlacement`（SPEC 4.1）を、`KeyboardTheme` の寸法から 3×4 の行列にする。基準は盤面の中心（テクスチャの中心ではない） |
+| | `OverlayPlacement` | `KeyboardPlacement`（SPEC 4.1）を 3×4 の行列にする。基準は盤面の中心（テクスチャの中心ではない）で、そのずれは `KeyboardView.BoardCenterOffset`（シーンの盤面の位置から求める）を受け取る |
 | | `OpenVRErrors` | `EVRInputError` / `EVROverlayError` の検査。失敗は操作名とエラー名を含む例外にする |
-| `View/` | `KeyboardView` | 表示の根。盤面・入力欄・グリップパネル・候補欄を組み立て、`RefreshIfChanged()` で `ViewVersion` が変わったときだけ各部を更新する |
-| | `GripPanelView` / `InputAreaView` / `CandidateAreaView` | それぞれグリップのパネル（母音側・子音側、機能ページのヒント、ページ・全半角・大小のチップ）、入力欄（確定・未確定・カーソル・残り文字数・通知）、候補欄（応答待ち・文節と候補・失敗の理由）。いずれも `KeyboardSession` の状態を読むだけで、操作は持たない |
-| | `SettingsView` | 設定画面の uGUI。`SettingsLayout` の配置で組み立て、`SettingsForm.Version` が変わったときだけ更新する。操作は持たない |
-| | `OverlayRenderTarget` | 専用の無効なカメラと透明な RenderTexture、Screen Space - Camera のキャンバス。名前・大きさ・レイヤーは描画先ごとに受け取る。`Render()` を呼んだときだけ 1回描き、`Rendered` イベントで通知する。`Texture` が OpenVR のオーバーレイへ渡すもの |
-| | `KeyboardFonts` | 日本語フォント（Regular・Bold）から TMP の動的フォントアセットを実行時に生成する（アセットとして保存しない）。atlas は満杯になると増える（multi atlas） |
-| | `KeyboardTheme` / `UiBuilder` | 寸法と色の定数（キーボードのテクスチャは 1024×1024、設定画面の文字の大きさと色を含む）と、uGUI をコードで組み立てる補助 |
+| `View/` | `KeyboardView` | キーボードの表示の根（キャンバスに置く）。`RefreshIfChanged()` で `ViewVersion` が変わったときだけ各部を更新する。`BoardCenterOffset` は盤面（`_board`）の中心のテクスチャの中心からのずれ |
+| | `GripPanelView` / `GripPanelCell` / `GripPanelChip` | グリップのパネル（左右 3×3 のセル・役割の見出し・ページ・全半角・大小の札）。子音を担当する手に応じて、左右のどちらを子音側にするかを決める |
+| | `InputAreaView` | 入力欄（確定・未確定・キャレット・残り文字数・通知）。キャレットは文字の配置から位置と高さを決め、行が溢れたら文字をずらす |
+| | `CandidateAreaView` / `CandidateColumn` / `CandidateLabel` | 候補欄（応答待ち・文節と候補・失敗の帯）。文節の列と候補の行はシーンの雛形を複製し、雛形は起動時に非表示にする |
+| | `SettingsView` / `SettingsRow` / `SettingsButton` | 設定画面（キャンバスに置く）。行は `_key` で `SettingsCatalog` の項目と対応させ、`CreateLayout` でシーンの矩形から `SettingsLayout` を作る。`SettingsForm.Version` が変わったときだけ更新する。操作は持たない |
+| | `OverlayRenderTarget` | 描画先の根（MonoBehaviour）。子に無効な正投影のカメラと World Space のキャンバスを持つ。`Initialize` でキャンバスと同じピクセル数の透明な RenderTexture を作り、カメラをキャンバスの正面に合わせる。`Render()` を呼んだときだけ 1回描き、`Rendered` イベントで通知する。テクスチャの破棄（`Release`）はオーバーレイの破棄の後に `KeyboardApp` が呼ぶ |
+| | `KeyboardFonts` | 編集用のフォントアセットの元のフォントから、実行用の Dynamic SDF フォントアセット（atlas 2048・multi atlas）を作り、描画先の下のすべての文字のフォントを差し替える（保存しない）。最初の描画より前に差し替えるため、編集用のアセットは書き換わらない |
+| | `KeyboardTheme` | 状態によって切り替わる色と文字の大きさ（ScriptableObject。`Assets/VRKeyboard/UI/KeyboardTheme.asset`）。状態によらない見た目はシーンに置く |
+| | `UiRects` / `SceneChecks` | 左上を原点・下向きを正とする矩形の配置と読み取り（当たり判定と盤面の位置に使う）。シーンの参照の検証（どのオブジェクトのどの欄かを示す例外） |
 | | `KeyboardPreview` | エディターと開発ビルド専用。メインカメラを使わず OnGUI で、テクスチャ・振動・操作キーを表示する。設定画面の表示中は設定画面のテクスチャを表示し、開発用の環境ではマウスの操作を `ISettingsPointer` へ渡す |
 | `Settings/` | `UserSettings` / `KeyboardPlacement` / `SettingRange` | 設定画面で変える値（表示位置と2つのしきい値）。不変で、範囲外は例外。`SettingRange` は範囲と刻みを持ち、刻みに丸める。しきい値の既定値は Core の `KeyboardSettings` の既定値から取る。`ToKeyboardSettings` で Core の設定にする |
 | | `SettingsSerializer` / `SettingsStore` / `SettingsLoadResult` | 設定ファイルの JSON（形式は SPEC 8.1）への変換と読み書き。内容が正しくないファイルは別名に移し、既定値と通知を返す。読み書きの IO の失敗は例外のまま上げる。保存は一時ファイルに書いてから置き換える |
-| | `SettingsCatalog` / `SettingGroup` / `SettingItem` | 画面に並べる項目の定義（見出し・注記・項目名・範囲・値の読み書き・表示の形式）。項目を足すときはここに加える |
-| | `SettingsLayout` / `SettingsGroupLayout` / `SettingsRowLayout` / `SettingsHit` | 設定画面の配置（テクスチャ 1280×800 のピクセル、左上が原点）と当たり判定。表示（`SettingsView`）と操作（`SettingsForm`）が同じ配置を使う。項目が下端に収まらなければ例外 |
+| | `SettingsCatalog` / `SettingItem` | 設定画面で変える項目の定義（キー・範囲・値の読み書き・表示の形式）。キーは設定ファイルの項目名と同じ。項目を足すときは、ここに加え、シーンに同じキーの `SettingsRow` を置く |
+| | `SettingsLayout` / `SettingsRowLayout` / `SettingsHit` | 設定画面の操作の対象の配置（テクスチャのピクセル、左上が原点）と当たり判定。シーンの矩形から作り（`SettingsView.CreateLayout`）、表示と操作（`SettingsForm`）が同じ配置を使う。対象の重なり・画面外・大きさが正でないものは例外 |
 | | `SettingsForm` / `ISettingsPointer` | 設定画面の状態（値・指している対象・つまんでいるスライダー・押しているボタン・通知・版）とポインターの操作。ボタンは押したときと離したときの対象が同じなら実行する。値が変わるたびに `Changed`、スライダーを離す・ボタンを実行するなどで値が確定し、前回の確定から変わっていれば `Committed` を出す |
 | `Conversion/` | `ConversionRunner` | 変換の要求を `GoogleTransliterateClient` に渡し、結果を `CompleteConversion` / `FailConversion` で返す。通信は同時に 1件で、新しい要求・応答待ちの終了・破棄のときは前の通信を中止する |
 | | `GoogleTransliterateClient` | `TransliterateApi` の URL に `UnityWebRequest` で GET し、文節の一覧を返す（`Awaitable`・メインスレッド専用）。制限時間は 2秒で、自前の時計で測る。ログや例外に読みを含めない |
@@ -112,10 +115,18 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 **描画の流れと構成**
 
 - 描画は `KeyboardApp.Update` が `KeyboardView.RefreshIfChanged()` で `ViewVersion` の変化を検出したときだけ `OverlayRenderTarget.Render()` を呼ぶ。キーボードは開いている間と設定画面の表示中だけ描き、表示し始めたフレームでは版が変わっていなくても描く。設定画面は `SettingsView.RefreshIfChanged()` が true のときに描く。
-- `Render()` は `Canvas.ForceUpdateCanvases()` でレイアウトと TMP のメッシュを確定してから、`RenderPipeline.SubmitRenderRequest`（URP の `SingleCameraRequest`）で無効なカメラを 1回描く。`Camera.Render()` と違い、出力先を要求に含められ、対応していないパイプラインでは例外にできる。カメラの `targetTexture` は常に設定しておく（Screen Space - Camera のキャンバスの大きさがテクスチャのピクセルに一致するため）。
+- `Render()` は `Canvas.ForceUpdateCanvases()` でレイアウトと TMP のメッシュを確定してから、`RenderPipeline.SubmitRenderRequest`（URP の `SingleCameraRequest`）で無効なカメラを 1回描く。`Camera.Render()` と違い、出力先を要求に含められ、対応していないパイプラインでは例外にできる。
 - 描画先ごとのレイヤー `VRKeyboardOverlay`（キーボード）と `VRKeyboardSettings`（設定画面）を Tags and Layers に登録している。各カメラは自分のレイヤーだけを映す（同じ位置にある別の描画先の uGUI を映さないため）。TMP の `Mobile/Distance Field` シェーダーは Always Included Shaders に登録している（ビルドで除外されないため）。
 - TMP の `Ellipsis` は、レイアウトで幅が決まる文字では描かれなくなるため、候補欄は文字列を自前で切って省略記号を付ける。
-- シーン `Assets/VRKeyboard/Scenes/Main.unity` は `KeyboardApp` を持つ 1つのオブジェクトだけで構成し、フォントを設定する。Build Settings の先頭に登録している。
+- シーン `Assets/VRKeyboard/Scenes/Main.unity` を Build Settings の先頭に登録している。
+
+**シーンの uGUI**
+
+- `Main.unity` は `KeyboardApp` と、2つの描画先 `KeyboardOverlay`（キャンバス 1024×1024）・`SettingsOverlay`（1280×800）で構成する。キャンバスの大きさがテクスチャのピクセル数になり、拡大率は 1 のままにする。2つの描画先は互いに離して置く（エディターで重ならないようにするため。描画はレイヤーで分かれる）。
+- 描画先の下のオブジェクトはすべて描画先のレイヤーに置く。部品を足すときもレイヤーを合わせる（違えば起動時の検証で例外）。
+- 配置・大きさ・固定の色・項目名などのラベルはシーンで調整する。状態で変わる色と大きさは `KeyboardTheme`、文字の内容は各ビューが書き換える。シーンの文字には仮の文字を入れてある。
+- 文字のフォントは2つの編集用のフォントアセットのどちらかにする。リッチテキストは入力欄の文字だけが使う。
+- `KeyboardApp.ValidateScene()` は EditMode テスト（`MainSceneTests`）でも実行する。シーンを変えたらテストで確かめる。
 
 **入力元の選択と開閉の流れ**
 

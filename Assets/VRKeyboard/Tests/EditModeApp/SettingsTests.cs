@@ -257,47 +257,38 @@ namespace VRKeyboard.App.Tests
         }
     }
 
+    /// <summary>シーンの設定画面と同じ寸法の配置（1280×800。行の高さ 72・［−］・スライダー・［＋］を横に並べる）。</summary>
+    internal static class TestSettingsLayout
+    {
+        public static readonly Vector2 Size = new Vector2(1280f, 800f);
+        public static readonly Rect Reset = new Rect(992f, 732f, 240f, 52f);
+        const float FirstRowTop = 144f;
+        const float RowHeight = 72f;
+
+        public static SettingsLayout Create()
+        {
+            var rows = new List<SettingsRowLayout>();
+            for (int i = 0; i < SettingsCatalog.Items.Count; i++) rows.Add(Row(SettingsCatalog.Items[i], FirstRowTop + RowHeight * i));
+            return new SettingsLayout(Size, rows, Reset);
+        }
+
+        public static SettingsRowLayout Row(SettingItem item, float top)
+        {
+            var slider = new Rect(440f, top, 520f, RowHeight);
+            return new SettingsRowLayout(item,
+                new Rect(360f, top + 4f, 64f, 64f),
+                slider,
+                new Rect(976f, top + 4f, 64f, 64f),
+                new Rect(slider.xMin + 18f, slider.center.y - 5f, slider.width - 36f, 10f));
+        }
+
+        /// <summary>行の左（項目名の位置）。操作の対象がない。</summary>
+        public static Vector2 LabelPoint(SettingsRowLayout row) => new Vector2(200f, row.Slider.center.y);
+    }
+
     public sealed class SettingsLayoutTests
     {
-        readonly SettingsLayout _layout = new SettingsLayout(SettingsCatalog.Groups);
-
-        [Test]
-        public void すべての項目に行がある()
-        {
-            var items = new List<SettingItem>();
-            foreach (SettingGroup group in SettingsCatalog.Groups) items.AddRange(group.Items);
-            Assert.AreEqual(items.Count, _layout.Rows.Count);
-            for (int i = 0; i < items.Count; i++) Assert.AreSame(items[i], _layout.Rows[i].Item);
-        }
-
-        [Test]
-        public void 部品は画面に収まり重ならない()
-        {
-            var rects = new List<Rect> { _layout.Title, _layout.Notice, _layout.Reset };
-            foreach (SettingsGroupLayout group in _layout.Groups)
-            {
-                rects.Add(group.Title);
-                rects.Add(group.Note);
-            }
-            foreach (SettingsRowLayout row in _layout.Rows)
-            {
-                rects.Add(row.Label);
-                rects.Add(row.Decrease);
-                rects.Add(row.Slider);
-                rects.Add(row.Increase);
-                rects.Add(row.Value);
-            }
-            foreach (Rect rect in rects)
-            {
-                bool inside = rect.xMin >= 0f && rect.yMin >= 0f && rect.xMax <= SettingsLayout.Width && rect.yMax <= SettingsLayout.Height;
-                Assert.IsTrue(inside, rect + " が画面の外");
-            }
-            for (int i = 0; i < rects.Count; i++)
-            {
-                for (int j = i + 1; j < rects.Count; j++)
-                    Assert.IsFalse(rects[i].Overlaps(rects[j]), rects[i] + " と " + rects[j] + " が重なる");
-            }
-        }
+        readonly SettingsLayout _layout = TestSettingsLayout.Create();
 
         [Test]
         public void 当たり判定()
@@ -307,19 +298,78 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(new SettingsHit(SettingsTarget.Decrease, row.Item), _layout.HitTest(row.Decrease.center));
             Assert.AreEqual(new SettingsHit(SettingsTarget.Increase, row.Item), _layout.HitTest(row.Increase.center));
             Assert.AreEqual(new SettingsHit(SettingsTarget.Reset, null), _layout.HitTest(_layout.Reset.center));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(row.Label.center));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(TestSettingsLayout.LabelPoint(row)));
             Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(-10f, -10f)));
         }
 
         [Test]
-        public void スライダーの位置は両端で0と1()
+        public void スライダーの位置は値の範囲の両端で0と1()
         {
             SettingsRowLayout row = _layout.Rows[0];
-            Assert.AreEqual(0f, row.FractionAt(row.TrackLeft));
-            Assert.AreEqual(1f, row.FractionAt(row.TrackLeft + row.TrackWidth));
+            Assert.AreEqual(0f, row.FractionAt(row.Track.xMin));
+            Assert.AreEqual(1f, row.FractionAt(row.Track.xMax));
             Assert.AreEqual(0f, row.FractionAt(row.Slider.xMin));
             Assert.AreEqual(1f, row.FractionAt(row.Slider.xMax));
-            Assert.AreEqual(0.5f, row.FractionAt(row.TrackLeft + row.TrackWidth / 2f), 1e-6f);
+            Assert.AreEqual(0.5f, row.FractionAt(row.Track.center.x), 1e-6f);
+        }
+
+        [Test]
+        public void 隣り合う行は接していても重ならない()
+        {
+            Assert.AreEqual(_layout.Rows[0].Slider.yMax, _layout.Rows[1].Slider.yMin);
+            Assert.DoesNotThrow(() => TestSettingsLayout.Create());
+        }
+
+        [Test]
+        public void 操作の対象が重なると例外()
+        {
+            var rows = new List<SettingsRowLayout>
+            {
+                TestSettingsLayout.Row(SettingsCatalog.Items[0], 100f),
+                TestSettingsLayout.Row(SettingsCatalog.Items[1], 140f),
+            };
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, TestSettingsLayout.Reset));
+        }
+
+        [Test]
+        public void 操作の対象が画面の外にあると例外()
+        {
+            var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.Items[0], 760f) };
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, TestSettingsLayout.Reset));
+        }
+
+        [Test]
+        public void 操作の対象の大きさが正でないと例外()
+        {
+            var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.Items[0], 100f) };
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, new Rect(992f, 732f, 0f, 52f)));
+        }
+
+        [Test]
+        public void 同じ項目の行が重複すると例外()
+        {
+            var rows = new List<SettingsRowLayout>
+            {
+                TestSettingsLayout.Row(SettingsCatalog.Items[0], 100f),
+                TestSettingsLayout.Row(SettingsCatalog.Items[0], 300f),
+            };
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, TestSettingsLayout.Reset));
+        }
+
+        [Test]
+        public void 値の範囲の幅が正でないと例外()
+        {
+            SettingItem item = SettingsCatalog.Items[0];
+            Assert.Throws<ArgumentException>(() => new SettingsRowLayout(item,
+                new Rect(360f, 104f, 64f, 64f), new Rect(440f, 100f, 520f, 72f), new Rect(976f, 104f, 64f, 64f), new Rect(458f, 131f, 0f, 10f)));
+        }
+
+        [Test]
+        public void 配置にない項目の行は例外()
+        {
+            var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.Items[0], 100f) };
+            var layout = new SettingsLayout(TestSettingsLayout.Size, rows, TestSettingsLayout.Reset);
+            Assert.Throws<ArgumentException>(() => layout.RowOf(SettingsCatalog.Items[1]));
         }
     }
 
@@ -328,10 +378,10 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 値の表示()
         {
-            SettingItem down = Item("下への距離");
-            SettingItem right = Item("左右の位置");
-            SettingItem tilt = Item("傾き");
-            SettingItem trigger = Item("トリガーのしきい値");
+            SettingItem down = SettingsCatalog.Find("downMeters");
+            SettingItem right = SettingsCatalog.Find("rightMeters");
+            SettingItem tilt = SettingsCatalog.Find("tiltDegrees");
+            SettingItem trigger = SettingsCatalog.Find("triggerThreshold");
             Assert.AreEqual("26 cm", down.Format(0.26f));
             Assert.AreEqual("中央", right.Format(0f));
             Assert.AreEqual("右 12 cm", right.Format(0.12f));
@@ -344,31 +394,32 @@ namespace VRKeyboard.App.Tests
         public void 項目ごとに対応する値を読み書きする()
         {
             UserSettings s = UserSettings.Default;
-            Assert.AreEqual(0.30f, Item("下への距離").Get(Item("下への距離").Set(s, 0.30f)));
-            Assert.AreEqual(1.20f, Item("前への距離").Set(s, 1.20f).Placement.ForwardMeters);
-            Assert.AreEqual(-0.10f, Item("左右の位置").Set(s, -0.10f).Placement.RightMeters);
-            Assert.AreEqual(40f, Item("傾き").Set(s, 40f).Placement.TiltDegrees);
-            Assert.AreEqual(0.60f, Item("幅").Set(s, 0.60f).Placement.WidthMeters);
-            Assert.AreEqual(0.50f, Item("トリガーのしきい値").Set(s, 0.50f).TriggerThreshold);
-            Assert.AreEqual(0.65f, Item("スティックのしきい値").Set(s, 0.65f).StickThreshold);
+            Assert.AreEqual(0.30f, SettingsCatalog.Find("downMeters").Get(SettingsCatalog.Find("downMeters").Set(s, 0.30f)));
+            Assert.AreEqual(1.20f, SettingsCatalog.Find("forwardMeters").Set(s, 1.20f).Placement.ForwardMeters);
+            Assert.AreEqual(-0.10f, SettingsCatalog.Find("rightMeters").Set(s, -0.10f).Placement.RightMeters);
+            Assert.AreEqual(40f, SettingsCatalog.Find("tiltDegrees").Set(s, 40f).Placement.TiltDegrees);
+            Assert.AreEqual(0.60f, SettingsCatalog.Find("widthMeters").Set(s, 0.60f).Placement.WidthMeters);
+            Assert.AreEqual(0.50f, SettingsCatalog.Find("triggerThreshold").Set(s, 0.50f).TriggerThreshold);
+            Assert.AreEqual(0.65f, SettingsCatalog.Find("stickThreshold").Set(s, 0.65f).StickThreshold);
         }
 
         [Test]
         public void 設定する値は刻みに揃える()
         {
-            Assert.AreEqual(0.55f, Item("トリガーのしきい値").Set(UserSettings.Default, 0.56f).TriggerThreshold);
+            Assert.AreEqual(0.55f, SettingsCatalog.Find("triggerThreshold").Set(UserSettings.Default, 0.56f).TriggerThreshold);
         }
 
-        internal static SettingItem Item(string label)
+        [Test]
+        public void 項目のキーは重複しない()
         {
-            foreach (SettingGroup group in SettingsCatalog.Groups)
-            {
-                foreach (SettingItem item in group.Items)
-                {
-                    if (item.Label == label) return item;
-                }
-            }
-            throw new ArgumentException("項目がありません: " + label);
+            var keys = new HashSet<string>();
+            foreach (SettingItem item in SettingsCatalog.Items) Assert.IsTrue(keys.Add(item.Key), item.Key);
+        }
+
+        [Test]
+        public void ない項目のキーは例外()
+        {
+            Assert.Throws<ArgumentException>(() => SettingsCatalog.Find("unknown"));
         }
     }
 
@@ -382,7 +433,7 @@ namespace VRKeyboard.App.Tests
         [SetUp]
         public void SetUp()
         {
-            _layout = new SettingsLayout(SettingsCatalog.Groups);
+            _layout = TestSettingsLayout.Create();
             _form = new SettingsForm(_layout, UserSettings.Default);
             _changed = new List<UserSettings>();
             _committed = new List<UserSettings>();
@@ -390,12 +441,12 @@ namespace VRKeyboard.App.Tests
             _form.Committed += s => _committed.Add(s);
         }
 
-        SettingsRowLayout Row(string label) => _layout.RowOf(SettingsCatalogTests.Item(label));
+        SettingsRowLayout Row(string key) => _layout.RowOf(SettingsCatalog.Find(key));
 
         [Test]
         public void 増やすボタンで刻み1つ分増えて確定する()
         {
-            SettingsRowLayout row = Row("傾き");
+            SettingsRowLayout row = Row("tiltDegrees");
             _form.PointerDown(row.Increase.center);
             Assert.AreEqual(0, _changed.Count, "押しただけでは変わらない");
             _form.PointerUp(row.Increase.center);
@@ -409,7 +460,7 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 減らすボタンで刻み1つ分減る()
         {
-            SettingsRowLayout row = Row("トリガーのしきい値");
+            SettingsRowLayout row = Row("triggerThreshold");
             _form.PointerDown(row.Decrease.center);
             _form.PointerUp(row.Decrease.center);
             Assert.AreEqual(0.65f, _form.Settings.TriggerThreshold);
@@ -418,9 +469,9 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void ボタンの外で離すと働かない()
         {
-            SettingsRowLayout row = Row("傾き");
+            SettingsRowLayout row = Row("tiltDegrees");
             _form.PointerDown(row.Increase.center);
-            _form.PointerUp(row.Label.center);
+            _form.PointerUp(TestSettingsLayout.LabelPoint(row));
             Assert.AreEqual(UserSettings.Default, _form.Settings);
             Assert.AreEqual(0, _committed.Count);
         }
@@ -431,7 +482,7 @@ namespace VRKeyboard.App.Tests
             var form = new SettingsForm(_layout, UserSettings.Default.WithTriggerThreshold(UserSettings.TriggerThresholdRange.Max));
             int committed = 0;
             form.Committed += _ => committed++;
-            SettingsRowLayout row = Row("トリガーのしきい値");
+            SettingsRowLayout row = Row("triggerThreshold");
             form.PointerDown(row.Increase.center);
             form.PointerUp(row.Increase.center);
             Assert.AreEqual(0, committed);
@@ -440,19 +491,19 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void スライダーはつまんでいる間随時変わり離したときに確定する()
         {
-            SettingsRowLayout row = Row("左右の位置");
+            SettingsRowLayout row = Row("rightMeters");
             float y = row.Slider.center.y;
-            _form.PointerDown(new Vector2(row.TrackLeft, y));
+            _form.PointerDown(new Vector2(row.Track.xMin, y));
             Assert.AreEqual(-0.50f, _form.Settings.Placement.RightMeters);
             Assert.AreSame(row.Item, _form.DraggingItem);
 
             // 行の外へ動かしても、つまんでいる間は追従する。
-            _form.PointerMove(new Vector2(row.TrackLeft + row.TrackWidth, y + 200f));
+            _form.PointerMove(new Vector2(row.Track.xMax, y + 200f));
             Assert.AreEqual(0.50f, _form.Settings.Placement.RightMeters);
             Assert.AreEqual(2, _changed.Count);
             Assert.AreEqual(0, _committed.Count);
 
-            _form.PointerUp(new Vector2(row.TrackLeft + row.TrackWidth, y + 200f));
+            _form.PointerUp(new Vector2(row.Track.xMax, y + 200f));
             Assert.IsNull(_form.DraggingItem);
             Assert.AreEqual(1, _committed.Count);
             Assert.AreEqual(0.50f, _committed[0].Placement.RightMeters);
@@ -461,10 +512,10 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void スライダーを元の値に戻して離すと確定しない()
         {
-            SettingsRowLayout row = Row("左右の位置");
+            SettingsRowLayout row = Row("rightMeters");
             float y = row.Slider.center.y;
-            float center = row.TrackLeft + row.TrackWidth / 2f;
-            _form.PointerDown(new Vector2(row.TrackLeft, y));
+            float center = row.Track.center.x;
+            _form.PointerDown(new Vector2(row.Track.xMin, y));
             _form.PointerMove(new Vector2(center, y));
             _form.PointerUp(new Vector2(center, y));
             Assert.AreEqual(UserSettings.Default, _form.Settings);
@@ -474,8 +525,8 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void つまんだままポインターが外れると確定する()
         {
-            SettingsRowLayout row = Row("幅");
-            _form.PointerDown(new Vector2(row.TrackLeft, row.Slider.center.y));
+            SettingsRowLayout row = Row("widthMeters");
+            _form.PointerDown(new Vector2(row.Track.xMin, row.Slider.center.y));
             _form.PointerLeave();
             Assert.IsNull(_form.DraggingItem);
             Assert.AreEqual(1, _committed.Count);
@@ -497,7 +548,7 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 指しているものと押しているものが変わると版が増える()
         {
-            SettingsRowLayout row = Row("傾き");
+            SettingsRowLayout row = Row("tiltDegrees");
             int version = _form.Version;
             _form.PointerMove(row.Increase.center);
             Assert.AreEqual(new SettingsHit(SettingsTarget.Increase, row.Item), _form.Hover);

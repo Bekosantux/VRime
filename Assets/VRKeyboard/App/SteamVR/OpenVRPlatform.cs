@@ -34,13 +34,15 @@ namespace VRKeyboard.App.SteamVR
         /// <param name="renderTarget">キーボードの描画先。描かれるたびに、そのテクスチャをオーバーレイへ渡す。</param>
         /// <param name="settingsRenderTarget">設定画面の描画先。描かれるたびに、そのテクスチャをダッシュボードのタブへ渡す。</param>
         /// <param name="settingsPointer">設定画面へのレーザーの操作の渡し先。</param>
+        /// <param name="overlayPlacement">キーボードの位置からオーバーレイの変換を求めるもの。</param>
         /// <param name="placement">キーボードのオーバーレイの最初の位置。</param>
         public OpenVRPlatform(OverlayRenderTarget renderTarget, OverlayRenderTarget settingsRenderTarget,
-            ISettingsPointer settingsPointer, KeyboardPlacement placement)
+            ISettingsPointer settingsPointer, OverlayPlacement overlayPlacement, KeyboardPlacement placement)
         {
-            _renderTarget = renderTarget ?? throw new ArgumentNullException(nameof(renderTarget));
-            _settingsRenderTarget = settingsRenderTarget ?? throw new ArgumentNullException(nameof(settingsRenderTarget));
+            _renderTarget = renderTarget != null ? renderTarget : throw new ArgumentNullException(nameof(renderTarget));
+            _settingsRenderTarget = settingsRenderTarget != null ? settingsRenderTarget : throw new ArgumentNullException(nameof(settingsRenderTarget));
             if (settingsPointer == null) throw new ArgumentNullException(nameof(settingsPointer));
+            if (overlayPlacement == null) throw new ArgumentNullException(nameof(overlayPlacement));
             if (placement == null) throw new ArgumentNullException(nameof(placement));
 
             string manifest = Path.Combine(Application.streamingAssetsPath, ActionManifestRelativePath);
@@ -50,7 +52,7 @@ namespace VRKeyboard.App.SteamVR
                 var actions = new OpenVRActions();
                 _controller = new OpenVRControllerSource(actions);
                 _haptics = new OpenVRHapticOutput(actions);
-                _overlay = new KeyboardOverlay(renderTarget.Texture, placement);
+                _overlay = new KeyboardOverlay(renderTarget.Texture, overlayPlacement, placement);
                 _settingsOverlay = new SettingsDashboardOverlay(settingsRenderTarget.Texture, settingsPointer);
                 _runtime.QuitRequested += OnRuntimeQuitRequested;
                 _renderTarget.Rendered += OnRendered;
@@ -108,8 +110,9 @@ namespace VRKeyboard.App.SteamVR
         {
             if (_disposed) return;
             _disposed = true;
-            if (_renderTarget != null) _renderTarget.Rendered -= OnRendered;
-            if (_settingsRenderTarget != null) _settingsRenderTarget.Rendered -= OnSettingsRendered;
+            // 描画先はコンストラクタの最初に設定済み。シーンの終了で破棄されていても、イベントの解除はできる。
+            _renderTarget.Rendered -= OnRendered;
+            _settingsRenderTarget.Rendered -= OnSettingsRendered;
             try
             {
                 try

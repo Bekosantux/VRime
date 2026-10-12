@@ -5,80 +5,53 @@ using UnityEngine;
 namespace VRKeyboard.App.Settings
 {
     /// <summary>
-    /// 設定画面の配置。座標はテクスチャのピクセルで、左上を原点とし、下向きを正とする（<see cref="View.UiBuilder"/> と同じ）。
-    /// 表示（<see cref="View.SettingsView"/>）と、ポインターの当たり判定（<see cref="SettingsForm"/>）が同じ配置を使う。
+    /// 設定画面の操作の対象の配置と当たり判定。座標はテクスチャのピクセルで、左上を原点とし、下向きを正とする。
+    /// 配置はシーンの uGUI から作る（<see cref="View.SettingsView.CreateLayout"/>）。表示とポインターの当たり判定（<see cref="SettingsForm"/>）が同じ配置を使う。
+    /// 操作の対象が画面の外にある・互いに重なる配置は、どれを指しているか決まらないため例外にする。
     /// </summary>
     public sealed class SettingsLayout
     {
-        public const int Width = 1280;
-        public const int Height = 800;
-
-        const float PaddingX = 48f;
-        const float ContentWidth = Width - PaddingX * 2f;
-        const float TitleTop = 24f;
-        const float TitleHeight = 56f;
-        const float GroupGap = 16f;
-        const float HeaderHeight = 48f;
-        const float RowHeight = 72f;
-        const float LabelWidth = 300f;
-        const float ButtonSize = 64f;
-        const float DecreaseX = 360f;
-        const float SliderX = 440f;
-        const float SliderWidth = 520f;
-        const float IncreaseX = 976f;
-        const float ValueX = 1056f;
-        const float FooterTop = 720f;
-        const float ResetWidth = 240f;
-        const float ResetHeight = 52f;
-
-        /// <summary>つまみの半分の幅。つまみが端からはみ出さないよう、スライダーの両端をこの分だけ内側にした範囲を値の範囲とする。</summary>
-        public const float ThumbHalfWidth = 18f;
-
-        public SettingsLayout(IReadOnlyList<SettingGroup> groups)
+        /// <param name="size">画面（テクスチャ）の大きさ。</param>
+        /// <param name="rows">項目の行。項目の重複は許さない。</param>
+        /// <param name="reset">「既定に戻す」のボタン。</param>
+        public SettingsLayout(Vector2 size, IReadOnlyList<SettingsRowLayout> rows, Rect reset)
         {
-            if (groups == null) throw new ArgumentNullException(nameof(groups));
-            if (groups.Count == 0) throw new ArgumentException("項目のまとまりがありません。", nameof(groups));
+            if (!(size.x > 0f) || !(size.y > 0f)) throw new ArgumentOutOfRangeException(nameof(size), size, "画面の大きさが正ではありません。");
+            if (rows == null) throw new ArgumentNullException(nameof(rows));
 
-            Title = new Rect(PaddingX, TitleTop, ContentWidth, TitleHeight);
-
-            var groupLayouts = new List<SettingsGroupLayout>(groups.Count);
-            var rows = new List<SettingsRowLayout>();
-            float y = TitleTop + TitleHeight + GroupGap;
-            foreach (SettingGroup group in groups)
+            var screen = new Rect(Vector2.zero, size);
+            var targets = new List<(string name, Rect rect)> { ("既定に戻す", reset) };
+            var items = new HashSet<SettingItem>();
+            foreach (SettingsRowLayout row in rows)
             {
-                if (group == null) throw new ArgumentException("null のまとまりがあります。", nameof(groups));
-                groupLayouts.Add(new SettingsGroupLayout(group,
-                    new Rect(PaddingX, y, LabelWidth, HeaderHeight),
-                    new Rect(DecreaseX, y, Width - PaddingX - DecreaseX, HeaderHeight)));
-                y += HeaderHeight;
-                foreach (SettingItem item in group.Items)
-                {
-                    float buttonTop = y + (RowHeight - ButtonSize) / 2f;
-                    rows.Add(new SettingsRowLayout(item,
-                        new Rect(PaddingX, y, LabelWidth, RowHeight),
-                        new Rect(DecreaseX, buttonTop, ButtonSize, ButtonSize),
-                        new Rect(SliderX, y, SliderWidth, RowHeight),
-                        new Rect(IncreaseX, buttonTop, ButtonSize, ButtonSize),
-                        new Rect(ValueX, y, Width - PaddingX - ValueX, RowHeight)));
-                    y += RowHeight;
-                }
-                y += GroupGap;
+                if (row == null) throw new ArgumentException("null の行があります。", nameof(rows));
+                if (!items.Add(row.Item)) throw new ArgumentException("項目の行が重複しています: " + row.Item.Key, nameof(rows));
+                targets.Add((row.Item.Key + " の［−］", row.Decrease));
+                targets.Add((row.Item.Key + " のスライダー", row.Slider));
+                targets.Add((row.Item.Key + " の［＋］", row.Increase));
             }
-            if (y - GroupGap > FooterTop)
-                throw new InvalidOperationException("設定の項目が画面に収まりません。");
 
-            Groups = groupLayouts;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                (string name, Rect rect) = targets[i];
+                if (!(rect.width > 0f) || !(rect.height > 0f))
+                    throw new ArgumentException(name + " の大きさが正ではありません: " + rect, nameof(rows));
+                if (rect.xMin < screen.xMin || rect.yMin < screen.yMin || rect.xMax > screen.xMax || rect.yMax > screen.yMax)
+                    throw new ArgumentException(name + " が画面の外にあります: " + rect, nameof(rows));
+                for (int j = 0; j < i; j++)
+                {
+                    if (rect.Overlaps(targets[j].rect))
+                        throw new ArgumentException(name + " と " + targets[j].name + " が重なっています。", nameof(rows));
+                }
+            }
+
+            Size = size;
             Rows = rows;
-            Notice = new Rect(PaddingX, FooterTop, Width - PaddingX * 3f - ResetWidth, Height - FooterTop);
-            Reset = new Rect(Width - PaddingX - ResetWidth, FooterTop + 12f, ResetWidth, ResetHeight);
+            Reset = reset;
         }
 
-        public Rect Title { get; }
-        public IReadOnlyList<SettingsGroupLayout> Groups { get; }
+        public Vector2 Size { get; }
         public IReadOnlyList<SettingsRowLayout> Rows { get; }
-
-        /// <summary>通知（設定ファイルの問題など）を表示する領域。</summary>
-        public Rect Notice { get; }
 
         /// <summary>「既定に戻す」のボタン。</summary>
         public Rect Reset { get; }
@@ -103,58 +76,40 @@ namespace VRKeyboard.App.Settings
             {
                 if (row.Item == item) return row;
             }
-            throw new ArgumentException("この配置にない項目です: " + item.Label, nameof(item));
+            throw new ArgumentException("この配置にない項目です: " + item.Key, nameof(item));
         }
     }
 
-    /// <summary>見出しの配置。</summary>
-    public sealed class SettingsGroupLayout
-    {
-        internal SettingsGroupLayout(SettingGroup group, Rect title, Rect note)
-        {
-            Group = group;
-            Title = title;
-            Note = note;
-        }
-
-        public SettingGroup Group { get; }
-        public Rect Title { get; }
-        public Rect Note { get; }
-    }
-
-    /// <summary>1項目の行の配置。左から 項目名・［−］・スライダー・［＋］・値。</summary>
+    /// <summary>1項目の行の、操作の対象の配置。</summary>
     public sealed class SettingsRowLayout
     {
-        internal SettingsRowLayout(SettingItem item, Rect label, Rect decrease, Rect slider, Rect increase, Rect value)
+        /// <param name="slider">スライダーの操作を受ける領域。</param>
+        /// <param name="track">値の範囲（左端が最小値、右端が最大値）。</param>
+        public SettingsRowLayout(SettingItem item, Rect decrease, Rect slider, Rect increase, Rect track)
         {
-            Item = item;
-            Label = label;
+            Item = item ?? throw new ArgumentNullException(nameof(item));
+            if (!(track.width > 0f)) throw new ArgumentException("値の範囲の幅が正ではありません: " + item.Key, nameof(track));
             Decrease = decrease;
             Slider = slider;
             Increase = increase;
-            Value = value;
+            Track = track;
         }
 
         public SettingItem Item { get; }
-        public Rect Label { get; }
         public Rect Decrease { get; }
 
-        /// <summary>スライダーの操作を受ける領域（行の高さいっぱい）。</summary>
+        /// <summary>スライダーの操作を受ける領域。</summary>
         public Rect Slider { get; }
 
         public Rect Increase { get; }
-        public Rect Value { get; }
 
-        /// <summary>値の範囲の左端（最小値）の x。</summary>
-        public float TrackLeft => Slider.xMin + SettingsLayout.ThumbHalfWidth;
-
-        /// <summary>値の範囲の幅。</summary>
-        public float TrackWidth => Slider.width - SettingsLayout.ThumbHalfWidth * 2f;
+        /// <summary>値の範囲。</summary>
+        public Rect Track { get; }
 
         /// <summary>x の位置が値の範囲のどこにあたるか（0..1。外側は端に収める）。</summary>
         public float FractionAt(float x)
         {
-            return Mathf.Clamp01((x - TrackLeft) / TrackWidth);
+            return Mathf.Clamp01((x - Track.xMin) / Track.width);
         }
     }
 

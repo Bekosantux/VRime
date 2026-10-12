@@ -89,6 +89,7 @@ VRKeyboard.exe（Unity）
 - 背景を透明にするため、カメラは Solid Color (0,0,0,0) で塗りつぶし、ポストプロセス・HDR・MSAA を切る。
 - D3D11 の RenderTexture は上下が逆になるため、`SetOverlayTextureBounds` で `vMin=1, vMax=0` を指定する。
 - キーボードと設定画面は別の RenderTexture に描く。カメラが互いの uGUI を映さないよう、描画先ごとに専用のレイヤーを使う。
+- キーボードと設定画面の uGUI はシーンに保存し、エディターで配置・見た目を調整できる。テクスチャの大きさはキャンバスの大きさ（キーボード 1024×1024、設定画面 1280×800 のピクセル）。キーボードは既定の幅 0.45m・距離 0.85m で 1px が約 0.44mm になる。
 - URP は Render Graph で描く。URP Global Settings の互換モード（Compatibility Mode）はオフにする。Unity 6.3 では、互換モードがオンのままだとビルドが失敗する。
 
 #### Player Settings 【暫定】
