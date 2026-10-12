@@ -3,10 +3,7 @@ using VRKeyboard.Core.Input;
 
 namespace VRKeyboard.Core.Grip
 {
-    /// <summary>
-    /// スティックの傾きの分類。倒し量が enter 以上で方向を決め、exit 未満で中央に戻り、
-    /// その間は直前の分類を保つ（チャタリングの防止）。
-    /// </summary>
+    /// <summary>スティックの傾きの分類。倒し量がしきい値以上で方向を決め、未満なら中央とする。</summary>
     public static class StickClassifier
     {
         /// <summary>3×3 のセル数。0..8 は行優先で左上が 0、中央が 4。</summary>
@@ -15,13 +12,9 @@ namespace VRKeyboard.Core.Grip
         public const int NeutralCell = 4;
 
         /// <summary>8方向（45° ずつ）に分けて 3×3 のセル番号にする。</summary>
-        public static int ClassifyCell(StickValue stick, int previous, float enter, float exit)
+        public static int ClassifyCell(StickValue stick, float threshold)
         {
-            if (previous < 0 || previous >= CellCount)
-                throw new ArgumentOutOfRangeException(nameof(previous), previous, null);
-            float magnitude = Magnitude(stick);
-            if (magnitude < exit) return NeutralCell;
-            if (magnitude < enter) return previous;
+            if (Magnitude(stick) < threshold) return NeutralCell;
 
             // 0=右, 1=右上, 2=上 ... 反時計回り
             int sector = Sector(stick, 8);
@@ -31,13 +24,9 @@ namespace VRKeyboard.Core.Grip
         }
 
         /// <summary>4方向（90° ずつ）＋中央に分ける。</summary>
-        public static StickDirection ClassifyDirection(StickValue stick, StickDirection previous, float enter, float exit)
+        public static StickDirection ClassifyDirection(StickValue stick, float threshold)
         {
-            if (!Enum.IsDefined(typeof(StickDirection), previous))
-                throw new ArgumentOutOfRangeException(nameof(previous), previous, null);
-            float magnitude = Magnitude(stick);
-            if (magnitude < exit) return StickDirection.Center;
-            if (magnitude < enter) return previous;
+            if (Magnitude(stick) < threshold) return StickDirection.Center;
 
             switch (Sector(stick, 4))
             {

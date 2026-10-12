@@ -13,10 +13,10 @@ namespace VRKeyboard.Core.Grip
         /// <summary>
         /// 分類を更新する。中央から方向に倒したフレームではその方向を、それ以外は Center を返す。
         /// </summary>
-        public StickDirection Update(StickValue stick, float enter, float exit)
+        public StickDirection Update(StickValue stick, float threshold)
         {
             StickDirection previous = Current;
-            Current = StickClassifier.ClassifyDirection(stick, previous, enter, exit);
+            Current = StickClassifier.ClassifyDirection(stick, threshold);
             return previous == StickDirection.Center ? Current : StickDirection.Center;
         }
     }

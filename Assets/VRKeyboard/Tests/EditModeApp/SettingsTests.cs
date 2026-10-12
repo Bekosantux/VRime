@@ -74,8 +74,8 @@ namespace VRKeyboard.App.Tests
         public void 既定のしきい値はCoreの既定値と同じ()
         {
             var core = new KeyboardSettings();
-            Assert.AreEqual(core.TriggerPressThreshold, UserSettings.Default.TriggerThreshold);
-            Assert.AreEqual(core.StickEnterThreshold, UserSettings.Default.StickThreshold);
+            Assert.AreEqual(core.TriggerThreshold, UserSettings.Default.TriggerThreshold);
+            Assert.AreEqual(core.StickThreshold, UserSettings.Default.StickThreshold);
             Assert.AreEqual(KeyboardPlacement.Default, UserSettings.Default.Placement);
         }
 
@@ -94,14 +94,13 @@ namespace VRKeyboard.App.Tests
         public void Coreの設定にしきい値を渡す()
         {
             KeyboardSettings core = UserSettings.Default.WithTriggerThreshold(0.6f).WithStickThreshold(0.4f).ToKeyboardSettings();
-            Assert.AreEqual(0.6f, core.TriggerPressThreshold);
-            Assert.AreEqual(0.4f, core.StickEnterThreshold);
+            Assert.AreEqual(0.6f, core.TriggerThreshold);
+            Assert.AreEqual(0.4f, core.StickThreshold);
         }
 
         [Test]
         public void すべての範囲のしきい値をCoreが受け付ける()
         {
-            // 離した判定のしきい値（-0.2）が 0 より大きくなるよう、範囲の下限は Core の制約を満たす。
             Assert.DoesNotThrow(() => UserSettings.Default.WithTriggerThreshold(UserSettings.TriggerThresholdRange.Min)
                 .WithStickThreshold(UserSettings.StickThresholdRange.Min).ToKeyboardSettings());
             Assert.DoesNotThrow(() => UserSettings.Default.WithTriggerThreshold(UserSettings.TriggerThresholdRange.Max)
@@ -111,7 +110,7 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 範囲外の値は例外()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default.WithTriggerThreshold(0.2f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default.WithTriggerThreshold(0.04f));
             Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default.WithStickThreshold(1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => KeyboardPlacement.Default.WithTilt(61f));
             Assert.Throws<ArgumentOutOfRangeException>(() => KeyboardPlacement.Default.WithRight(-0.51f));
@@ -169,7 +168,7 @@ namespace VRKeyboard.App.Tests
         [TestCase("{\"version\":1,\"display\":[]}")]
         [TestCase("{\"version\":1,\"display\":{\"downMeters\":\"0.3\"}}")]
         [TestCase("{\"version\":1,\"display\":{\"downMeters\":0.61}}")]
-        [TestCase("{\"version\":1,\"grip\":{\"triggerThreshold\":0.1}}")]
+        [TestCase("{\"version\":1,\"grip\":{\"triggerThreshold\":0.01}}")]
         [TestCase("{\"version\":1,\"grip\":{\"stickThreshold\":null}}")]
         public void 正しくない内容はFormatException(string json)
         {

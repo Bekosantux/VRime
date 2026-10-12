@@ -9,8 +9,8 @@ namespace VRKeyboard.App.Settings
     /// </summary>
     public sealed class UserSettings
     {
-        public static readonly SettingRange TriggerThresholdRange = new SettingRange(0.25f, 0.95f, 0.05f);
-        public static readonly SettingRange StickThresholdRange = new SettingRange(0.25f, 0.95f, 0.05f);
+        public static readonly SettingRange TriggerThresholdRange = new SettingRange(0.05f, 0.95f, 0.05f);
+        public static readonly SettingRange StickThresholdRange = new SettingRange(0.05f, 0.95f, 0.05f);
 
         /// <summary>しきい値の既定は Core の既定値に揃える。</summary>
         public static readonly UserSettings Default = CreateDefault();
@@ -30,10 +30,10 @@ namespace VRKeyboard.App.Settings
 
         public KeyboardPlacement Placement { get; }
 
-        /// <summary>トリガーの引き量がこの値以上で押したとみなす（<see cref="KeyboardSettings.TriggerPressThreshold"/>）。</summary>
+        /// <summary>トリガーの引き量がこの値以上で押したとみなす（<see cref="KeyboardSettings.TriggerThreshold"/>）。</summary>
         public float TriggerThreshold { get; }
 
-        /// <summary>スティックの傾きがこの値以上で方向を決める（<see cref="KeyboardSettings.StickEnterThreshold"/>）。</summary>
+        /// <summary>スティックの傾きがこの値以上で方向を決める（<see cref="KeyboardSettings.StickThreshold"/>）。</summary>
         public float StickThreshold { get; }
 
         public UserSettings WithPlacement(KeyboardPlacement value) => new UserSettings(value, TriggerThreshold, StickThreshold);
@@ -43,7 +43,7 @@ namespace VRKeyboard.App.Settings
         /// <summary>Core の設定にする。この設定で扱わない値（子音の手など）は Core の既定値。</summary>
         public KeyboardSettings ToKeyboardSettings()
         {
-            return new KeyboardSettings(stickEnterThreshold: StickThreshold, triggerPressThreshold: TriggerThreshold);
+            return new KeyboardSettings(stickThreshold: StickThreshold, triggerThreshold: TriggerThreshold);
         }
 
         public bool Equals(UserSettings other)
@@ -70,7 +70,7 @@ namespace VRKeyboard.App.Settings
         static UserSettings CreateDefault()
         {
             var core = new KeyboardSettings();
-            return new UserSettings(KeyboardPlacement.Default, core.TriggerPressThreshold, core.StickEnterThreshold);
+            return new UserSettings(KeyboardPlacement.Default, core.TriggerThreshold, core.StickThreshold);
         }
     }
 }

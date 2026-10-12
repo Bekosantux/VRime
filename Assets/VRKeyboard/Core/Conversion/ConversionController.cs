@@ -51,8 +51,8 @@ namespace VRKeyboard.Core.Conversion
         {
             if (haptics == null) throw new ArgumentNullException(nameof(haptics));
 
-            StickDirection left = _leftStick.Update(frame.Left.Stick, _settings.StickEnterThreshold, _settings.StickExitThreshold);
-            StickDirection right = _rightStick.Update(frame.Right.Stick, _settings.StickEnterThreshold, _settings.StickExitThreshold);
+            StickDirection left = _leftStick.Update(frame.Left.Stick, _settings.StickThreshold);
+            StickDirection right = _rightStick.Update(frame.Right.Stick, _settings.StickThreshold);
 
             if (edges.AnyGrip) return ConversionOutcome.Cancel;
             if (session == null) return ConversionOutcome.None;
@@ -65,8 +65,8 @@ namespace VRKeyboard.Core.Conversion
 
         void Track(ControllerFrame frame)
         {
-            _leftStick.Update(frame.Left.Stick, _settings.StickEnterThreshold, _settings.StickExitThreshold);
-            _rightStick.Update(frame.Right.Stick, _settings.StickEnterThreshold, _settings.StickExitThreshold);
+            _leftStick.Update(frame.Left.Stick, _settings.StickThreshold);
+            _rightStick.Update(frame.Right.Stick, _settings.StickThreshold);
         }
 
         static void Move(ConversionSession session, StickDirection pushed, Hand hand, List<HapticEvent> haptics)

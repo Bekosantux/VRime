@@ -121,13 +121,11 @@ namespace VRKeyboard.Core.Grip
         /// </summary>
         public void Reset(ControllerFrame frame)
         {
-            int cell = StickClassifier.ClassifyCell(frame.Get(_settings.ConsonantHand).Stick,
-                StickClassifier.NeutralCell, _settings.StickEnterThreshold, _settings.StickExitThreshold);
+            float threshold = _settings.StickThreshold;
+            int cell = StickClassifier.ClassifyCell(frame.Get(_settings.ConsonantHand).Stick, threshold);
             StickValue vowelStick = frame.Get(_settings.VowelHand).Stick;
-            StickDirection direction = StickClassifier.ClassifyDirection(vowelStick,
-                StickDirection.Center, _settings.StickEnterThreshold, _settings.StickExitThreshold);
-            int vowelCell = StickClassifier.ClassifyCell(vowelStick,
-                StickClassifier.NeutralCell, _settings.StickEnterThreshold, _settings.StickExitThreshold);
+            StickDirection direction = StickClassifier.ClassifyDirection(vowelStick, threshold);
+            int vowelCell = StickClassifier.ClassifyCell(vowelStick, threshold);
             bool consonantFunction = frame.Get(_settings.ConsonantHand).Grip;
             bool vowelFunction = frame.Get(_settings.VowelHand).Grip;
 
@@ -155,12 +153,11 @@ namespace VRKeyboard.Core.Grip
             Hand vowelHand = _settings.VowelHand;
             HandState consonant = frame.Get(consonantHand);
             HandState vowel = frame.Get(vowelHand);
-            float enter = _settings.StickEnterThreshold;
-            float exit = _settings.StickExitThreshold;
+            float threshold = _settings.StickThreshold;
 
-            int cell = StickClassifier.ClassifyCell(consonant.Stick, _cell, enter, exit);
-            StickDirection direction = StickClassifier.ClassifyDirection(vowel.Stick, _direction, enter, exit);
-            int vowelCell = StickClassifier.ClassifyCell(vowel.Stick, _vowelCell, enter, exit);
+            int cell = StickClassifier.ClassifyCell(consonant.Stick, threshold);
+            StickDirection direction = StickClassifier.ClassifyDirection(vowel.Stick, threshold);
+            int vowelCell = StickClassifier.ClassifyCell(vowel.Stick, threshold);
             bool consonantFunction = consonant.Grip;
             bool vowelFunction = vowel.Grip;
 

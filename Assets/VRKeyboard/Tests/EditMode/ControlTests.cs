@@ -148,21 +148,11 @@ namespace VRKeyboard.Core.Tests
             var settings = new KeyboardSettings();
             Assert.AreEqual(Hand.Right, settings.ConsonantHand);
             Assert.AreEqual(Hand.Left, settings.VowelHand);
-            Assert.AreEqual(0.5f, settings.StickEnterThreshold);
-            Assert.AreEqual(0.3f, settings.StickExitThreshold, 1e-6f);
-            Assert.AreEqual(0.7f, settings.TriggerPressThreshold);
-            Assert.AreEqual(0.5f, settings.TriggerReleaseThreshold, 1e-6f);
+            Assert.AreEqual(0.5f, settings.StickThreshold);
+            Assert.AreEqual(0.7f, settings.TriggerThreshold);
             Assert.AreEqual(0.20, settings.ChordWindowSeconds);
             Assert.AreEqual(0.60, settings.DoubleChordWindowSeconds);
             Assert.AreEqual(144, settings.MaxLength);
-        }
-
-        [Test]
-        public void 戻りの判定はしきい値から一定の差を引いた値()
-        {
-            var settings = new KeyboardSettings(stickEnterThreshold: 0.8f, triggerPressThreshold: 0.4f);
-            Assert.AreEqual(0.8f - KeyboardSettings.ReleaseMargin, settings.StickExitThreshold, 1e-6f);
-            Assert.AreEqual(0.4f - KeyboardSettings.ReleaseMargin, settings.TriggerReleaseThreshold, 1e-6f);
         }
 
         [Test]
@@ -175,14 +165,13 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 不正な値は例外()
         {
-            // 戻りの判定が 0 以下になるしきい値は不正。
-            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(stickEnterThreshold: KeyboardSettings.ReleaseMargin));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(stickEnterThreshold: 0f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(stickEnterThreshold: 1.5f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(stickEnterThreshold: float.NaN));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(triggerPressThreshold: KeyboardSettings.ReleaseMargin));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(triggerPressThreshold: 1.01f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(triggerPressThreshold: float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(stickThreshold: 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(stickThreshold: -0.1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(stickThreshold: 1.5f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(stickThreshold: float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(triggerThreshold: 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(triggerThreshold: 1.01f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(triggerThreshold: float.NaN));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(chordWindowSeconds: 0.0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(chordWindowSeconds: -0.2));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(doubleChordWindowSeconds: 0.0));
@@ -194,14 +183,13 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void しきい値は1ちょうどを許す()
         {
-            Assert.DoesNotThrow(() => new KeyboardSettings(stickEnterThreshold: 1f, triggerPressThreshold: 1f));
+            Assert.DoesNotThrow(() => new KeyboardSettings(stickThreshold: 1f, triggerThreshold: 1f));
         }
     }
 
     public class EdgeTrackerTests
     {
-        const float Press = 0.7f;
-        const float Release = 0.5f;
+        const float Threshold = 0.7f;
 
         static ControllerFrame LeftTrigger(float pull)
         {
@@ -209,26 +197,21 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 押した判定のしきい値以上で押下エッジが出る()
+        public void しきい値以上で押下エッジが出る()
         {
             var tracker = new EdgeTracker();
-            Assert.IsFalse(tracker.Update(LeftTrigger(0.69f), Press, Release).LeftTrigger);
-            Assert.IsTrue(tracker.Update(LeftTrigger(0.7f), Press, Release).LeftTrigger);
-            Assert.IsFalse(tracker.Update(LeftTrigger(1f), Press, Release).LeftTrigger, "押し続けている間はエッジが出ない");
+            Assert.IsFalse(tracker.Update(LeftTrigger(0.69f), Threshold).LeftTrigger);
+            Assert.IsTrue(tracker.Update(LeftTrigger(0.7f), Threshold).LeftTrigger);
+            Assert.IsFalse(tracker.Update(LeftTrigger(1f), Threshold).LeftTrigger, "押し続けている間はエッジが出ない");
         }
 
         [Test]
-        public void 押している間は離した判定のしきい値まで押したまま()
+        public void しきい値を下回ると離したとみなす()
         {
             var tracker = new EdgeTracker();
-            tracker.Update(LeftTrigger(0.8f), Press, Release);
-            // 押した判定のしきい値を下回っても、離した判定のしきい値以上なら押したまま（再び上げてもエッジは出ない）。
-            Assert.IsFalse(tracker.Update(LeftTrigger(0.6f), Press, Release).LeftTrigger);
-            Assert.IsFalse(tracker.Update(LeftTrigger(0.8f), Press, Release).LeftTrigger);
-            // 離した判定のしきい値を下回ると離した扱いになり、次に押した判定のしきい値を超えるとエッジが出る。
-            Assert.IsFalse(tracker.Update(LeftTrigger(0.49f), Press, Release).LeftTrigger);
-            Assert.IsFalse(tracker.Update(LeftTrigger(0.6f), Press, Release).LeftTrigger, "離した後は押した判定のしきい値が必要");
-            Assert.IsTrue(tracker.Update(LeftTrigger(0.7f), Press, Release).LeftTrigger);
+            tracker.Update(LeftTrigger(0.8f), Threshold);
+            Assert.IsFalse(tracker.Update(LeftTrigger(0.69f), Threshold).LeftTrigger);
+            Assert.IsTrue(tracker.Update(LeftTrigger(0.7f), Threshold).LeftTrigger, "離した後に再びしきい値以上にするとエッジが出る");
         }
     }
 }

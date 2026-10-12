@@ -394,7 +394,7 @@ namespace VRKeyboard.Core
 
         FrameEdges UpdateEdges(ControllerFrame frame)
         {
-            return _edges.Update(frame, _settings.TriggerPressThreshold, _settings.TriggerReleaseThreshold);
+            return _edges.Update(frame, _settings.TriggerThreshold);
         }
 
         ControllerFrame ApplyGripIgnore(ControllerFrame frame)

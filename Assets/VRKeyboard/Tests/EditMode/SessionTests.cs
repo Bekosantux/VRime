@@ -926,7 +926,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void トリガーはしきい値以上に引くと入力する()
         {
-            var rig = new Rig(new KeyboardSettings(triggerPressThreshold: 0.6f));
+            var rig = new Rig(new KeyboardSettings(triggerThreshold: 0.6f));
             SelectA(rig);
             rig.SetTriggerPull(rig.Vowel, 0.55f); rig.Tick();
             Assert.AreEqual("", rig.Session.Composition, "しきい値未満では入力しない");
@@ -943,10 +943,10 @@ namespace VRKeyboard.Core.Tests
             Assert.AreEqual("", rig.Session.Composition, "既定のしきい値 0.7 未満");
             rig.SetTriggerPull(rig.Vowel, 0f); rig.Tick();
 
-            rig.Session.ApplySettings(new KeyboardSettings(triggerPressThreshold: 0.4f));
+            rig.Session.ApplySettings(new KeyboardSettings(triggerThreshold: 0.4f));
             rig.SetTriggerPull(rig.Vowel, 0.5f); rig.Tick();
             Assert.AreEqual("あ", rig.Session.Composition);
-            Assert.AreEqual(0.4f, rig.Session.Settings.TriggerPressThreshold);
+            Assert.AreEqual(0.4f, rig.Session.Settings.TriggerThreshold);
         }
 
         [Test]
@@ -957,7 +957,7 @@ namespace VRKeyboard.Core.Tests
             rig.SetStick(rig.Consonant, tilt); rig.Tick();
             Assert.AreEqual(StickClassifier.NeutralCell, rig.Session.GripInput.ConsonantCell, "既定のしきい値 0.5 未満");
 
-            rig.Session.ApplySettings(new KeyboardSettings(stickEnterThreshold: 0.4f));
+            rig.Session.ApplySettings(new KeyboardSettings(stickThreshold: 0.4f));
             rig.Tick();
             Assert.AreEqual(5, rig.Session.GripInput.ConsonantCell, "右に倒したセル");
         }

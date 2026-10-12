@@ -45,13 +45,13 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 |---|---|---|
 | 状態機械 | `KeyboardSession` | 全体の状態機械。開閉・ダッシュボードによる一時停止・モード（入力 / 応答待ち / 変換中）を持ち、操作を `GripInputMethod` と `ConversionController` に振り分ける。しきい値の変更は `ApplySettings` で次のフレームから反映する（子音の手・最大長・同時押しの判定時間の変更は `NotSupportedException`）。グリップの押下エッジは常に追跡し、開いた直後・変換の開始・取り消しの直後に握っていたグリップは離すまで無視する。変換結果は `CompleteConversion` / `FailConversion` で受け取り、リクエスト ID が古いものは捨てる |
 | | `IKeyboardEffects` | Core から App への通知（開閉・振動・変換の要求・送信の要求）。Core は結果をここへ出すだけで、通信や描画は知らない。送信の要求（`OnSendRequested`）だけは成否を `bool` で同期的に返し、`true` のときだけ Core が入力バッファを空にする（失敗時は内容を残して `Invalid` の振動を出す） |
-| | `KeyboardSettings` | 設定値（子音の手・スティックとトリガーのしきい値・同時押しの窓・最大長）。戻り・離したとみなすしきい値は、設定値から `ReleaseMargin`（0.2）を引いて導く。不正な値は例外 |
+| | `KeyboardSettings` | 設定値（子音の手・スティックとトリガーのしきい値・同時押しの窓・最大長）。しきい値は 1 つで、倒した・押したと中央に戻った・離したの両方の判定に使う。不正な値は例外 |
 | 入力 | `ControllerFrame` / `HandState` / `StickValue` | 1フレーム分の両手の状態（スティック・トリガーの引き量 0〜1・グリップ） |
-| | `EdgeTracker` / `FrameEdges` | 前フレームとの差から押下エッジを出す。トリガーは引き量をしきい値で判定する（押している間は離したとみなすしきい値で判定するヒステリシス） |
+| | `EdgeTracker` / `FrameEdges` | 前フレームとの差から押下エッジを出す。トリガーは引き量がしきい値以上なら押したとみなす |
 | 開閉 | `DoubleChordDetector` | 両手グリップの2回続けての同時押しを検出する（時刻は引数で受け取り、時計に依存しない） |
 | グリップ入力 | `GripInputMethod` | セル・方向の選択、機能ページ、トリガーによる入力と直前の文字の切り替え（手ごとの役割は SPEC 5.2）。バッファを更新し、変換・確定は要求（`GripRequest`）として返す。ページは言語と数字ページの有無から導出する |
 | | `GripLayout` / `GripCell` | SPEC 5.2 の表をデータとして持つ |
-| | `StickClassifier` / `StickDirectionTracker` | スティックの 8方向（3×3 のセル）・4方向への分類（ヒステリシス付き）と、中央から倒した瞬間の検出。候補欄のスティック操作でも使う |
+| | `StickClassifier` / `StickDirectionTracker` | スティックの 8方向（3×3 のセル）・4方向への分類（倒し量がしきい値未満なら中央。直前の状態によらない）と、中央から倒した瞬間の検出。候補欄のスティック操作でも使う |
 | | `GripViewState` | 描画用のスナップショット（ラベル・無効・点灯・選択位置と、通常のページに重ねる機能ページのヒント）。App はこれを描くだけにする |
 | テキスト | `InputBuffer` | 確定済みと未確定の文字列とそれぞれのカーソル、上限の検査。操作の結果は `EditResult` で返す |
 | | `CharacterModifier` / `CharacterWidth` / `Katakana` | 直前の文字の切り替え（かなの小゛゜の巡回・英字の大文字/小文字）・全角化・ひらがな→カタカナの変換表 |
