@@ -29,7 +29,6 @@ namespace VRKeyboard.App.SteamVR
         static readonly uint EventSize = (uint)Marshal.SizeOf<VREvent_t>();
 
         readonly ISettingsPointer _pointer;
-        readonly int _textureHeight;
         OverlayTextureSubmitter _submitter;
         ulong _handle;
         ulong _thumbnailHandle;
@@ -38,7 +37,6 @@ namespace VRKeyboard.App.SteamVR
         {
             IntPtr nativeTexture = OverlayTextures.GetNativeTexture(texture, nameof(texture));
             _pointer = pointer ?? throw new ArgumentNullException(nameof(pointer));
-            _textureHeight = texture.height;
 
             string thumbnail = Path.Combine(Application.streamingAssetsPath, ThumbnailRelativePath);
             if (!File.Exists(thumbnail)) throw new FileNotFoundException("ダッシュボードのアイコンが見つかりません。", thumbnail);
@@ -95,13 +93,13 @@ namespace VRKeyboard.App.SteamVR
                 switch ((EVREventType)ev.eventType)
                 {
                     case EVREventType.VREvent_MouseMove:
-                        _pointer.PointerMove(ToTexturePosition(ev.data.mouse));
+                        _pointer.PointerMove(OverlayTextures.ToTexturePosition(ev.data.mouse));
                         break;
                     case EVREventType.VREvent_MouseButtonDown:
-                        if (ev.data.mouse.button == (uint)EVRMouseButton.Left) _pointer.PointerDown(ToTexturePosition(ev.data.mouse));
+                        if (ev.data.mouse.button == (uint)EVRMouseButton.Left) _pointer.PointerDown(OverlayTextures.ToTexturePosition(ev.data.mouse));
                         break;
                     case EVREventType.VREvent_MouseButtonUp:
-                        if (ev.data.mouse.button == (uint)EVRMouseButton.Left) _pointer.PointerUp(ToTexturePosition(ev.data.mouse));
+                        if (ev.data.mouse.button == (uint)EVRMouseButton.Left) _pointer.PointerUp(OverlayTextures.ToTexturePosition(ev.data.mouse));
                         break;
                     case EVREventType.VREvent_FocusLeave:
                     case EVREventType.VREvent_OverlayHidden:
@@ -134,12 +132,6 @@ namespace VRKeyboard.App.SteamVR
             {
                 OpenVRErrors.Check(OpenVR.Overlay.DestroyOverlay(handle), "DestroyOverlay");
             }
-        }
-
-        // OpenVR のマウスの座標は左下が原点で上向きが正のため、設定画面の座標（左上が原点・下向きが正）に変換する。
-        Vector2 ToTexturePosition(VREvent_Mouse_t mouse)
-        {
-            return new Vector2(mouse.x, _textureHeight - mouse.y);
         }
 
         void ThrowIfDisposed()

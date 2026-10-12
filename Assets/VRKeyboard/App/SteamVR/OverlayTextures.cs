@@ -31,5 +31,15 @@ namespace VRKeyboard.App.SteamVR
             var bounds = new VRTextureBounds_t { uMin = 0f, uMax = 1f, vMin = 1f, vMax = 0f };
             OpenVRErrors.Check(overlay.SetOverlayTextureBounds(handle, ref bounds), "SetOverlayTextureBounds");
         }
+
+        /// <summary>
+        /// <see cref="Configure"/> を行ったオーバーレイのマウスの座標を、テクスチャの座標（左上が原点・下向きが正）にする。
+        /// マウスの座標はテクスチャの範囲を通して求められ、<see cref="Configure"/> で v を反転しているため、上が 0 で下向きが正の値で届く。
+        /// マウスのスケールはテクスチャのピクセル数にしておくこと。
+        /// </summary>
+        public static Vector2 ToTexturePosition(VREvent_Mouse_t mouse)
+        {
+            return new Vector2(mouse.x, mouse.y);
+        }
     }
 }
