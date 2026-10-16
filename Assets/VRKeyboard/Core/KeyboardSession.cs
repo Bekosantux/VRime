@@ -145,7 +145,7 @@ namespace VRKeyboard.Core
             switch (_mode)
             {
                 case KeyboardMode.Input:
-                    UpdateInput(effective, edges);
+                    UpdateInput(effective, edges, timeSeconds);
                     break;
                 case KeyboardMode.WaitingConversion:
                 case KeyboardMode.Converting:
@@ -203,7 +203,7 @@ namespace VRKeyboard.Core
 
         /// <summary>
         /// 実行中に設定を差し替える。次の <see cref="Tick"/> から新しい値で判定する。
-        /// 実行中に変えられるのはスティックとトリガーのしきい値だけで、それ以外の値が異なる設定は例外にする
+        /// 実行中に変えられるのはスティックとトリガーのしきい値と連続入力の時間だけで、それ以外の値が異なる設定は例外にする
         /// （子音の手は表示の組み立てに、最大長は入力バッファに、同時押しの窓は開閉の判定に、生成時の値が使われているため）。
         /// </summary>
         public void ApplySettings(KeyboardSettings settings)
@@ -271,9 +271,9 @@ namespace VRKeyboard.Core
             _effects.OnOpenChanged(false);
         }
 
-        void UpdateInput(ControllerFrame effective, FrameEdges edges)
+        void UpdateInput(ControllerFrame effective, FrameEdges edges, double timeSeconds)
         {
-            GripRequest request = _grip.Update(effective, edges, _haptics);
+            GripRequest request = _grip.Update(effective, edges, timeSeconds, _haptics);
             switch (request.Kind)
             {
                 case GripRequestKind.None:

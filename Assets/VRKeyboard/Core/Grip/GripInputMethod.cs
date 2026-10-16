@@ -38,12 +38,13 @@ namespace VRKeyboard.Core.Grip
 
     /// <summary>
     /// 入力中のグリップ入力（SPEC 5.2）。毎フレームの手の状態から、セル・方向の選択、
-    /// 機能ページの切り替え、トリガーによる入力を処理し、入力バッファを更新する。
+    /// 機能ページの切り替え、トリガーによる入力（長押しによる連続入力を含む）を処理し、入力バッファを更新する。
     /// 変換・確定はバッファだけでは完結しないため、要求として返す。
     /// </summary>
     public sealed class GripInputMethod
     {
         readonly InputBuffer _buffer;
+        readonly KeyRepeater _repeater = new KeyRepeater();
         KeyboardSettings _settings;
 
         InputLanguage _language = InputLanguage.Japanese;
@@ -139,13 +140,14 @@ namespace VRKeyboard.Core.Grip
             _vowelCell = vowelCell;
             _consonantFunction = consonantFunction;
             _vowelFunction = vowelFunction;
+            _repeater.Stop();
         }
 
         /// <summary>
         /// 1フレーム分を処理する。振動は haptics に追加する。
         /// edges は、両手のグリップを押している間のトリガーの抑止などを済ませたもの。
         /// </summary>
-        public GripRequest Update(ControllerFrame frame, FrameEdges edges, List<HapticEvent> haptics)
+        public GripRequest Update(ControllerFrame frame, FrameEdges edges, double timeSeconds, List<HapticEvent> haptics)
         {
             if (haptics == null) throw new ArgumentNullException(nameof(haptics));
 
@@ -182,6 +184,18 @@ namespace VRKeyboard.Core.Grip
             _vowelFunction = vowelFunction;
             if (changed) Version++;
 
+            // 選択が変わる（グリップの押し離しを含む）・トリガーを離す・新たにトリガーを引くと、連続入力をやめる。
+            if (changed || edges.AnyTrigger
+                || (_repeater.IsActive && frame.Get(_repeater.Hand).TriggerPull < _settings.TriggerThreshold))
+            {
+                _repeater.Stop();
+            }
+            if (_repeater.IsActive)
+            {
+                if (_repeater.Poll(timeSeconds, _settings.RepeatIntervalSeconds)) Repeat(haptics);
+                return default;
+            }
+
             // 両手のグリップを押している間は、開閉の操作と区別するためトリガーを受け付けない。
             if (!edges.AnyTrigger || (consonant.Grip && vowel.Grip)) return default;
 
@@ -189,19 +203,40 @@ namespace VRKeyboard.Core.Grip
             if (consonantFunction || vowelFunction)
             {
                 Hand pressedHand = edges.LeftTrigger ? Hand.Left : Hand.Right;
-                return Press(pressedHand, haptics);
+                GripRequest functionRequest = Press(pressedHand, haptics, out bool functionRepeatable);
+                if (functionRepeatable) _repeater.Start(pressedHand, timeSeconds, _settings.RepeatDelaySeconds);
+                return functionRequest;
             }
 
             // 通常のページでは、母音側のトリガーで入力し、子音側のトリガーで直前の文字を切り替える。
-            // 同じフレームで両方を引いたときは、入力してから切り替える。
+            // 同じフレームで両方を引いたときは、入力してから切り替える。切り替えた文字は連続入力しない。
             GripRequest request = default;
-            if (edges.TriggerPressed(vowelHand)) request = Press(vowelHand, haptics);
-            if (edges.TriggerPressed(consonantHand)) Report(_buffer.ApplyCharacterModifier(), consonantHand, haptics);
+            bool repeatable = false;
+            if (edges.TriggerPressed(vowelHand)) request = Press(vowelHand, haptics, out repeatable);
+            if (edges.TriggerPressed(consonantHand))
+            {
+                Report(_buffer.ApplyCharacterModifier(), consonantHand, haptics);
+                repeatable = false;
+            }
+            if (repeatable) _repeater.Start(vowelHand, timeSeconds, _settings.RepeatDelaySeconds);
             return request;
         }
 
-        GripRequest Press(Hand pressedHand, List<HapticEvent> haptics)
+        /// <summary>引いたままのトリガーで、選択中のセルをもう一度実行する。実行できなければ連続入力をやめる。</summary>
+        void Repeat(List<HapticEvent> haptics)
         {
+            GripRequest request = Press(_repeater.Hand, haptics, out bool repeatable);
+            if (request.Kind != GripRequestKind.None)
+                throw new InvalidOperationException("連続入力の対象のセルが要求を返しました: " + request.Kind);
+            if (!repeatable) _repeater.Stop();
+        }
+
+        /// <summary>
+        /// 選択中のセルを実行する。repeatable は、連続入力の対象（文字・消去・空白・カーソル移動）のセルを実行できたか。
+        /// </summary>
+        GripRequest Press(Hand pressedHand, List<HapticEvent> haptics, out bool repeatable)
+        {
+            repeatable = false;
             GripCell cell;
             if (_vowelFunction)
             {
@@ -221,11 +256,16 @@ namespace VRKeyboard.Core.Grip
                 {
                     string character = cell.CharacterAt(_direction);
                     if (character == null) return default; // 未割り当て
-                    Report(InsertCharacter(character), pressedHand, haptics);
+                    repeatable = Report(InsertCharacter(character), pressedHand, haptics);
                     return default;
                 }
 
                 case GripCellKind.Action:
+                    if (TryEdit(cell.Action, out EditResult result))
+                    {
+                        repeatable = Report(result, pressedHand, haptics);
+                        return default;
+                    }
                     return Execute(cell.Action, pressedHand, haptics);
 
                 default:
@@ -233,24 +273,36 @@ namespace VRKeyboard.Core.Grip
             }
         }
 
-        GripRequest Execute(GripAction action, Hand pressedHand, List<HapticEvent> haptics)
+        /// <summary>連続入力の対象の動作なら実行して true を返す。</summary>
+        bool TryEdit(GripAction action, out EditResult result)
         {
             switch (action)
             {
                 case GripAction.Erase:
-                    Report(_buffer.Erase(), pressedHand, haptics);
-                    break;
+                    result = _buffer.Erase();
+                    return true;
                 case GripAction.Space:
-                    Report(InsertSpace(), pressedHand, haptics);
-                    break;
+                    result = InsertSpace();
+                    return true;
+                case GripAction.CursorLeft:
+                    result = _buffer.MoveCursorLeft();
+                    return true;
+                case GripAction.CursorRight:
+                    result = _buffer.MoveCursorRight();
+                    return true;
+                default:
+                    result = default;
+                    return false;
+            }
+        }
+
+        /// <summary>連続入力の対象ではない動作を実行する。</summary>
+        GripRequest Execute(GripAction action, Hand pressedHand, List<HapticEvent> haptics)
+        {
+            switch (action)
+            {
                 case GripAction.CharacterModifier:
                     Report(_buffer.ApplyCharacterModifier(), pressedHand, haptics);
-                    break;
-                case GripAction.CursorLeft:
-                    Report(_buffer.MoveCursorLeft(), pressedHand, haptics);
-                    break;
-                case GripAction.CursorRight:
-                    Report(_buffer.MoveCursorRight(), pressedHand, haptics);
                     break;
                 case GripAction.ToggleWidth:
                     if (Page == GripPage.Kana) Invalid(pressedHand, haptics);
@@ -310,10 +362,16 @@ namespace VRKeyboard.Core.Grip
             return character;
         }
 
-        void Report(EditResult result, Hand hand, List<HapticEvent> haptics)
+        /// <summary>結果に応じた振動を出し、実行できたかを返す。</summary>
+        bool Report(EditResult result, Hand hand, List<HapticEvent> haptics)
         {
-            if (result == EditResult.Done) Done(hand, haptics);
-            else Invalid(hand, haptics);
+            if (result == EditResult.Done)
+            {
+                Done(hand, haptics);
+                return true;
+            }
+            Invalid(hand, haptics);
+            return false;
         }
 
         void Done(Hand hand, List<HapticEvent> haptics)

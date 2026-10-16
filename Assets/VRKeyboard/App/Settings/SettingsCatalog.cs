@@ -57,6 +57,8 @@ namespace VRKeyboard.App.Settings
                 s => s.TriggerThreshold, (s, v) => s.WithTriggerThreshold(v), Percent),
             new SettingItem("stickThreshold", UserSettings.StickThresholdRange,
                 s => s.StickThreshold, (s, v) => s.WithStickThreshold(v), Percent),
+            new SettingItem("repeatDelaySeconds", UserSettings.RepeatDelaySecondsRange,
+                s => s.RepeatDelaySeconds, (s, v) => s.WithRepeatDelaySeconds(v), Seconds),
         };
 
         /// <summary>キーに対応する項目。ない場合は例外。</summary>
@@ -81,6 +83,8 @@ namespace VRKeyboard.App.Settings
         static string Degrees(float degrees) => Round(degrees) + "°";
 
         static string Percent(float ratio) => Round(ratio * 100f) + "%";
+
+        static string Seconds(float seconds) => seconds.ToString("0.00", CultureInfo.InvariantCulture) + " 秒";
 
         static int Round(float value) => (int)Math.Round(value, MidpointRounding.AwayFromZero);
     }

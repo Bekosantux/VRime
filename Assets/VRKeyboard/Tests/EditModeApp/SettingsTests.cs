@@ -71,11 +71,12 @@ namespace VRKeyboard.App.Tests
     public sealed class UserSettingsTests
     {
         [Test]
-        public void 既定のしきい値はCoreの既定値と同じ()
+        public void 既定のしきい値と長押しの時間はCoreの既定値と同じ()
         {
             var core = new KeyboardSettings();
             Assert.AreEqual(core.TriggerThreshold, UserSettings.Default.TriggerThreshold);
             Assert.AreEqual(core.StickThreshold, UserSettings.Default.StickThreshold);
+            Assert.AreEqual(core.RepeatDelaySeconds, UserSettings.Default.RepeatDelaySeconds);
             Assert.AreEqual(KeyboardPlacement.Default, UserSettings.Default.Placement);
         }
 
@@ -99,12 +100,22 @@ namespace VRKeyboard.App.Tests
         }
 
         [Test]
-        public void すべての範囲のしきい値をCoreが受け付ける()
+        public void Coreの設定に長押しの時間を10進表記のまま渡す()
+        {
+            KeyboardSettings core = UserSettings.Default.WithRepeatDelaySeconds(0.35f).ToKeyboardSettings();
+            Assert.AreEqual(0.35, core.RepeatDelaySeconds);
+            Assert.AreEqual(new KeyboardSettings().RepeatIntervalSeconds, core.RepeatIntervalSeconds);
+        }
+
+        [Test]
+        public void すべての範囲のしきい値と長押しの時間をCoreが受け付ける()
         {
             Assert.DoesNotThrow(() => UserSettings.Default.WithTriggerThreshold(UserSettings.TriggerThresholdRange.Min)
-                .WithStickThreshold(UserSettings.StickThresholdRange.Min).ToKeyboardSettings());
+                .WithStickThreshold(UserSettings.StickThresholdRange.Min)
+                .WithRepeatDelaySeconds(UserSettings.RepeatDelaySecondsRange.Min).ToKeyboardSettings());
             Assert.DoesNotThrow(() => UserSettings.Default.WithTriggerThreshold(UserSettings.TriggerThresholdRange.Max)
-                .WithStickThreshold(UserSettings.StickThresholdRange.Max).ToKeyboardSettings());
+                .WithStickThreshold(UserSettings.StickThresholdRange.Max)
+                .WithRepeatDelaySeconds(UserSettings.RepeatDelaySecondsRange.Max).ToKeyboardSettings());
         }
 
         [Test]
@@ -112,6 +123,9 @@ namespace VRKeyboard.App.Tests
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default.WithTriggerThreshold(0.04f));
             Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default.WithStickThreshold(1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default.WithRepeatDelaySeconds(0.15f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default.WithRepeatDelaySeconds(1.05f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default.WithRepeatDelaySeconds(float.NaN));
             Assert.Throws<ArgumentOutOfRangeException>(() => KeyboardPlacement.Default.WithTilt(61f));
             Assert.Throws<ArgumentOutOfRangeException>(() => KeyboardPlacement.Default.WithRight(-0.51f));
             Assert.Throws<ArgumentNullException>(() => UserSettings.Default.WithPlacement(null));
@@ -125,6 +139,7 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(a, b);
             Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
             Assert.AreNotEqual(a, UserSettings.Default);
+            Assert.AreNotEqual(UserSettings.Default.WithRepeatDelaySeconds(0.6f), UserSettings.Default);
         }
     }
 
@@ -136,7 +151,8 @@ namespace VRKeyboard.App.Tests
             UserSettings settings = UserSettings.Default
                 .WithPlacement(new KeyboardPlacement(0.31f, 0.72f, -0.12f, 25f, 0.52f))
                 .WithTriggerThreshold(0.55f)
-                .WithStickThreshold(0.35f);
+                .WithStickThreshold(0.35f)
+                .WithRepeatDelaySeconds(0.65f);
             Assert.AreEqual(settings, SettingsSerializer.Deserialize(SettingsSerializer.Serialize(settings)));
         }
 
@@ -147,6 +163,7 @@ namespace VRKeyboard.App.Tests
             StringAssert.Contains("\"downMeters\": 0.26", json);
             StringAssert.DoesNotContain("0.2599", json);
             StringAssert.Contains("\"version\": 1", json);
+            StringAssert.Contains("\"repeatDelaySeconds\": 0.5", json);
         }
 
         [Test]
@@ -155,6 +172,7 @@ namespace VRKeyboard.App.Tests
             UserSettings settings = SettingsSerializer.Deserialize("{\"version\":1,\"display\":{\"tiltDegrees\":30}}");
             Assert.AreEqual(KeyboardPlacement.Default.WithTilt(30f), settings.Placement);
             Assert.AreEqual(UserSettings.Default.TriggerThreshold, settings.TriggerThreshold);
+            Assert.AreEqual(UserSettings.Default.RepeatDelaySeconds, settings.RepeatDelaySeconds);
 
             Assert.AreEqual(UserSettings.Default, SettingsSerializer.Deserialize("{\"version\":1}"));
         }
@@ -170,6 +188,7 @@ namespace VRKeyboard.App.Tests
         [TestCase("{\"version\":1,\"display\":{\"downMeters\":0.61}}")]
         [TestCase("{\"version\":1,\"grip\":{\"triggerThreshold\":0.01}}")]
         [TestCase("{\"version\":1,\"grip\":{\"stickThreshold\":null}}")]
+        [TestCase("{\"version\":1,\"grip\":{\"repeatDelaySeconds\":1.5}}")]
         public void 正しくない内容はFormatException(string json)
         {
             Assert.Throws<FormatException>(() => SettingsSerializer.Deserialize(json));
@@ -256,11 +275,11 @@ namespace VRKeyboard.App.Tests
         }
     }
 
-    /// <summary>シーンの設定画面と同じ寸法の配置（1280×800。行の高さ 72・［−］・スライダー・［＋］を横に並べる）。</summary>
+    /// <summary>シーンの設定画面と同じ寸法の配置（1280×872。行の高さ 72・［−］・スライダー・［＋］を横に並べる）。</summary>
     internal static class TestSettingsLayout
     {
-        public static readonly Vector2 Size = new Vector2(1280f, 800f);
-        public static readonly Rect Reset = new Rect(992f, 732f, 240f, 52f);
+        public static readonly Vector2 Size = new Vector2(1280f, 872f);
+        public static readonly Rect Reset = new Rect(992f, 804f, 240f, 52f);
         const float FirstRowTop = 144f;
         const float RowHeight = 72f;
 
@@ -333,7 +352,7 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 操作の対象が画面の外にあると例外()
         {
-            var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.Items[0], 760f) };
+            var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.Items[0], 820f) };
             Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, TestSettingsLayout.Reset));
         }
 
@@ -341,7 +360,7 @@ namespace VRKeyboard.App.Tests
         public void 操作の対象の大きさが正でないと例外()
         {
             var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.Items[0], 100f) };
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, new Rect(992f, 732f, 0f, 52f)));
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, new Rect(992f, 804f, 0f, 52f)));
         }
 
         [Test]
@@ -387,6 +406,8 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual("左 5 cm", right.Format(-0.05f));
             Assert.AreEqual("17°", tilt.Format(17f));
             Assert.AreEqual("70%", trigger.Format(0.7f));
+            Assert.AreEqual("0.50 秒", SettingsCatalog.Find("repeatDelaySeconds").Format(0.5f));
+            Assert.AreEqual("0.35 秒", SettingsCatalog.Find("repeatDelaySeconds").Format(0.35f));
         }
 
         [Test]
@@ -400,6 +421,7 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(0.60f, SettingsCatalog.Find("widthMeters").Set(s, 0.60f).Placement.WidthMeters);
             Assert.AreEqual(0.50f, SettingsCatalog.Find("triggerThreshold").Set(s, 0.50f).TriggerThreshold);
             Assert.AreEqual(0.65f, SettingsCatalog.Find("stickThreshold").Set(s, 0.65f).StickThreshold);
+            Assert.AreEqual(0.75f, SettingsCatalog.Find("repeatDelaySeconds").Set(s, 0.75f).RepeatDelaySeconds);
         }
 
         [Test]

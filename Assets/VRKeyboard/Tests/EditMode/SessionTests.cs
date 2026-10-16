@@ -963,7 +963,37 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void しきい値以外の変更は例外()
+        public void 連続入力の時間を差し替えると次の長押しから使われる()
+        {
+            var rig = new Rig();
+            rig.Session.ApplySettings(new KeyboardSettings(repeatDelaySeconds: 0.25, repeatIntervalSeconds: 0.5));
+            SelectA(rig);
+            rig.SetTrigger(rig.Vowel, true); rig.Tick();
+            rig.Tick(0.27);
+            Assert.AreEqual("ああ", rig.Session.Composition);
+            rig.Tick(0.46); // 0.73
+            Assert.AreEqual("ああ", rig.Session.Composition, "間隔の前");
+            rig.Tick(0.04); // 0.77
+            Assert.AreEqual("あああ", rig.Session.Composition);
+            Assert.AreEqual(0.25, rig.Session.Settings.RepeatDelaySeconds);
+        }
+
+        [Test]
+        public void ダッシュボードで一時停止すると連続入力が止まり_再開後も引き直すまで入らない()
+        {
+            var rig = new Rig();
+            SelectA(rig);
+            rig.SetTrigger(rig.Vowel, true); rig.Tick();
+            rig.Session.SetDashboardVisible(true);
+            rig.Tick(1.0);
+            rig.Session.SetDashboardVisible(false);
+            rig.Tick();
+            rig.Tick(1.0);
+            Assert.AreEqual("あ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void しきい値と連続入力の時間以外の変更は例外()
         {
             var rig = new Rig();
             Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(consonantHand: Hand.Left)));

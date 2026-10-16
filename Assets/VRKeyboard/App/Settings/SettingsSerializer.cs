@@ -23,6 +23,7 @@ namespace VRKeyboard.App.Settings
         const string GripKey = "grip";
         const string TriggerKey = "triggerThreshold";
         const string StickKey = "stickThreshold";
+        const string RepeatDelayKey = "repeatDelaySeconds";
 
         public static string Serialize(UserSettings settings)
         {
@@ -43,6 +44,7 @@ namespace VRKeyboard.App.Settings
                 {
                     [TriggerKey] = Number(settings.TriggerThreshold),
                     [StickKey] = Number(settings.StickThreshold),
+                    [RepeatDelayKey] = Number(settings.RepeatDelaySeconds),
                 },
             };
             return root.ToString(Formatting.Indented);
@@ -84,7 +86,8 @@ namespace VRKeyboard.App.Settings
                 return new UserSettings(
                     placement,
                     OptionalNumber(grip, TriggerKey, defaults.TriggerThreshold),
-                    OptionalNumber(grip, StickKey, defaults.StickThreshold));
+                    OptionalNumber(grip, StickKey, defaults.StickThreshold),
+                    OptionalNumber(grip, RepeatDelayKey, defaults.RepeatDelaySeconds));
             }
             catch (ArgumentOutOfRangeException e)
             {

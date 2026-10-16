@@ -32,7 +32,7 @@ namespace VRKeyboard.Core.Grip
             Single("7"), Single("8"), Single("9"),
         };
 
-        // 機能ページの上6マスはすべてのページで共通。
+        // 機能ページの上段と下段はすべてのページで共通。中段はページごとに異なる。
         static readonly GripCell Erase = GripCell.ForAction(GripAction.Erase, "消去");
         static readonly GripCell Space = GripCell.ForAction(GripAction.Space, "空白");
 
@@ -83,13 +83,13 @@ namespace VRKeyboard.Core.Grip
             }
         }
 
-        static GripCell[] BuildFunctionCells(GripCell bottomLeft, GripCell bottom, GripCell bottomRight)
+        static GripCell[] BuildFunctionCells(GripCell middleLeft, GripCell middle, GripCell middleRight)
         {
             return new[]
             {
                 GripCell.Empty, GripCell.Empty, Erase,
+                middleLeft, middle, middleRight,
                 GripCell.Empty, GripCell.Empty, Space,
-                bottomLeft, bottom, bottomRight,
             };
         }
 

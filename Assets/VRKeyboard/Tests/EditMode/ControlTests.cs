@@ -153,6 +153,8 @@ namespace VRKeyboard.Core.Tests
             Assert.AreEqual(0.20, settings.ChordWindowSeconds);
             Assert.AreEqual(0.60, settings.DoubleChordWindowSeconds);
             Assert.AreEqual(144, settings.MaxLength);
+            Assert.AreEqual(0.50, settings.RepeatDelaySeconds);
+            Assert.AreEqual(0.10, settings.RepeatIntervalSeconds);
         }
 
         [Test]
@@ -178,6 +180,14 @@ namespace VRKeyboard.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(maxLength: 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(maxLength: -1));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(consonantHand: (Hand)5));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatDelaySeconds: 0.0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatDelaySeconds: -0.1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatDelaySeconds: double.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatDelaySeconds: double.PositiveInfinity));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatIntervalSeconds: 0.0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatIntervalSeconds: -0.1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatIntervalSeconds: double.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatIntervalSeconds: double.PositiveInfinity));
         }
 
         [Test]
@@ -212,6 +222,61 @@ namespace VRKeyboard.Core.Tests
             tracker.Update(LeftTrigger(0.8f), Threshold);
             Assert.IsFalse(tracker.Update(LeftTrigger(0.69f), Threshold).LeftTrigger);
             Assert.IsTrue(tracker.Update(LeftTrigger(0.7f), Threshold).LeftTrigger, "離した後に再びしきい値以上にするとエッジが出る");
+        }
+    }
+
+    public class KeyRepeaterTests
+    {
+        // 2進数で正確に表せる時刻を使い、境界ちょうどの判定を確かめる。
+        const double Delay = 0.5;
+        const double Interval = 0.25;
+
+        [Test]
+        public void 遅延の後に最初の連続入力_以降は間隔ごと()
+        {
+            var repeater = new KeyRepeater();
+            repeater.Start(Hand.Left, 1.0, Delay);
+            Assert.IsTrue(repeater.IsActive);
+            Assert.AreEqual(Hand.Left, repeater.Hand);
+            Assert.IsFalse(repeater.Poll(1.25, Interval));
+            Assert.IsTrue(repeater.Poll(1.5, Interval));
+            Assert.IsFalse(repeater.Poll(1.5, Interval));
+            Assert.IsFalse(repeater.Poll(1.625, Interval));
+            Assert.IsTrue(repeater.Poll(1.75, Interval));
+            Assert.IsTrue(repeater.Poll(2.0, Interval));
+        }
+
+        [Test]
+        public void 間隔を超えて遅れても1回だけで_次は遅れた時刻から間隔の後()
+        {
+            var repeater = new KeyRepeater();
+            repeater.Start(Hand.Right, 0.0, Delay);
+            Assert.IsTrue(repeater.Poll(2.0, Interval));
+            Assert.IsFalse(repeater.Poll(2.125, Interval));
+            Assert.IsTrue(repeater.Poll(2.25, Interval));
+        }
+
+        [Test]
+        public void 止めると連続入力しない()
+        {
+            var repeater = new KeyRepeater();
+            Assert.IsFalse(repeater.IsActive);
+            Assert.IsFalse(repeater.Poll(10.0, Interval));
+            repeater.Start(Hand.Left, 0.0, Delay);
+            repeater.Stop();
+            Assert.IsFalse(repeater.IsActive);
+            Assert.IsFalse(repeater.Poll(10.0, Interval));
+            Assert.Throws<InvalidOperationException>(() => { var _ = repeater.Hand; });
+        }
+
+        [Test]
+        public void 不正な引数は例外()
+        {
+            var repeater = new KeyRepeater();
+            Assert.Throws<ArgumentOutOfRangeException>(() => repeater.Start((Hand)5, 0.0, Delay));
+            Assert.Throws<ArgumentOutOfRangeException>(() => repeater.Start(Hand.Left, 0.0, 0.0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => repeater.Start(Hand.Left, 0.0, double.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => repeater.Poll(0.0, 0.0));
         }
     }
 }

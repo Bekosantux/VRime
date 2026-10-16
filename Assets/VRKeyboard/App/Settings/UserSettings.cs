@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using VRKeyboard.Core;
 
 namespace VRKeyboard.App.Settings
@@ -11,11 +12,12 @@ namespace VRKeyboard.App.Settings
     {
         public static readonly SettingRange TriggerThresholdRange = new SettingRange(0.05f, 0.95f, 0.05f);
         public static readonly SettingRange StickThresholdRange = new SettingRange(0.05f, 0.95f, 0.05f);
+        public static readonly SettingRange RepeatDelaySecondsRange = new SettingRange(0.20f, 1.00f, 0.05f);
 
-        /// <summary>しきい値の既定は Core の既定値に揃える。</summary>
+        /// <summary>しきい値と長押しの時間の既定は Core の既定値に揃える。</summary>
         public static readonly UserSettings Default = CreateDefault();
 
-        public UserSettings(KeyboardPlacement placement, float triggerThreshold, float stickThreshold)
+        public UserSettings(KeyboardPlacement placement, float triggerThreshold, float stickThreshold, float repeatDelaySeconds)
         {
             Placement = placement ?? throw new ArgumentNullException(nameof(placement));
             if (!TriggerThresholdRange.Contains(triggerThreshold))
@@ -24,8 +26,12 @@ namespace VRKeyboard.App.Settings
             if (!StickThresholdRange.Contains(stickThreshold))
                 throw new ArgumentOutOfRangeException(nameof(stickThreshold), stickThreshold,
                     StickThresholdRange.Min + "〜" + StickThresholdRange.Max + " である必要があります。");
+            if (!RepeatDelaySecondsRange.Contains(repeatDelaySeconds))
+                throw new ArgumentOutOfRangeException(nameof(repeatDelaySeconds), repeatDelaySeconds,
+                    RepeatDelaySecondsRange.Min + "〜" + RepeatDelaySecondsRange.Max + " である必要があります。");
             TriggerThreshold = triggerThreshold;
             StickThreshold = stickThreshold;
+            RepeatDelaySeconds = repeatDelaySeconds;
         }
 
         public KeyboardPlacement Placement { get; }
@@ -36,14 +42,21 @@ namespace VRKeyboard.App.Settings
         /// <summary>スティックの傾きがこの値以上で方向を決める（<see cref="KeyboardSettings.StickThreshold"/>）。</summary>
         public float StickThreshold { get; }
 
-        public UserSettings WithPlacement(KeyboardPlacement value) => new UserSettings(value, TriggerThreshold, StickThreshold);
-        public UserSettings WithTriggerThreshold(float value) => new UserSettings(Placement, value, StickThreshold);
-        public UserSettings WithStickThreshold(float value) => new UserSettings(Placement, TriggerThreshold, value);
+        /// <summary>トリガーを引いたままこの秒数が経つと連続入力を始める（<see cref="KeyboardSettings.RepeatDelaySeconds"/>）。</summary>
+        public float RepeatDelaySeconds { get; }
+
+        public UserSettings WithPlacement(KeyboardPlacement value) => new UserSettings(value, TriggerThreshold, StickThreshold, RepeatDelaySeconds);
+        public UserSettings WithTriggerThreshold(float value) => new UserSettings(Placement, value, StickThreshold, RepeatDelaySeconds);
+        public UserSettings WithStickThreshold(float value) => new UserSettings(Placement, TriggerThreshold, value, RepeatDelaySeconds);
+        public UserSettings WithRepeatDelaySeconds(float value) => new UserSettings(Placement, TriggerThreshold, StickThreshold, value);
 
         /// <summary>Core の設定にする。この設定で扱わない値（子音の手など）は Core の既定値。</summary>
         public KeyboardSettings ToKeyboardSettings()
         {
-            return new KeyboardSettings(stickThreshold: StickThreshold, triggerThreshold: TriggerThreshold);
+            return new KeyboardSettings(
+                stickThreshold: StickThreshold,
+                triggerThreshold: TriggerThreshold,
+                repeatDelaySeconds: ToDouble(RepeatDelaySeconds));
         }
 
         public bool Equals(UserSettings other)
@@ -51,7 +64,8 @@ namespace VRKeyboard.App.Settings
             return other != null
                 && Placement.Equals(other.Placement)
                 && TriggerThreshold == other.TriggerThreshold
-                && StickThreshold == other.StickThreshold;
+                && StickThreshold == other.StickThreshold
+                && RepeatDelaySeconds == other.RepeatDelaySeconds;
         }
 
         public override bool Equals(object obj) => Equals(obj as UserSettings);
@@ -63,6 +77,7 @@ namespace VRKeyboard.App.Settings
                 int hash = Placement.GetHashCode();
                 hash = hash * 31 + TriggerThreshold.GetHashCode();
                 hash = hash * 31 + StickThreshold.GetHashCode();
+                hash = hash * 31 + RepeatDelaySeconds.GetHashCode();
                 return hash;
             }
         }
@@ -70,7 +85,13 @@ namespace VRKeyboard.App.Settings
         static UserSettings CreateDefault()
         {
             var core = new KeyboardSettings();
-            return new UserSettings(KeyboardPlacement.Default, core.TriggerThreshold, core.StickThreshold);
+            return new UserSettings(KeyboardPlacement.Default, core.TriggerThreshold, core.StickThreshold, (float)core.RepeatDelaySeconds);
+        }
+
+        // float を double に広げると 0.35 が 0.34999999403953552 になるため、float として最短の 10進表記を経由する。
+        static double ToDouble(float value)
+        {
+            return double.Parse(value.ToString("R", CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
         }
     }
 }

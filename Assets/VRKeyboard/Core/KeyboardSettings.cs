@@ -14,7 +14,9 @@ namespace VRKeyboard.Core
             float triggerThreshold = 0.7f,
             double chordWindowSeconds = 0.20,
             double doubleChordWindowSeconds = 0.60,
-            int maxLength = 144)
+            int maxLength = 144,
+            double repeatDelaySeconds = 0.50,
+            double repeatIntervalSeconds = 0.10)
         {
             if (consonantHand != Hand.Left && consonantHand != Hand.Right)
                 throw new ArgumentOutOfRangeException(nameof(consonantHand), consonantHand, null);
@@ -26,6 +28,8 @@ namespace VRKeyboard.Core
                 throw new ArgumentOutOfRangeException(nameof(doubleChordWindowSeconds), doubleChordWindowSeconds, "正の値である必要があります。");
             if (maxLength <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maxLength), maxLength, "正の値である必要があります。");
+            ValidateSeconds(repeatDelaySeconds, nameof(repeatDelaySeconds));
+            ValidateSeconds(repeatIntervalSeconds, nameof(repeatIntervalSeconds));
 
             ConsonantHand = consonantHand;
             StickThreshold = stickThreshold;
@@ -33,6 +37,8 @@ namespace VRKeyboard.Core
             ChordWindowSeconds = chordWindowSeconds;
             DoubleChordWindowSeconds = doubleChordWindowSeconds;
             MaxLength = maxLength;
+            RepeatDelaySeconds = repeatDelaySeconds;
+            RepeatIntervalSeconds = repeatIntervalSeconds;
         }
 
         /// <summary>子音パネルを担当する手。母音パネルは反対の手。</summary>
@@ -55,11 +61,23 @@ namespace VRKeyboard.Core
         /// <summary>入力バッファの最大長（UTF-16 単位）。</summary>
         public int MaxLength { get; }
 
+        /// <summary>トリガーを引いたままこの秒数が経つと、連続入力を始める（長押し時間）。</summary>
+        public double RepeatDelaySeconds { get; }
+
+        /// <summary>連続入力の2回目以降の間隔。</summary>
+        public double RepeatIntervalSeconds { get; }
+
         // 傾き・引き量は 0..1 で表されるため、1 を超える値には到達できない。0 以下だと、触れていなくても倒した・押したとみなす。
         static void ValidateThreshold(float value, string name)
         {
             if (!(value > 0f && value <= 1f))
                 throw new ArgumentOutOfRangeException(name, value, "0 を超え 1 以下である必要があります。");
+        }
+
+        static void ValidateSeconds(double value, string name)
+        {
+            if (!(value > 0.0) || double.IsInfinity(value))
+                throw new ArgumentOutOfRangeException(name, value, "正の有限の値である必要があります。");
         }
     }
 }

@@ -9,10 +9,10 @@ namespace VRKeyboard.Core.Tests
     {
         // 機能ページのセル番号（SPEC 5.2）
         const int Erase = 2;
-        const int Space = 5;
-        const int Modifier = 6;
-        const int Wa = 7;
-        const int Symbol = 8;
+        const int Modifier = 3;
+        const int Wa = 4;
+        const int Symbol = 5;
+        const int Space = 8;
 
         // 母音側の機能ページのセル番号
         const int ToggleWidth = 0;
@@ -252,8 +252,8 @@ namespace VRKeyboard.Core.Tests
             var rig = new Rig();
             rig.ConsonantFunction(0);
             rig.ConsonantFunction(1);
-            rig.ConsonantFunction(3);
-            rig.ConsonantFunction(4);
+            rig.ConsonantFunction(6);
+            rig.ConsonantFunction(7);
             Assert.AreEqual("", rig.Session.Composition);
             Assert.AreEqual("", rig.Session.Committed);
             Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
@@ -395,10 +395,10 @@ namespace VRKeyboard.Core.Tests
         {
             var rig = new Rig();
             rig.VowelFunction(NumberPage);
-            rig.ConsonantFunction(7, StickDirection.Center); // 0
-            rig.ConsonantFunction(7, StickDirection.Left);   // (
-            rig.ConsonantFunction(6, StickDirection.Up);     // *
-            rig.ConsonantFunction(8, StickDirection.Right);  // ;
+            rig.ConsonantFunction(4, StickDirection.Center); // 0
+            rig.ConsonantFunction(4, StickDirection.Left);   // (
+            rig.ConsonantFunction(3, StickDirection.Up);     // *
+            rig.ConsonantFunction(5, StickDirection.Right);  // ;
             Assert.AreEqual("0(*;", rig.Session.Committed);
         }
 
@@ -619,7 +619,7 @@ namespace VRKeyboard.Core.Tests
         {
             var rig = new Rig();
             GripViewState view = rig.Session.GripView;
-            string[] consonant = { "", "", "消", "", "", "空", "小", "わ", "記" };
+            string[] consonant = { "", "", "消", "小", "わ", "記", "", "", "空" };
             string[] vowel = { "全", "", "数", "←", "↑", "→", "言", "変", "確" };
             CollectionAssert.AreEqual(consonant, view.ConsonantHints);
             CollectionAssert.AreEqual(vowel, view.VowelHints);
@@ -669,6 +669,228 @@ namespace VRKeyboard.Core.Tests
             Assert.AreEqual("1", rig.Session.GripView.VowelCells[0].Label);
             Assert.AreEqual("", rig.Session.GripView.VowelCells[1].Label);
             Assert.IsTrue(rig.Session.GripView.VowelCells[1].Disabled);
+        }
+
+        // 連続入力（長押し）。遅延 0.5 秒・間隔 0.1 秒。時刻の境界の前後 0.02 秒で確かめ、浮動小数の誤差の影響を避ける。
+
+        static Rig RepeatRig()
+        {
+            return new Rig(new KeyboardSettings(repeatDelaySeconds: 0.5, repeatIntervalSeconds: 0.1));
+        }
+
+        /// <summary>通常ページで「あ」を選び、母音側のトリガーを引いたままにする（1回目が入る）。</summary>
+        static void HoldA(Rig rig)
+        {
+            rig.SetStick(rig.Consonant, Sticks.Cell(0));
+            rig.SetStick(rig.Vowel, Sticks.Dir(StickDirection.Center));
+            rig.Tick();
+            rig.SetTrigger(rig.Vowel, true);
+            rig.Tick();
+        }
+
+        /// <summary>機能ページのセルを選び、実行するトリガーを引いたままにする（1回目が実行される）。</summary>
+        static void HoldFunction(Rig rig, Hand gripHand, int cell)
+        {
+            rig.SetGrip(gripHand, true);
+            rig.SetStick(gripHand, Sticks.Cell(cell));
+            rig.Tick();
+            rig.SetTrigger(gripHand == rig.Consonant ? rig.Vowel : rig.Consonant, true);
+            rig.Tick();
+        }
+
+        [Test]
+        public void 文字はトリガーを引いたままにすると遅延の後に間隔ごとに連続入力される()
+        {
+            var rig = RepeatRig();
+            HoldA(rig);
+            Assert.AreEqual("あ", rig.Session.Composition);
+            rig.Tick(0.48);
+            Assert.AreEqual("あ", rig.Session.Composition, "遅延の前");
+            rig.Tick(0.04); // 0.52
+            Assert.AreEqual("ああ", rig.Session.Composition);
+            rig.Tick(0.06); // 0.58
+            Assert.AreEqual("ああ", rig.Session.Composition, "間隔の前");
+            rig.Tick(0.04); // 0.62
+            Assert.AreEqual("あああ", rig.Session.Composition);
+            rig.Tick(0.1); // 0.72
+            Assert.AreEqual("ああああ", rig.Session.Composition);
+            Assert.AreEqual(4, rig.Effects.CountHaptics(rig.Vowel, HapticKind.Input));
+        }
+
+        [Test]
+        public void 間隔より長いフレームが挟まっても連続入力は1フレームに1回()
+        {
+            var rig = RepeatRig();
+            HoldA(rig);
+            rig.Tick(1.0);
+            Assert.AreEqual("ああ", rig.Session.Composition);
+            rig.Tick(0.08);
+            Assert.AreEqual("ああ", rig.Session.Composition, "次は遅れたフレームから間隔の後");
+            rig.Tick(0.04);
+            Assert.AreEqual("あああ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void トリガーを離すと連続入力が止まり_引き直すと遅延からやり直す()
+        {
+            var rig = RepeatRig();
+            HoldA(rig);
+            rig.Tick(0.52);
+            Assert.AreEqual("ああ", rig.Session.Composition);
+            rig.SetTrigger(rig.Vowel, false);
+            rig.Tick();
+            rig.Tick(1.0);
+            Assert.AreEqual("ああ", rig.Session.Composition);
+
+            rig.SetTrigger(rig.Vowel, true);
+            rig.Tick();
+            Assert.AreEqual("あああ", rig.Session.Composition);
+            rig.Tick(0.48);
+            Assert.AreEqual("あああ", rig.Session.Composition);
+            rig.Tick(0.04);
+            Assert.AreEqual("ああああ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void トリガーをしきい値未満まで戻すと連続入力が止まる()
+        {
+            var rig = RepeatRig();
+            HoldA(rig);
+            rig.SetTriggerPull(rig.Vowel, 0.6f); // 既定のしきい値 0.7 未満
+            rig.Tick();
+            rig.Tick(1.0);
+            Assert.AreEqual("あ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void 選択を変えると連続入力が止まり_新しい選択は引き直すまで入らない()
+        {
+            var rig = RepeatRig();
+            HoldA(rig);
+            rig.SetStick(rig.Vowel, Sticks.Dir(StickDirection.Left)); // い
+            rig.Tick();
+            rig.Tick(1.0);
+            Assert.AreEqual("あ", rig.Session.Composition);
+
+            rig.SetStick(rig.Vowel, Sticks.Dir(StickDirection.Center));
+            rig.SetStick(rig.Consonant, Sticks.Cell(1)); // か
+            rig.Tick();
+            rig.Tick(1.0);
+            Assert.AreEqual("あ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void グリップを押すと連続入力が止まる()
+        {
+            var rig = RepeatRig();
+            HoldA(rig);
+            rig.SetGrip(rig.Consonant, true);
+            rig.Tick();
+            rig.Tick(1.0);
+            rig.SetGrip(rig.Consonant, false);
+            rig.Tick();
+            rig.Tick(1.0);
+            Assert.AreEqual("あ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void 子音側のトリガーを引くと連続入力が止まる()
+        {
+            var rig = RepeatRig();
+            rig.SetStick(rig.Consonant, Sticks.Cell(1)); // か
+            rig.Tick();
+            rig.SetTrigger(rig.Vowel, true);
+            rig.Tick();
+            rig.Tick(0.52);
+            Assert.AreEqual("かか", rig.Session.Composition);
+
+            rig.SetTrigger(rig.Consonant, true);
+            rig.Tick();
+            Assert.AreEqual("かが", rig.Session.Composition);
+            rig.Tick(1.0);
+            Assert.AreEqual("かが", rig.Session.Composition);
+        }
+
+        [Test]
+        public void 同じフレームで子音側のトリガーで切り替えた文字は連続入力しない()
+        {
+            var rig = RepeatRig();
+            rig.SetStick(rig.Consonant, Sticks.Cell(1)); // か
+            rig.Tick();
+            rig.SetTrigger(rig.Vowel, true);
+            rig.SetTrigger(rig.Consonant, true);
+            rig.Tick();
+            Assert.AreEqual("が", rig.Session.Composition);
+            rig.Tick(1.0);
+            Assert.AreEqual("が", rig.Session.Composition);
+        }
+
+        [Test]
+        public void 消去は連続入力され_消すものがなくなると1回だけ無効の振動を出して止まる()
+        {
+            var rig = RepeatRig();
+            rig.Type(0, StickDirection.Center);
+            rig.Type(0, StickDirection.Left);
+            rig.Effects.ClearAll();
+
+            HoldFunction(rig, rig.Consonant, Erase);
+            Assert.AreEqual("あ", rig.Session.Composition);
+            rig.Tick(0.52);
+            Assert.AreEqual("", rig.Session.Composition);
+            rig.Tick(0.1);
+            rig.Tick(1.0);
+            Assert.AreEqual(2, rig.Effects.CountHaptics(HapticKind.Input));
+            Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
+        }
+
+        [Test]
+        public void 空白は連続入力される()
+        {
+            var rig = RepeatRig();
+            HoldFunction(rig, rig.Consonant, Space);
+            rig.Tick(0.52);
+            Assert.AreEqual("　　", rig.Session.Committed);
+        }
+
+        [Test]
+        public void 機能ページの文字は連続入力される()
+        {
+            var rig = RepeatRig();
+            HoldFunction(rig, rig.Consonant, Wa);
+            rig.Tick(0.52);
+            Assert.AreEqual("わわ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void カーソル移動は連続入力される()
+        {
+            var rig = RepeatRig();
+            rig.Type(0, StickDirection.Center);
+            rig.Type(0, StickDirection.Left);
+            rig.Type(0, StickDirection.Up);
+
+            HoldFunction(rig, rig.Vowel, CursorLeft);
+            Assert.AreEqual(2, rig.Session.CompositionCursor);
+            rig.Tick(0.52);
+            Assert.AreEqual(1, rig.Session.CompositionCursor);
+        }
+
+        [Test]
+        public void 文字の切り替えとページの操作は連続入力しない()
+        {
+            var rig = RepeatRig();
+            rig.Type(1, StickDirection.Center); // か
+            HoldFunction(rig, rig.Consonant, Modifier);
+            rig.Tick(1.0);
+            Assert.AreEqual("が", rig.Session.Composition);
+            rig.SetTrigger(rig.Vowel, false);
+            rig.SetGrip(rig.Consonant, false);
+            rig.SetStick(rig.Consonant, StickValue.Zero);
+            rig.Tick();
+
+            HoldFunction(rig, rig.Vowel, NumberPage);
+            rig.Tick(1.0);
+            Assert.IsTrue(rig.Session.GripInput.IsNumberPage);
         }
     }
 }

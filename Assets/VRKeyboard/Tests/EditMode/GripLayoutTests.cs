@@ -72,9 +72,9 @@ namespace VRKeyboard.Core.Tests
         [TestCase(GripPage.Kana)]
         [TestCase(GripPage.Alpha)]
         [TestCase(GripPage.Number)]
-        public void 機能ページの上6マスは全ページ共通(GripPage page)
+        public void 機能ページの上段と下段は全ページ共通(GripPage page)
         {
-            int[] empty = { 0, 1, 3, 4 };
+            int[] empty = { 0, 1, 6, 7 };
             foreach (int cell in empty)
             {
                 Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(page, true, cell).Kind, "セル " + cell);
@@ -82,42 +82,42 @@ namespace VRKeyboard.Core.Tests
             GripCell erase = GripLayout.GetConsonantCell(page, true, 2);
             Assert.AreEqual(GripCellKind.Action, erase.Kind);
             Assert.AreEqual(GripAction.Erase, erase.Action);
-            GripCell space = GripLayout.GetConsonantCell(page, true, 5);
+            GripCell space = GripLayout.GetConsonantCell(page, true, 8);
             Assert.AreEqual(GripCellKind.Action, space.Kind);
             Assert.AreEqual(GripAction.Space, space.Action);
         }
 
         [Test]
-        public void かなの機能ページの下3マス()
+        public void かなの機能ページの中段3マス()
         {
-            GripCell modifier = GripLayout.GetConsonantCell(GripPage.Kana, true, 6);
+            GripCell modifier = GripLayout.GetConsonantCell(GripPage.Kana, true, 3);
             Assert.AreEqual(GripCellKind.Action, modifier.Kind);
             Assert.AreEqual(GripAction.CharacterModifier, modifier.Action);
             Assert.AreEqual("小゛゜", modifier.Label);
 
-            GripCell wa = GripLayout.GetConsonantCell(GripPage.Kana, true, 7);
+            GripCell wa = GripLayout.GetConsonantCell(GripPage.Kana, true, 4);
             AssertGroup(wa, "わをんー〜");
             Assert.AreEqual("わ", wa.Label);
 
-            GripCell symbol = GripLayout.GetConsonantCell(GripPage.Kana, true, 8);
+            GripCell symbol = GripLayout.GetConsonantCell(GripPage.Kana, true, 5);
             AssertGroup(symbol, "、。？！…");
             Assert.AreEqual("記号", symbol.Label);
         }
 
         [Test]
-        public void 英字の機能ページの下3マス()
+        public void 英字の機能ページの中段3マス()
         {
-            Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 6).Kind);
-            Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 7).Kind);
-            AssertGroup(GripLayout.GetConsonantCell(GripPage.Alpha, true, 8), ",.?!'");
+            Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 3).Kind);
+            Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 4).Kind);
+            AssertGroup(GripLayout.GetConsonantCell(GripPage.Alpha, true, 5), ",.?!'");
         }
 
         [Test]
-        public void 数字の機能ページの下3マス()
+        public void 数字の機能ページの中段3マス()
         {
-            AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 6), "-+*/~");
-            AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 7), "0(=)&");
-            AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 8), ".,:;%");
+            AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 3), "-+*/~");
+            AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 4), "0(=)&");
+            AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 5), ".,:;%");
         }
 
         [Test]

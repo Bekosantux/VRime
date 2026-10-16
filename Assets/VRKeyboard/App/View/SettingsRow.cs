@@ -13,7 +13,7 @@ namespace VRKeyboard.App.View
     /// </summary>
     public sealed class SettingsRow : MonoBehaviour
     {
-        [Tooltip("項目のキー（設定ファイルの項目名と同じ）。downMeters / forwardMeters / rightMeters / tiltDegrees / widthMeters / triggerThreshold / stickThreshold。")]
+        [Tooltip("項目のキー（設定ファイルの項目名と同じ）。downMeters / forwardMeters / rightMeters / tiltDegrees / widthMeters / triggerThreshold / stickThreshold / repeatDelaySeconds。")]
         [SerializeField] string _key;
 
         [SerializeField] SettingsButton _decrease;
