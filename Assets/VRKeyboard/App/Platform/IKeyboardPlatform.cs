@@ -20,8 +20,11 @@ namespace VRKeyboard.App.Platform
         /// </summary>
         event Action QuitRequested;
 
-        /// <summary>SteamVR のダッシュボードが表示されているか。<see cref="BeginFrame"/> で更新される。</summary>
-        bool IsDashboardVisible { get; }
+        /// <summary>
+        /// SteamVR のダッシュボードが入力を持っているか（表示中と、閉じた後に入力がまだアプリへ戻っていない間）。
+        /// true の間、キーボードは一時停止する（SPEC 4.4）。<see cref="BeginFrame"/> で更新される。
+        /// </summary>
+        bool IsDashboardHoldingInput { get; }
 
         /// <summary>
         /// 設定画面（ダッシュボードの設定タブ）が表示されているか。<see cref="BeginFrame"/> で更新される。

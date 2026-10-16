@@ -23,8 +23,8 @@ namespace VRKeyboard.App.Platform
         /// <summary>プレビューの表示用。</summary>
         public DebugHapticOutput DebugHaptics => _haptics;
 
-        /// <summary>設定タブはダッシュボードの中にあるため、ダッシュボードも表示されているとみなす。</summary>
-        public bool IsDashboardVisible => IsSettingsVisible;
+        /// <summary>設定タブはダッシュボードの中にあるため、ダッシュボードが入力を持っているとみなす。</summary>
+        public bool IsDashboardHoldingInput => IsSettingsVisible;
 
         public bool IsSettingsVisible { get; private set; }
 

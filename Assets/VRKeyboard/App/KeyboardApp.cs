@@ -206,8 +206,8 @@ namespace VRKeyboard.App
             // 終了を求められたあとは、環境の API を呼ばない。
             if (_quitting) return;
 
-            // ダッシュボードの表示中は、手動で閉じるのと同じ処理でキーボードを閉じる（SPEC 4.4）。
-            _session.SetDashboardVisible(_platform.IsDashboardVisible);
+            // ダッシュボードが入力を持っている間は、手動で閉じるのと同じ処理でキーボードを閉じる（SPEC 4.4）。
+            _session.SetDashboardVisible(_platform.IsDashboardHoldingInput);
 
             _session.Tick(_platform.Controller.Read(), now);
             _runner.CancelUnlessWaiting();

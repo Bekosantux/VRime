@@ -67,7 +67,7 @@ namespace VRKeyboard.App.SteamVR
 
         public IControllerSource Controller => _controller;
         public IHapticOutput Haptics => _haptics;
-        public bool IsDashboardVisible { get; private set; }
+        public bool IsDashboardHoldingInput { get; private set; }
         public bool IsSettingsVisible { get; private set; }
 
         public event Action QuitRequested;
@@ -77,7 +77,9 @@ namespace VRKeyboard.App.SteamVR
             ThrowIfDisposed();
             _runtime.PollEvents();
             if (_quitRequested) return;
-            IsDashboardVisible = OpenVR.Overlay.IsDashboardVisible();
+            // ダッシュボードを閉じても、入力がアプリへ戻るのは数フレーム後になる。その間に入力の占有を始めると、
+            // 占有が有効にならず、開き直すまでゲームにも入力が渡り続ける。入力が戻るまでは一時停止を続ける。
+            IsDashboardHoldingInput = OpenVR.Overlay.IsDashboardVisible() || !OpenVR.System.IsInputAvailable();
             _overlay.Update();
             _settingsOverlay.Update();
             IsSettingsVisible = _settingsOverlay.IsVisible;
