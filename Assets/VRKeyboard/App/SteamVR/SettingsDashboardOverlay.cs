@@ -11,6 +11,7 @@ namespace VRKeyboard.App.SteamVR
     /// 設定画面を SteamVR のダッシュボードのタブ（ダッシュボードオーバーレイ）として表示する。
     /// 表示と非表示はダッシュボードが行う。レーザーによる操作はマウスのイベントとして届き、<see cref="ISettingsPointer"/> へ渡す。
     /// テクスチャは <see cref="KeyboardOverlay"/> と同じく、レンダースレッドで渡す。
+    /// タブのアイコン（サムネイル）のオーバーレイは本体と一緒に OpenVR が破棄する。単独では破棄できない（<c>ThumbnailCantBeDestroyed</c>）。
     /// </summary>
     public sealed class SettingsDashboardOverlay : IDisposable
     {
@@ -31,7 +32,6 @@ namespace VRKeyboard.App.SteamVR
         readonly ISettingsPointer _pointer;
         OverlayTextureSubmitter _submitter;
         ulong _handle;
-        ulong _thumbnailHandle;
 
         public SettingsDashboardOverlay(RenderTexture texture, ISettingsPointer pointer)
         {
@@ -42,11 +42,12 @@ namespace VRKeyboard.App.SteamVR
             if (!File.Exists(thumbnail)) throw new FileNotFoundException("ダッシュボードのアイコンが見つかりません。", thumbnail);
 
             CVROverlay overlay = OpenVR.Overlay;
-            OpenVRErrors.Check(overlay.CreateDashboardOverlay(OverlayKey, FriendlyName, ref _handle, ref _thumbnailHandle),
+            ulong thumbnailHandle = 0;
+            OpenVRErrors.Check(overlay.CreateDashboardOverlay(OverlayKey, FriendlyName, ref _handle, ref thumbnailHandle),
                 "CreateDashboardOverlay(" + OverlayKey + ")");
             try
             {
-                OpenVRErrors.Check(overlay.SetOverlayFromFile(_thumbnailHandle, thumbnail), "SetOverlayFromFile");
+                OpenVRErrors.Check(overlay.SetOverlayFromFile(thumbnailHandle, thumbnail), "SetOverlayFromFile");
                 OpenVRErrors.Check(overlay.SetOverlayWidthInMeters(_handle, WidthMeters), "SetOverlayWidthInMeters");
                 OverlayTextures.Configure(_handle);
 
@@ -60,10 +61,8 @@ namespace VRKeyboard.App.SteamVR
             catch
             {
                 // 元の例外を優先するため、破棄の失敗は無視する。
-                overlay.DestroyOverlay(_thumbnailHandle);
                 overlay.DestroyOverlay(_handle);
                 _handle = 0;
-                _thumbnailHandle = 0;
                 throw;
             }
         }
@@ -117,21 +116,12 @@ namespace VRKeyboard.App.SteamVR
         {
             if (_handle == 0) return;
             ulong handle = _handle;
-            ulong thumbnail = _thumbnailHandle;
             _handle = 0;
-            _thumbnailHandle = 0;
             IsVisible = false;
             // 先にレンダースレッドからの参照を断つ（KeyboardOverlay.Dispose と同じ理由）。
             _submitter?.Dispose();
             _submitter = null;
-            try
-            {
-                OpenVRErrors.Check(OpenVR.Overlay.DestroyOverlay(thumbnail), "DestroyOverlay(thumbnail)");
-            }
-            finally
-            {
-                OpenVRErrors.Check(OpenVR.Overlay.DestroyOverlay(handle), "DestroyOverlay");
-            }
+            OpenVRErrors.Check(OpenVR.Overlay.DestroyOverlay(handle), "DestroyOverlay");
         }
 
         void ThrowIfDisposed()
