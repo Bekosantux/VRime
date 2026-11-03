@@ -140,6 +140,28 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
             Assert.AreNotEqual(a, UserSettings.Default);
             Assert.AreNotEqual(UserSettings.Default.WithRepeatDelaySeconds(0.6f), UserSettings.Default);
+            Assert.AreNotEqual(UserSettings.Default.WithVRChat(new VRChatSettings(true, false)), UserSettings.Default);
+            Assert.AreEqual(UserSettings.Default.WithVRChat(new VRChatSettings(true, true)), UserSettings.Default);
+        }
+
+        [Test]
+        public void VRChatの設定は既定でどちらもオン()
+        {
+            Assert.IsTrue(UserSettings.Default.VRChat.FocusOnStartup);
+            Assert.IsTrue(UserSettings.Default.VRChat.ShowTypingText);
+        }
+
+        [Test]
+        public void ほかの値を変えてもVRChatの設定は変わらない()
+        {
+            var vrchat = new VRChatSettings(false, true);
+            UserSettings settings = UserSettings.Default.WithVRChat(vrchat)
+                .WithPlacement(KeyboardPlacement.Default.WithTilt(30f))
+                .WithTriggerThreshold(0.6f)
+                .WithStickThreshold(0.4f)
+                .WithRepeatDelaySeconds(0.7f);
+            Assert.AreEqual(vrchat, settings.VRChat);
+            Assert.Throws<ArgumentNullException>(() => UserSettings.Default.WithVRChat(null));
         }
     }
 
@@ -152,7 +174,8 @@ namespace VRKeyboard.App.Tests
                 .WithPlacement(new KeyboardPlacement(0.31f, 0.72f, -0.12f, 25f, 0.52f))
                 .WithTriggerThreshold(0.55f)
                 .WithStickThreshold(0.35f)
-                .WithRepeatDelaySeconds(0.65f);
+                .WithRepeatDelaySeconds(0.65f)
+                .WithVRChat(new VRChatSettings(false, true));
             Assert.AreEqual(settings, SettingsSerializer.Deserialize(SettingsSerializer.Serialize(settings)));
         }
 
@@ -164,6 +187,8 @@ namespace VRKeyboard.App.Tests
             StringAssert.DoesNotContain("0.2599", json);
             StringAssert.Contains("\"version\": 1", json);
             StringAssert.Contains("\"repeatDelaySeconds\": 0.5", json);
+            StringAssert.Contains("\"focusOnStartup\": true", json);
+            StringAssert.Contains("\"showTypingText\": true", json);
         }
 
         [Test]
@@ -173,6 +198,11 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(KeyboardPlacement.Default.WithTilt(30f), settings.Placement);
             Assert.AreEqual(UserSettings.Default.TriggerThreshold, settings.TriggerThreshold);
             Assert.AreEqual(UserSettings.Default.RepeatDelaySeconds, settings.RepeatDelaySeconds);
+
+            Assert.AreEqual(VRChatSettings.Default, settings.VRChat);
+
+            Assert.AreEqual(new VRChatSettings(true, false),
+                SettingsSerializer.Deserialize("{\"version\":1,\"vrchat\":{\"showTypingText\":false}}").VRChat);
 
             Assert.AreEqual(UserSettings.Default, SettingsSerializer.Deserialize("{\"version\":1}"));
         }
@@ -189,6 +219,10 @@ namespace VRKeyboard.App.Tests
         [TestCase("{\"version\":1,\"grip\":{\"triggerThreshold\":0.01}}")]
         [TestCase("{\"version\":1,\"grip\":{\"stickThreshold\":null}}")]
         [TestCase("{\"version\":1,\"grip\":{\"repeatDelaySeconds\":1.5}}")]
+        [TestCase("{\"version\":1,\"vrchat\":true}")]
+        [TestCase("{\"version\":1,\"vrchat\":{\"focusOnStartup\":\"true\"}}")]
+        [TestCase("{\"version\":1,\"vrchat\":{\"showTypingText\":1}}")]
+        [TestCase("{\"version\":1,\"vrchat\":{\"showTypingText\":null}}")]
         public void 正しくない内容はFormatException(string json)
         {
             Assert.Throws<FormatException>(() => SettingsSerializer.Deserialize(json));
@@ -275,55 +309,120 @@ namespace VRKeyboard.App.Tests
         }
     }
 
-    /// <summary>シーンの設定画面と同じ寸法の配置（1280×872。行の高さ 72・［−］・スライダー・［＋］を横に並べる）。</summary>
+    /// <summary>
+    /// シーンの設定画面と同じ大きさ（1280×872）の配置。左にカテゴリのタブを縦に並べ、右に選んでいるカテゴリのページを置く。
+    /// ページはどれも同じ位置から行を並べるため、別のページの行どうしは重なる。
+    /// </summary>
     internal static class TestSettingsLayout
     {
         public static readonly Vector2 Size = new Vector2(1280f, 872f);
         public static readonly Rect Reset = new Rect(992f, 804f, 240f, 52f);
-        const float FirstRowTop = 144f;
+        public const float FirstRowTop = 144f;
         const float RowHeight = 72f;
 
         public static SettingsLayout Create()
         {
-            var rows = new List<SettingsRowLayout>();
-            for (int i = 0; i < SettingsCatalog.Items.Count; i++) rows.Add(Row(SettingsCatalog.Items[i], FirstRowTop + RowHeight * i));
-            return new SettingsLayout(Size, rows, Reset);
+            var pages = new List<SettingsPageLayout>();
+            for (int i = 0; i < SettingsCatalog.Categories.Count; i++) pages.Add(Page(SettingsCatalog.Categories[i], i));
+            return new SettingsLayout(Size, pages, Reset);
         }
 
-        public static SettingsRowLayout Row(SettingItem item, float top)
+        public static SettingsLayout Create(params SettingsPageLayout[] pages) => new SettingsLayout(Size, pages, Reset);
+
+        /// <summary>カテゴリの項目を、カテゴリの順に 1 行ずつ上から並べたページ。</summary>
+        public static SettingsPageLayout Page(SettingsCategory category, int tabIndex)
         {
-            var slider = new Rect(440f, top, 520f, RowHeight);
+            var rows = new List<SettingsRowLayout>();
+            var toggles = new List<SettingsToggleLayout>();
+            for (int i = 0; i < category.Items.Count; i++)
+            {
+                float top = FirstRowTop + RowHeight * i;
+                switch (category.Items[i])
+                {
+                    case NumberSettingItem number:
+                        rows.Add(Row(number, top));
+                        break;
+                    case ToggleSettingItem toggle:
+                        toggles.Add(Toggle(toggle, top));
+                        break;
+                    default:
+                        throw new InvalidOperationException("未知の種類の項目です: " + category.Items[i].Key);
+                }
+            }
+            return new SettingsPageLayout(category, Tab(tabIndex), rows, toggles);
+        }
+
+        public static Rect Tab(int index) => new Rect(48f, FirstRowTop + 80f * index, 220f, 64f);
+
+        public static SettingsRowLayout Row(NumberSettingItem item, float top)
+        {
+            var slider = new Rect(680f, top, 440f, RowHeight);
             return new SettingsRowLayout(item,
-                new Rect(360f, top + 4f, 64f, 64f),
+                new Rect(600f, top + 4f, 64f, 64f),
                 slider,
-                new Rect(976f, top + 4f, 64f, 64f),
+                new Rect(1136f, top + 4f, 64f, 64f),
                 new Rect(slider.xMin + 18f, slider.center.y - 5f, slider.width - 36f, 10f));
         }
 
-        /// <summary>行の左（項目名の位置）。操作の対象がない。</summary>
-        public static Vector2 LabelPoint(SettingsRowLayout row) => new Vector2(200f, row.Slider.center.y);
+        public static SettingsToggleLayout Toggle(ToggleSettingItem item, float top) =>
+            new SettingsToggleLayout(item, new Rect(300f, top, 900f, RowHeight));
+
+        /// <summary>数値の行の左（項目名の位置）。操作の対象がない。</summary>
+        public static Vector2 LabelPoint(SettingsRowLayout row) => new Vector2(420f, row.Slider.center.y);
     }
 
     public sealed class SettingsLayoutTests
     {
         readonly SettingsLayout _layout = TestSettingsLayout.Create();
 
+        static SettingsCategory Display => SettingsCatalog.FindCategory("display");
+        static SettingsCategory Grip => SettingsCatalog.FindCategory("grip");
+        static SettingsCategory VRChat => SettingsCatalog.FindCategory("vrchat");
+
         [Test]
         public void 当たり判定()
         {
-            SettingsRowLayout row = _layout.Rows[2];
-            Assert.AreEqual(new SettingsHit(SettingsTarget.Slider, row.Item), _layout.HitTest(row.Slider.center));
-            Assert.AreEqual(new SettingsHit(SettingsTarget.Decrease, row.Item), _layout.HitTest(row.Decrease.center));
-            Assert.AreEqual(new SettingsHit(SettingsTarget.Increase, row.Item), _layout.HitTest(row.Increase.center));
-            Assert.AreEqual(new SettingsHit(SettingsTarget.Reset, null), _layout.HitTest(_layout.Reset.center));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(TestSettingsLayout.LabelPoint(row)));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(-10f, -10f)));
+            SettingsRowLayout row = _layout.PageOf(Display).Rows[2];
+            Assert.AreEqual(SettingsHit.Slider(row.Item), _layout.HitTest(row.Slider.center, Display));
+            Assert.AreEqual(SettingsHit.Decrease(row.Item), _layout.HitTest(row.Decrease.center, Display));
+            Assert.AreEqual(SettingsHit.Increase(row.Item), _layout.HitTest(row.Increase.center, Display));
+            Assert.AreEqual(SettingsHit.Reset, _layout.HitTest(_layout.Reset.center, Display));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(TestSettingsLayout.LabelPoint(row), Display));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(-10f, -10f), Display));
+
+            SettingsToggleLayout toggle = _layout.PageOf(VRChat).Toggles[1];
+            Assert.AreEqual(SettingsHit.Toggle(toggle.Item), _layout.HitTest(toggle.Area.center, VRChat));
+        }
+
+        [Test]
+        public void タブはどのページを表示していても当たる()
+        {
+            foreach (SettingsPageLayout page in _layout.Pages)
+            {
+                foreach (SettingsCategory current in SettingsCatalog.Categories)
+                    Assert.AreEqual(SettingsHit.Tab(page.Category), _layout.HitTest(page.Tab.center, current), page.Category.Key + " / " + current.Key);
+            }
+        }
+
+        [Test]
+        public void 表示しているページの対象だけに当たる()
+        {
+            // 別のページの対象どうしは同じ位置に重ねて置いてよい。
+            SettingsRowLayout down = _layout.PageOf(Display).Rows[0];
+            SettingsToggleLayout focus = _layout.PageOf(VRChat).Toggles[0];
+            Assert.IsTrue(down.Slider.Overlaps(focus.Area));
+            Assert.AreEqual(SettingsHit.Slider(down.Item), _layout.HitTest(down.Slider.center, Display));
+            Assert.AreEqual(SettingsHit.Toggle(focus.Item), _layout.HitTest(down.Slider.center, VRChat));
+
+            // grip のページは 3 行のため、display の 5 行目の位置には対象がない。
+            SettingsRowLayout width = _layout.PageOf(Display).Rows[4];
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(width.Increase.center, Grip));
         }
 
         [Test]
         public void スライダーの位置は値の範囲の両端で0と1()
         {
-            SettingsRowLayout row = _layout.Rows[0];
+            SettingsRowLayout row = _layout.PageOf(Display).Rows[0];
             Assert.AreEqual(0f, row.FractionAt(row.Track.xMin));
             Assert.AreEqual(1f, row.FractionAt(row.Track.xMax));
             Assert.AreEqual(0f, row.FractionAt(row.Slider.xMin));
@@ -334,60 +433,115 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 隣り合う行は接していても重ならない()
         {
-            Assert.AreEqual(_layout.Rows[0].Slider.yMax, _layout.Rows[1].Slider.yMin);
+            IReadOnlyList<SettingsRowLayout> rows = _layout.PageOf(Display).Rows;
+            Assert.AreEqual(rows[0].Slider.yMax, rows[1].Slider.yMin);
             Assert.DoesNotThrow(() => TestSettingsLayout.Create());
         }
 
         [Test]
-        public void 操作の対象が重なると例外()
+        public void 同じページの操作の対象が重なると例外()
         {
-            var rows = new List<SettingsRowLayout>
+            var page = new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), new List<SettingsRowLayout>
             {
-                TestSettingsLayout.Row(SettingsCatalog.Items[0], 100f),
-                TestSettingsLayout.Row(SettingsCatalog.Items[1], 140f),
-            };
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, TestSettingsLayout.Reset));
+                TestSettingsLayout.Row(SettingsCatalog.FindNumber("triggerThreshold"), 144f),
+                TestSettingsLayout.Row(SettingsCatalog.FindNumber("stickThreshold"), 184f),
+                TestSettingsLayout.Row(SettingsCatalog.FindNumber("repeatDelaySeconds"), 400f),
+            }, Array.Empty<SettingsToggleLayout>());
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(page));
+        }
+
+        [Test]
+        public void タブとページの操作の対象が重なると例外()
+        {
+            var page = new SettingsPageLayout(VRChat, TestSettingsLayout.Tab(0), Array.Empty<SettingsRowLayout>(), new List<SettingsToggleLayout>
+            {
+                new SettingsToggleLayout(SettingsCatalog.FindToggle("focusOnStartup"), new Rect(200f, 144f, 900f, 72f)),
+                TestSettingsLayout.Toggle(SettingsCatalog.FindToggle("showTypingText"), 216f),
+            });
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(page));
+        }
+
+        [Test]
+        public void タブどうしが重なると例外()
+        {
+            SettingsPageLayout display = TestSettingsLayout.Page(Display, 0);
+            var grip = new SettingsPageLayout(Grip, new Rect(48f, 180f, 220f, 64f), TestSettingsLayout.Page(Grip, 1).Rows, Array.Empty<SettingsToggleLayout>());
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(display, grip));
         }
 
         [Test]
         public void 操作の対象が画面の外にあると例外()
         {
-            var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.Items[0], 820f) };
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, TestSettingsLayout.Reset));
+            var page = new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), new List<SettingsRowLayout>
+            {
+                TestSettingsLayout.Row(SettingsCatalog.FindNumber("triggerThreshold"), 144f),
+                TestSettingsLayout.Row(SettingsCatalog.FindNumber("stickThreshold"), 216f),
+                TestSettingsLayout.Row(SettingsCatalog.FindNumber("repeatDelaySeconds"), 820f),
+            }, Array.Empty<SettingsToggleLayout>());
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(page));
         }
 
         [Test]
         public void 操作の対象の大きさが正でないと例外()
         {
-            var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.Items[0], 100f) };
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, new Rect(992f, 804f, 0f, 52f)));
+            var pages = new[] { TestSettingsLayout.Page(Display, 0) };
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, pages, new Rect(992f, 804f, 0f, 52f)));
+        }
+
+        [Test]
+        public void ページがない_または同じカテゴリのページが重複すると例外()
+        {
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(Array.Empty<SettingsPageLayout>()));
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(TestSettingsLayout.Page(Display, 0), TestSettingsLayout.Page(Display, 1)));
         }
 
         [Test]
         public void 同じ項目の行が重複すると例外()
         {
-            var rows = new List<SettingsRowLayout>
-            {
-                TestSettingsLayout.Row(SettingsCatalog.Items[0], 100f),
-                TestSettingsLayout.Row(SettingsCatalog.Items[0], 300f),
-            };
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, rows, TestSettingsLayout.Reset));
+            NumberSettingItem trigger = SettingsCatalog.FindNumber("triggerThreshold");
+            var rows = new List<SettingsRowLayout>(TestSettingsLayout.Page(Grip, 0).Rows) { TestSettingsLayout.Row(trigger, 400f) };
+            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>()));
+        }
+
+        [Test]
+        public void ページにカテゴリの項目の行が欠けていると例外()
+        {
+            var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.FindNumber("triggerThreshold"), 144f) };
+            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>()));
+        }
+
+        [Test]
+        public void ほかのカテゴリの項目の行は例外()
+        {
+            var rows = new List<SettingsRowLayout>(TestSettingsLayout.Page(Grip, 0).Rows) { TestSettingsLayout.Row(SettingsCatalog.FindNumber("downMeters"), 400f) };
+            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>()));
         }
 
         [Test]
         public void 値の範囲の幅が正でないと例外()
         {
-            SettingItem item = SettingsCatalog.Items[0];
+            NumberSettingItem item = SettingsCatalog.FindNumber("downMeters");
             Assert.Throws<ArgumentException>(() => new SettingsRowLayout(item,
-                new Rect(360f, 104f, 64f, 64f), new Rect(440f, 100f, 520f, 72f), new Rect(976f, 104f, 64f, 64f), new Rect(458f, 131f, 0f, 10f)));
+                new Rect(600f, 148f, 64f, 64f), new Rect(680f, 144f, 440f, 72f), new Rect(1136f, 148f, 64f, 64f), new Rect(698f, 175f, 0f, 10f)));
         }
 
         [Test]
-        public void 配置にない項目の行は例外()
+        public void 配置にない項目の行とカテゴリのページは例外()
         {
-            var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.Items[0], 100f) };
-            var layout = new SettingsLayout(TestSettingsLayout.Size, rows, TestSettingsLayout.Reset);
-            Assert.Throws<ArgumentException>(() => layout.RowOf(SettingsCatalog.Items[1]));
+            SettingsLayout layout = TestSettingsLayout.Create(TestSettingsLayout.Page(Display, 0));
+            Assert.Throws<ArgumentException>(() => layout.RowOf(SettingsCatalog.FindNumber("triggerThreshold")));
+            Assert.Throws<ArgumentException>(() => layout.PageOf(Grip));
+            Assert.Throws<ArgumentException>(() => layout.HitTest(Vector2.zero, Grip));
+        }
+
+        [Test]
+        public void 当たり判定の結果から別の種類の項目を取ると例外()
+        {
+            SettingsHit toggle = SettingsHit.Toggle(SettingsCatalog.FindToggle("focusOnStartup"));
+            SettingsHit slider = SettingsHit.Slider(SettingsCatalog.FindNumber("downMeters"));
+            Assert.Throws<InvalidOperationException>(() => _ = toggle.NumberItem);
+            Assert.Throws<InvalidOperationException>(() => _ = slider.ToggleItem);
+            Assert.Throws<InvalidOperationException>(() => _ = SettingsHit.Reset.NumberItem);
         }
     }
 
@@ -396,51 +550,124 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 値の表示()
         {
-            SettingItem down = SettingsCatalog.Find("downMeters");
-            SettingItem right = SettingsCatalog.Find("rightMeters");
-            SettingItem tilt = SettingsCatalog.Find("tiltDegrees");
-            SettingItem trigger = SettingsCatalog.Find("triggerThreshold");
+            NumberSettingItem down = SettingsCatalog.FindNumber("downMeters");
+            NumberSettingItem right = SettingsCatalog.FindNumber("rightMeters");
+            NumberSettingItem tilt = SettingsCatalog.FindNumber("tiltDegrees");
+            NumberSettingItem trigger = SettingsCatalog.FindNumber("triggerThreshold");
+            NumberSettingItem repeat = SettingsCatalog.FindNumber("repeatDelaySeconds");
             Assert.AreEqual("26 cm", down.Format(0.26f));
             Assert.AreEqual("中央", right.Format(0f));
             Assert.AreEqual("右 12 cm", right.Format(0.12f));
             Assert.AreEqual("左 5 cm", right.Format(-0.05f));
             Assert.AreEqual("17°", tilt.Format(17f));
             Assert.AreEqual("70%", trigger.Format(0.7f));
-            Assert.AreEqual("0.50 秒", SettingsCatalog.Find("repeatDelaySeconds").Format(0.5f));
-            Assert.AreEqual("0.35 秒", SettingsCatalog.Find("repeatDelaySeconds").Format(0.35f));
+            Assert.AreEqual("0.50 秒", repeat.Format(0.5f));
+            Assert.AreEqual("0.35 秒", repeat.Format(0.35f));
         }
 
         [Test]
         public void 項目ごとに対応する値を読み書きする()
         {
             UserSettings s = UserSettings.Default;
-            Assert.AreEqual(0.30f, SettingsCatalog.Find("downMeters").Get(SettingsCatalog.Find("downMeters").Set(s, 0.30f)));
-            Assert.AreEqual(1.20f, SettingsCatalog.Find("forwardMeters").Set(s, 1.20f).Placement.ForwardMeters);
-            Assert.AreEqual(-0.10f, SettingsCatalog.Find("rightMeters").Set(s, -0.10f).Placement.RightMeters);
-            Assert.AreEqual(40f, SettingsCatalog.Find("tiltDegrees").Set(s, 40f).Placement.TiltDegrees);
-            Assert.AreEqual(0.60f, SettingsCatalog.Find("widthMeters").Set(s, 0.60f).Placement.WidthMeters);
-            Assert.AreEqual(0.50f, SettingsCatalog.Find("triggerThreshold").Set(s, 0.50f).TriggerThreshold);
-            Assert.AreEqual(0.65f, SettingsCatalog.Find("stickThreshold").Set(s, 0.65f).StickThreshold);
-            Assert.AreEqual(0.75f, SettingsCatalog.Find("repeatDelaySeconds").Set(s, 0.75f).RepeatDelaySeconds);
+            NumberSettingItem down = SettingsCatalog.FindNumber("downMeters");
+            Assert.AreEqual(0.30f, down.Get(down.Set(s, 0.30f)));
+            Assert.AreEqual(1.20f, SettingsCatalog.FindNumber("forwardMeters").Set(s, 1.20f).Placement.ForwardMeters);
+            Assert.AreEqual(-0.10f, SettingsCatalog.FindNumber("rightMeters").Set(s, -0.10f).Placement.RightMeters);
+            Assert.AreEqual(40f, SettingsCatalog.FindNumber("tiltDegrees").Set(s, 40f).Placement.TiltDegrees);
+            Assert.AreEqual(0.60f, SettingsCatalog.FindNumber("widthMeters").Set(s, 0.60f).Placement.WidthMeters);
+            Assert.AreEqual(0.50f, SettingsCatalog.FindNumber("triggerThreshold").Set(s, 0.50f).TriggerThreshold);
+            Assert.AreEqual(0.65f, SettingsCatalog.FindNumber("stickThreshold").Set(s, 0.65f).StickThreshold);
+            Assert.AreEqual(0.75f, SettingsCatalog.FindNumber("repeatDelaySeconds").Set(s, 0.75f).RepeatDelaySeconds);
+
+            ToggleSettingItem focus = SettingsCatalog.FindToggle("focusOnStartup");
+            ToggleSettingItem typing = SettingsCatalog.FindToggle("showTypingText");
+            Assert.AreEqual(new VRChatSettings(false, true), focus.Set(s, false).VRChat);
+            Assert.AreEqual(new VRChatSettings(true, false), typing.Set(s, false).VRChat);
+            Assert.IsFalse(typing.Get(typing.Set(s, false)));
+        }
+
+        [Test]
+        public void スイッチは押すたびに切り替わる()
+        {
+            ToggleSettingItem focus = SettingsCatalog.FindToggle("focusOnStartup");
+            UserSettings once = focus.Toggle(UserSettings.Default);
+            Assert.IsFalse(once.VRChat.FocusOnStartup);
+            Assert.AreEqual(UserSettings.Default, focus.Toggle(once));
         }
 
         [Test]
         public void 設定する値は刻みに揃える()
         {
-            Assert.AreEqual(0.55f, SettingsCatalog.Find("triggerThreshold").Set(UserSettings.Default, 0.56f).TriggerThreshold);
+            Assert.AreEqual(0.55f, SettingsCatalog.FindNumber("triggerThreshold").Set(UserSettings.Default, 0.56f).TriggerThreshold);
         }
 
         [Test]
-        public void 項目のキーは重複しない()
+        public void カテゴリの並びと項目()
+        {
+            CollectionAssert.AreEqual(new[] { "display", "grip", "vrchat" }, Keys(SettingsCatalog.Categories, c => c.Key));
+            CollectionAssert.AreEqual(new[] { "downMeters", "forwardMeters", "rightMeters", "tiltDegrees", "widthMeters" },
+                Keys(SettingsCatalog.FindCategory("display").Items, i => i.Key));
+            CollectionAssert.AreEqual(new[] { "triggerThreshold", "stickThreshold", "repeatDelaySeconds" },
+                Keys(SettingsCatalog.FindCategory("grip").Items, i => i.Key));
+            CollectionAssert.AreEqual(new[] { "focusOnStartup", "showTypingText" },
+                Keys(SettingsCatalog.FindCategory("vrchat").Items, i => i.Key));
+        }
+
+        [Test]
+        public void 項目のキーは重複せずどれか1つのカテゴリに属する()
         {
             var keys = new HashSet<string>();
             foreach (SettingItem item in SettingsCatalog.Items) Assert.IsTrue(keys.Add(item.Key), item.Key);
+            int count = 0;
+            foreach (SettingsCategory category in SettingsCatalog.Categories) count += category.Items.Count;
+            Assert.AreEqual(count, SettingsCatalog.Items.Count);
         }
 
         [Test]
-        public void ない項目のキーは例外()
+        public void カテゴリを既定に戻すとそのカテゴリの項目だけが戻る()
+        {
+            UserSettings changed = UserSettings.Default
+                .WithPlacement(KeyboardPlacement.Default.WithTilt(30f))
+                .WithStickThreshold(0.8f)
+                .WithRepeatDelaySeconds(0.7f)
+                .WithVRChat(new VRChatSettings(false, false));
+
+            UserSettings grip = SettingsCatalog.FindCategory("grip").ResetToDefault(changed);
+            Assert.AreEqual(UserSettings.Default.StickThreshold, grip.StickThreshold);
+            Assert.AreEqual(UserSettings.Default.RepeatDelaySeconds, grip.RepeatDelaySeconds);
+            Assert.AreEqual(changed.Placement, grip.Placement);
+            Assert.AreEqual(changed.VRChat, grip.VRChat);
+
+            UserSettings vrchat = SettingsCatalog.FindCategory("vrchat").ResetToDefault(changed);
+            Assert.AreEqual(changed.WithVRChat(VRChatSettings.Default), vrchat);
+
+            UserSettings all = changed;
+            foreach (SettingsCategory category in SettingsCatalog.Categories) all = category.ResetToDefault(all);
+            Assert.AreEqual(UserSettings.Default, all);
+        }
+
+        [Test]
+        public void ない項目_ない種類_ないカテゴリのキーは例外()
         {
             Assert.Throws<ArgumentException>(() => SettingsCatalog.Find("unknown"));
+            Assert.Throws<ArgumentException>(() => SettingsCatalog.FindNumber("focusOnStartup"));
+            Assert.Throws<ArgumentException>(() => SettingsCatalog.FindToggle("downMeters"));
+            Assert.Throws<ArgumentException>(() => SettingsCatalog.FindCategory("unknown"));
+        }
+
+        [Test]
+        public void 項目がない_または重複するカテゴリは例外()
+        {
+            SettingItem down = SettingsCatalog.Find("downMeters");
+            Assert.Throws<ArgumentException>(() => new SettingsCategory("empty", Array.Empty<SettingItem>()));
+            Assert.Throws<ArgumentException>(() => new SettingsCategory("duplicate", new[] { down, down }));
+        }
+
+        static List<string> Keys<T>(IReadOnlyList<T> values, Func<T, string> key)
+        {
+            var keys = new List<string>();
+            foreach (T value in values) keys.Add(key(value));
+            return keys;
         }
     }
 
@@ -462,7 +689,64 @@ namespace VRKeyboard.App.Tests
             _form.Committed += s => _committed.Add(s);
         }
 
-        SettingsRowLayout Row(string key) => _layout.RowOf(SettingsCatalog.Find(key));
+        SettingsRowLayout Row(string key) => _layout.RowOf(SettingsCatalog.FindNumber(key));
+
+        SettingsToggleLayout Toggle(string key)
+        {
+            ToggleSettingItem item = SettingsCatalog.FindToggle(key);
+            foreach (SettingsPageLayout page in _layout.Pages)
+            {
+                foreach (SettingsToggleLayout toggle in page.Toggles)
+                {
+                    if (toggle.Item == item) return toggle;
+                }
+            }
+            throw new ArgumentException("配置にない項目です: " + key, nameof(key));
+        }
+
+        static void Click(SettingsForm form, Vector2 position)
+        {
+            form.PointerDown(position);
+            form.PointerUp(position);
+        }
+
+        void SelectCategory(SettingsForm form, string key)
+        {
+            Click(form, _layout.PageOf(SettingsCatalog.FindCategory(key)).Tab.center);
+            Assert.AreEqual(key, form.Category.Key);
+        }
+
+        [Test]
+        public void 最初は先頭のカテゴリを表示する()
+        {
+            Assert.AreSame(_layout.Pages[0].Category, _form.Category);
+        }
+
+        [Test]
+        public void タブを押して離すと表示するカテゴリが変わり確定しない()
+        {
+            SettingsCategory grip = SettingsCatalog.FindCategory("grip");
+            Rect tab = _layout.PageOf(grip).Tab;
+            _form.PointerDown(tab.center);
+            Assert.AreEqual("display", _form.Category.Key, "押しただけでは変わらない");
+            Assert.AreEqual(SettingsHit.Tab(grip), _form.Pressed);
+
+            int version = _form.Version;
+            _form.PointerUp(tab.center);
+            Assert.AreSame(grip, _form.Category);
+            Assert.Greater(_form.Version, version);
+            Assert.AreEqual(0, _changed.Count);
+            Assert.AreEqual(0, _committed.Count);
+        }
+
+        [Test]
+        public void 表示していないページの項目は操作できない()
+        {
+            SelectCategory(_form, "grip");
+            Click(_form, Row("widthMeters").Increase.center);
+            Assert.AreEqual(UserSettings.Default, _form.Settings);
+            Assert.AreEqual(0, _committed.Count);
+        }
 
         [Test]
         public void 増やすボタンで刻み1つ分増えて確定する()
@@ -481,9 +765,8 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void 減らすボタンで刻み1つ分減る()
         {
-            SettingsRowLayout row = Row("triggerThreshold");
-            _form.PointerDown(row.Decrease.center);
-            _form.PointerUp(row.Decrease.center);
+            SelectCategory(_form, "grip");
+            Click(_form, Row("triggerThreshold").Decrease.center);
             Assert.AreEqual(0.65f, _form.Settings.TriggerThreshold);
         }
 
@@ -503,10 +786,29 @@ namespace VRKeyboard.App.Tests
             var form = new SettingsForm(_layout, UserSettings.Default.WithTriggerThreshold(UserSettings.TriggerThresholdRange.Max));
             int committed = 0;
             form.Committed += _ => committed++;
-            SettingsRowLayout row = Row("triggerThreshold");
-            form.PointerDown(row.Increase.center);
-            form.PointerUp(row.Increase.center);
+            SelectCategory(form, "grip");
+            Click(form, Row("triggerThreshold").Increase.center);
             Assert.AreEqual(0, committed);
+        }
+
+        [Test]
+        public void スイッチを押して離すと切り替わって確定する()
+        {
+            SelectCategory(_form, "vrchat");
+            SettingsToggleLayout toggle = Toggle("focusOnStartup");
+            _form.PointerDown(toggle.Area.center);
+            Assert.AreEqual(0, _changed.Count, "押しただけでは変わらない");
+            Assert.AreEqual(SettingsHit.Toggle(toggle.Item), _form.Pressed);
+            _form.PointerUp(toggle.Area.center);
+
+            Assert.IsFalse(_form.Settings.VRChat.FocusOnStartup);
+            Assert.IsTrue(_form.Settings.VRChat.ShowTypingText);
+            Assert.AreEqual(1, _committed.Count);
+            Assert.AreEqual(_form.Settings, _committed[0]);
+
+            Click(_form, toggle.Area.center);
+            Assert.AreEqual(UserSettings.Default, _form.Settings);
+            Assert.AreEqual(2, _committed.Count);
         }
 
         [Test]
@@ -555,15 +857,25 @@ namespace VRKeyboard.App.Tests
         }
 
         [Test]
-        public void 既定に戻す()
+        public void 既定に戻すと表示中のカテゴリの項目だけが戻る()
         {
-            var form = new SettingsForm(_layout, UserSettings.Default.WithStickThreshold(0.8f));
+            UserSettings initial = UserSettings.Default
+                .WithPlacement(KeyboardPlacement.Default.WithTilt(30f))
+                .WithStickThreshold(0.8f)
+                .WithVRChat(new VRChatSettings(false, false));
+            var form = new SettingsForm(_layout, initial);
             UserSettings committed = null;
             form.Committed += s => committed = s;
-            form.PointerDown(_layout.Reset.center);
-            form.PointerUp(_layout.Reset.center);
-            Assert.AreEqual(UserSettings.Default, form.Settings);
-            Assert.AreEqual(UserSettings.Default, committed);
+
+            SelectCategory(form, "grip");
+            Click(form, _layout.Reset.center);
+            UserSettings expected = initial.WithStickThreshold(UserSettings.Default.StickThreshold);
+            Assert.AreEqual(expected, form.Settings);
+            Assert.AreEqual(expected, committed);
+
+            SelectCategory(form, "vrchat");
+            Click(form, _layout.Reset.center);
+            Assert.AreEqual(expected.WithVRChat(VRChatSettings.Default), form.Settings);
         }
 
         [Test]
@@ -572,7 +884,7 @@ namespace VRKeyboard.App.Tests
             SettingsRowLayout row = Row("tiltDegrees");
             int version = _form.Version;
             _form.PointerMove(row.Increase.center);
-            Assert.AreEqual(new SettingsHit(SettingsTarget.Increase, row.Item), _form.Hover);
+            Assert.AreEqual(SettingsHit.Increase(row.Item), _form.Hover);
             Assert.Greater(_form.Version, version);
 
             version = _form.Version;
@@ -580,7 +892,7 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(version, _form.Version, "同じものを指し続けても変わらない");
 
             _form.PointerDown(row.Increase.center);
-            Assert.AreEqual(new SettingsHit(SettingsTarget.Increase, row.Item), _form.Pressed);
+            Assert.AreEqual(SettingsHit.Increase(row.Item), _form.Pressed);
             Assert.Greater(_form.Version, version);
 
             _form.PointerLeave();

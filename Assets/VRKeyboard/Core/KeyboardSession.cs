@@ -60,7 +60,7 @@ namespace VRKeyboard.Core
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _effects = effects ?? throw new ArgumentNullException(nameof(effects));
-            _buffer = new InputBuffer(settings.MaxLength);
+            _buffer = new InputBuffer();
             _grip = new GripInputMethod(settings, _buffer);
             _conversionController = new ConversionController(settings);
             _chord = new DoubleChordDetector(settings.ChordWindowSeconds, settings.DoubleChordWindowSeconds);
@@ -77,8 +77,17 @@ namespace VRKeyboard.Core
         public string Composition => _buffer.Composition;
         public int CompositionCursor => _buffer.CompositionCursor;
 
-        /// <summary>あと何文字入力できるか。</summary>
-        public int RemainingLength => _buffer.Remaining;
+        /// <summary>確定済みと未確定の合計の文字数（UTF-16 単位）。</summary>
+        public int Length => _buffer.Length;
+
+        /// <summary>確定済みの文字列のカーソル位置に未確定のかなを挟んだ、表示どおりの文字列。</summary>
+        public string Text => _buffer.Text;
+
+        /// <summary>文字数の上限。null は上限なし。</summary>
+        public int? LengthLimit => _buffer.LengthLimit;
+
+        /// <summary>内容が文字数の上限を超えているか。超えている間は送信しない。</summary>
+        public bool IsOverLengthLimit => _buffer.IsOverLengthLimit;
 
         /// <summary>変換中の文節と選択。変換中でなければ null。</summary>
         public ConversionSession CurrentConversion => _conversion;
@@ -202,17 +211,25 @@ namespace VRKeyboard.Core
         }
 
         /// <summary>
+        /// 文字数の上限を変える。null は上限なし。入力済みの内容は切り詰めず、上限を超えている間は送信しない。
+        /// </summary>
+        public void SetLengthLimit(int? limit)
+        {
+            if (limit == _buffer.LengthLimit) return;
+            _buffer.SetLengthLimit(limit);
+            _viewVersion++;
+        }
+
+        /// <summary>
         /// 実行中に設定を差し替える。次の <see cref="Tick"/> から新しい値で判定する。
         /// 実行中に変えられるのはスティックとトリガーのしきい値と連続入力の時間だけで、それ以外の値が異なる設定は例外にする
-        /// （子音の手は表示の組み立てに、最大長は入力バッファに、同時押しの窓は開閉の判定に、生成時の値が使われているため）。
+        /// （子音の手は表示の組み立てに、同時押しの窓は開閉の判定に、生成時の値が使われているため）。
         /// </summary>
         public void ApplySettings(KeyboardSettings settings)
         {
             if (settings == null) throw new ArgumentNullException(nameof(settings));
             if (settings.ConsonantHand != _settings.ConsonantHand)
                 throw new NotSupportedException("子音の手は実行中に変更できません。");
-            if (settings.MaxLength != _settings.MaxLength)
-                throw new NotSupportedException("最大長は実行中に変更できません。");
             if (settings.ChordWindowSeconds != _settings.ChordWindowSeconds
                 || settings.DoubleChordWindowSeconds != _settings.DoubleChordWindowSeconds)
                 throw new NotSupportedException("同時押しの判定時間は実行中に変更できません。");
@@ -289,7 +306,8 @@ namespace VRKeyboard.Core
             }
         }
 
-        // 確定キー（SPEC 7.1）: 未確定があればそのまま確定し、なければ送信を要求する。送信に失敗したらバッファを残す。
+        // 確定キー（SPEC 7.1）: 未確定があればそのまま確定し、なければ送信を要求する。
+        // 文字数の上限を超えている間は送信を要求しない。送信に失敗したらバッファを残す。
         void PressCommitKey(Hand hand)
         {
             if (_buffer.HasComposition)
@@ -297,7 +315,7 @@ namespace VRKeyboard.Core
                 _buffer.CommitComposition();
                 _haptics.Add(new HapticEvent(hand, HapticKind.Input));
             }
-            else if (_buffer.Committed.Length > 0)
+            else if (_buffer.Committed.Length > 0 && !_buffer.IsOverLengthLimit)
             {
                 if (_effects.OnSendRequested(_buffer.Committed))
                 {

@@ -96,12 +96,13 @@ namespace VRKeyboard.App.Tests
 
         static ForegroundWindowInfo Window(int pid, string name, string display = null)
         {
-            return new ForegroundWindowInfo(new IntPtr(1), pid, name, display, "title");
+            return new ForegroundWindowInfo(new IntPtr(1), pid, name, display);
         }
 
         static TextOutputRouter Router(AppSettings settings, FakeChatbox chatbox, FakeDesktop desktop, ForegroundWindowInfo window)
         {
-            return new TextOutputRouter(settings, chatbox, desktop, () => window, OwnPid);
+            OutputTarget target = OutputTarget.Classify(window, OwnPid);
+            return new TextOutputRouter(settings, chatbox, desktop, () => target);
         }
 
         [Test]
@@ -201,6 +202,121 @@ namespace VRKeyboard.App.Tests
         }
     }
 
+    public sealed class OutputTargetTests
+    {
+        const int OwnPid = 100;
+
+        static ForegroundWindowInfo Window(int pid, string name, string display = null)
+        {
+            return new ForegroundWindowInfo(new IntPtr(1), pid, name, display);
+        }
+
+        [Test]
+        public void 前面のウィンドウから送信先を決める()
+        {
+            Assert.AreEqual(OutputTargetKind.None, OutputTarget.Classify(null, OwnPid).Kind);
+            Assert.AreEqual(OutputTargetKind.OwnWindow, OutputTarget.Classify(Window(OwnPid, "VRKeyboard"), OwnPid).Kind);
+            Assert.AreEqual(OutputTargetKind.VRChat, OutputTarget.Classify(Window(200, "VRChat"), OwnPid).Kind);
+            Assert.AreEqual(OutputTargetKind.VRChat, OutputTarget.Classify(Window(200, "vrchat"), OwnPid).Kind);
+            Assert.AreEqual(OutputTargetKind.Desktop, OutputTarget.Classify(Window(200, "notepad"), OwnPid).Kind);
+            Assert.AreEqual(OutputTargetKind.Desktop, OutputTarget.Classify(Window(200, null), OwnPid).Kind);
+        }
+
+        [Test]
+        public void 名前はアプリ名_プロセス名の順に使う()
+        {
+            Assert.AreEqual("メモ帳", OutputTarget.Classify(Window(200, "notepad", "メモ帳"), OwnPid).Name);
+            Assert.AreEqual("notepad", OutputTarget.Classify(Window(200, "notepad"), OwnPid).Name);
+            Assert.IsNotEmpty(OutputTarget.Classify(Window(200, null), OwnPid).Name);
+        }
+
+        [Test]
+        public void VRChatと本アプリとなしは決まった名前を使う()
+        {
+            Assert.AreEqual("VRChat", OutputTarget.Classify(Window(200, "vrchat", "VRChat Client"), OwnPid).Name);
+            Assert.IsNotEmpty(OutputTarget.Classify(Window(OwnPid, "VRKeyboard"), OwnPid).Name);
+            Assert.IsNotEmpty(OutputTarget.None.Name);
+        }
+    }
+
+    public sealed class ForegroundWindowMonitorTests
+    {
+        sealed class FakeSource : IForegroundWindowSource
+        {
+            public IntPtr Handle;
+            public int ProcessId;
+            public string ProcessName = "notepad";
+            public int DescribeCount;
+
+            public bool TryGetForeground(out IntPtr handle, out int processId)
+            {
+                handle = Handle;
+                processId = ProcessId;
+                return Handle != IntPtr.Zero;
+            }
+
+            public ForegroundWindowInfo Describe(IntPtr handle, int processId)
+            {
+                DescribeCount++;
+                return new ForegroundWindowInfo(handle, processId, ProcessName, null);
+            }
+        }
+
+        const int OwnPid = 100;
+
+        [Test]
+        public void 作成時に前面のウィンドウを調べる()
+        {
+            var source = new FakeSource { Handle = new IntPtr(1), ProcessId = 200, ProcessName = "VRChat" };
+            var monitor = new ForegroundWindowMonitor(source, OwnPid);
+            Assert.AreEqual(OutputTargetKind.VRChat, monitor.Target.Kind);
+            Assert.AreEqual(1, source.DescribeCount);
+        }
+
+        [Test]
+        public void 前面のウィンドウがなければ送信先はなし()
+        {
+            var monitor = new ForegroundWindowMonitor(new FakeSource(), OwnPid);
+            Assert.AreEqual(OutputTargetKind.None, monitor.Target.Kind);
+        }
+
+        [Test]
+        public void 前面が変わったときだけ調べ直してVersionを増やす()
+        {
+            var source = new FakeSource { Handle = new IntPtr(1), ProcessId = 200 };
+            var monitor = new ForegroundWindowMonitor(source, OwnPid);
+            int version = monitor.Version;
+
+            monitor.Update();
+            Assert.AreEqual(version, monitor.Version);
+            Assert.AreEqual(1, source.DescribeCount);
+
+            source.Handle = new IntPtr(2);
+            source.ProcessId = 300;
+            source.ProcessName = "VRChat";
+            monitor.Update();
+            Assert.AreEqual(version + 1, monitor.Version);
+            Assert.AreEqual(OutputTargetKind.VRChat, monitor.Target.Kind);
+            Assert.AreEqual(2, source.DescribeCount);
+
+            source.Handle = IntPtr.Zero;
+            monitor.Update();
+            Assert.AreEqual(version + 2, monitor.Version);
+            Assert.AreEqual(OutputTargetKind.None, monitor.Target.Kind);
+            Assert.AreEqual(2, source.DescribeCount);
+        }
+
+        [Test]
+        public void 同じハンドルでもプロセスが変われば調べ直す()
+        {
+            var source = new FakeSource { Handle = new IntPtr(1), ProcessId = 200 };
+            var monitor = new ForegroundWindowMonitor(source, OwnPid);
+            source.ProcessId = OwnPid;
+            monitor.Update();
+            Assert.AreEqual(OutputTargetKind.OwnWindow, monitor.Target.Kind);
+        }
+    }
+
     public sealed class VRChatChatboxTests
     {
         UdpClient _receiver;
@@ -243,11 +359,11 @@ namespace VRKeyboard.App.Tests
 
                 chatbox.Update(10.5);
                 Assert.IsFalse(HasPending());
-                Assert.AreEqual(1, chatbox.PendingCount);
+                Assert.AreEqual(1, chatbox.PendingSendCount);
 
                 chatbox.Update(11.0);
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "い", true, true), Receive());
-                Assert.AreEqual(0, chatbox.PendingCount);
+                Assert.AreEqual(0, chatbox.PendingSendCount);
             }
         }
 
@@ -275,6 +391,37 @@ namespace VRKeyboard.App.Tests
 
                 chatbox.SetTyping(false);
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/typing", false), Receive());
+            }
+        }
+
+        [Test]
+        public void 入力中の表示は通知音を鳴らさずに送る()
+        {
+            using (var chatbox = new VRChatChatbox(_settings))
+            {
+                chatbox.SetPreview("あい");
+                chatbox.Update(1.0);
+                CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "あい", true, false), Receive());
+
+                chatbox.SetPreview(null);
+                chatbox.Update(2.0);
+                CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "", true, false), Receive());
+            }
+        }
+
+        [Test]
+        public void 表示中の入力中の表示は間隔を待たずに消せる()
+        {
+            using (var chatbox = new VRChatChatbox(_settings))
+            {
+                chatbox.ClearPreviewNow();
+                Assert.IsFalse(HasPending());
+
+                chatbox.SetPreview("あ");
+                chatbox.Update(1.0);
+                Receive();
+                chatbox.ClearPreviewNow();
+                CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "", true, false), Receive());
             }
         }
 

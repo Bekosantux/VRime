@@ -14,7 +14,6 @@ namespace VRKeyboard.Core
             float triggerThreshold = 0.7f,
             double chordWindowSeconds = 0.20,
             double doubleChordWindowSeconds = 0.60,
-            int maxLength = 144,
             double repeatDelaySeconds = 0.50,
             double repeatIntervalSeconds = 0.10)
         {
@@ -26,8 +25,6 @@ namespace VRKeyboard.Core
                 throw new ArgumentOutOfRangeException(nameof(chordWindowSeconds), chordWindowSeconds, "正の値である必要があります。");
             if (!(doubleChordWindowSeconds > 0.0))
                 throw new ArgumentOutOfRangeException(nameof(doubleChordWindowSeconds), doubleChordWindowSeconds, "正の値である必要があります。");
-            if (maxLength <= 0)
-                throw new ArgumentOutOfRangeException(nameof(maxLength), maxLength, "正の値である必要があります。");
             ValidateSeconds(repeatDelaySeconds, nameof(repeatDelaySeconds));
             ValidateSeconds(repeatIntervalSeconds, nameof(repeatIntervalSeconds));
 
@@ -36,7 +33,6 @@ namespace VRKeyboard.Core
             TriggerThreshold = triggerThreshold;
             ChordWindowSeconds = chordWindowSeconds;
             DoubleChordWindowSeconds = doubleChordWindowSeconds;
-            MaxLength = maxLength;
             RepeatDelaySeconds = repeatDelaySeconds;
             RepeatIntervalSeconds = repeatIntervalSeconds;
         }
@@ -57,9 +53,6 @@ namespace VRKeyboard.Core
 
         /// <summary>同時押しをこの秒数以内に2回行うと開閉する。</summary>
         public double DoubleChordWindowSeconds { get; }
-
-        /// <summary>入力バッファの最大長（UTF-16 単位）。</summary>
-        public int MaxLength { get; }
 
         /// <summary>トリガーを引いたままこの秒数が経つと、連続入力を始める（長押し時間）。</summary>
         public double RepeatDelaySeconds { get; }

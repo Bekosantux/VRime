@@ -7,7 +7,7 @@ using VRKeyboard.App.Settings;
 namespace VRKeyboard.App.View
 {
     /// <summary>
-    /// 設定画面の1項目の行。［−］・スライダー・［＋］と現在の値を表示する。
+    /// 設定画面の数値の項目の行。［−］・スライダー・［＋］と現在の値を表示する。
     /// どの項目の行かは <see cref="_key"/>（<see cref="SettingsCatalog"/> の項目のキー）で決める。項目名などのラベルはシーンに置いたまま変えない。
     /// スライダーの塗りとつまみは、値の範囲（<see cref="_track"/>）に対する割合をアンカーの x に設定して置く。
     /// </summary>
@@ -33,7 +33,7 @@ namespace VRKeyboard.App.View
 
         [SerializeField] TextMeshProUGUI _value;
 
-        SettingItem _item;
+        NumberSettingItem _item;
         SettingsHit _sliderHit;
         KeyboardTheme _theme;
 
@@ -58,7 +58,7 @@ namespace VRKeyboard.App.View
         }
 
         /// <summary>この行の操作の対象の配置を、canvas の左上を原点とする座標で作る。</summary>
-        public SettingsRowLayout BuildLayout(SettingItem item, RectTransform canvas)
+        public SettingsRowLayout BuildLayout(NumberSettingItem item, RectTransform canvas)
         {
             CheckItem(item);
             return new SettingsRowLayout(item,
@@ -68,15 +68,15 @@ namespace VRKeyboard.App.View
                 UiRects.RectIn(_track, canvas));
         }
 
-        public void Initialize(SettingItem item, KeyboardTheme theme)
+        public void Initialize(NumberSettingItem item, KeyboardTheme theme)
         {
             Validate();
             CheckItem(item);
             _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
             _item = item;
-            _sliderHit = new SettingsHit(SettingsTarget.Slider, item);
-            _decrease.Initialize(theme, new SettingsHit(SettingsTarget.Decrease, item));
-            _increase.Initialize(theme, new SettingsHit(SettingsTarget.Increase, item));
+            _sliderHit = SettingsHit.Slider(item);
+            _decrease.Initialize(theme, SettingsHit.Decrease(item));
+            _increase.Initialize(theme, SettingsHit.Increase(item));
         }
 
         public void Refresh(SettingsForm form)
@@ -97,7 +97,7 @@ namespace VRKeyboard.App.View
             if (_value.text != text) _value.text = text;
         }
 
-        void CheckItem(SettingItem item)
+        void CheckItem(NumberSettingItem item)
         {
             if (item == null) throw new ArgumentNullException(nameof(item));
             if (item.Key != _key)

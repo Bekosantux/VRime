@@ -152,7 +152,6 @@ namespace VRKeyboard.Core.Tests
             Assert.AreEqual(0.7f, settings.TriggerThreshold);
             Assert.AreEqual(0.20, settings.ChordWindowSeconds);
             Assert.AreEqual(0.60, settings.DoubleChordWindowSeconds);
-            Assert.AreEqual(144, settings.MaxLength);
             Assert.AreEqual(0.50, settings.RepeatDelaySeconds);
             Assert.AreEqual(0.10, settings.RepeatIntervalSeconds);
         }
@@ -177,8 +176,6 @@ namespace VRKeyboard.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(chordWindowSeconds: 0.0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(chordWindowSeconds: -0.2));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(doubleChordWindowSeconds: 0.0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(maxLength: 0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(maxLength: -1));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(consonantHand: (Hand)5));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatDelaySeconds: 0.0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new KeyboardSettings(repeatDelaySeconds: -0.1));

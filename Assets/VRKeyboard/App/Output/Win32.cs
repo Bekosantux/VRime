@@ -11,6 +11,10 @@ namespace VRKeyboard.App.Output
         public const uint KEYEVENTF_KEYUP = 0x0002;
         public const uint KEYEVENTF_UNICODE = 0x0004;
         public const ushort VK_RETURN = 0x0D;
+        public const ushort VK_MENU = 0x12;
+
+        public const uint GW_OWNER = 4;
+        public const int SW_RESTORE = 9;
 
         public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
         public const uint TOKEN_QUERY = 0x0008;
@@ -47,11 +51,30 @@ namespace VRKeyboard.App.Output
         [DllImport("user32.dll")]
         public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int maxCount);
+        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern int GetWindowTextLength(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool IsWindowVisible(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetWindow(IntPtr hWnd, uint command);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool IsIconic(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool ShowWindow(IntPtr hWnd, int command);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
 
         [DllImport("kernel32.dll")]
         public static extern uint GetCurrentProcessId();

@@ -10,7 +10,7 @@ namespace VRKeyboard.Core.Text
         /// <summary>対象がなく、何も変わらなかった。</summary>
         NothingToDo,
 
-        /// <summary>最大長を超えるため実行しなかった。</summary>
+        /// <summary>長さの上限を超えるため実行しなかった。</summary>
         TooLong,
     }
 
@@ -18,41 +18,50 @@ namespace VRKeyboard.Core.Text
     /// 入力バッファ。確定済みの文字列とそのカーソル、確定前のかな（未確定）とその中のカーソルを持つ。
     /// 未確定のかなは確定済み文字列のカーソル位置にあり、未確定のかながある間は
     /// カーソル移動・消去・小゛゜は未確定の中で動作する。
-    /// 文字数は UTF-16 単位で、確定済みと未確定の合計が最大長を超える操作は実行しない。
+    /// 文字数は UTF-16 単位で数える。長さの上限（<see cref="LengthLimit"/>）があるときは、確定済みと未確定の合計が上限を超える操作は実行しない。
+    /// 上限は途中で変えられ、内容が上限を超えたままになることがある。その間も長さを増やさない操作（消去・移動・確定など）はできる。
     /// </summary>
     public sealed class InputBuffer
     {
-        readonly int _maxLength;
+        int? _lengthLimit;
         string _committed = string.Empty;
         int _committedCursor;
         string _composition = string.Empty;
         int _compositionCursor;
 
-        public InputBuffer(int maxLength)
-        {
-            if (maxLength <= 0)
-                throw new ArgumentOutOfRangeException(nameof(maxLength), maxLength, "正の値である必要があります。");
-            _maxLength = maxLength;
-        }
-
         public string Committed => _committed;
         public int CommittedCursor => _committedCursor;
         public string Composition => _composition;
         public int CompositionCursor => _compositionCursor;
-        public int MaxLength => _maxLength;
         public int Length => _committed.Length + _composition.Length;
-        public int Remaining => _maxLength - Length;
         public bool IsEmpty => Length == 0;
         public bool HasComposition => _composition.Length > 0;
 
-        /// <summary>内容が変わるたびに増える。</summary>
+        /// <summary>長さの上限（UTF-16 単位）。null は上限なし。</summary>
+        public int? LengthLimit => _lengthLimit;
+
+        /// <summary>内容が長さの上限を超えているか。</summary>
+        public bool IsOverLengthLimit => _lengthLimit.HasValue && Length > _lengthLimit.Value;
+
+        /// <summary>確定済みの文字列のカーソル位置に未確定のかなを挟んだ、表示どおりの文字列。</summary>
+        public string Text => _composition.Length == 0 ? _committed : _committed.Insert(_committedCursor, _composition);
+
+        /// <summary>内容が変わるたびに増える。上限の変更では増えない。</summary>
         public int Version { get; private set; }
+
+        /// <summary>長さの上限を変える。null は上限なし。内容が上限を超えていても切り詰めない。</summary>
+        public void SetLengthLimit(int? limit)
+        {
+            if (limit.HasValue && limit.Value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(limit), limit, "正の値である必要があります。");
+            _lengthLimit = limit;
+        }
 
         /// <summary>未確定のかなの、カーソル位置に文字列を挿入する。</summary>
         public EditResult InsertComposition(string kana)
         {
             if (string.IsNullOrEmpty(kana)) throw new ArgumentException("空の文字列は挿入できません。", nameof(kana));
-            if (Length + kana.Length > _maxLength) return EditResult.TooLong;
+            if (Exceeds(Length + kana.Length)) return EditResult.TooLong;
             _composition = _composition.Insert(_compositionCursor, kana);
             _compositionCursor += kana.Length;
             Version++;
@@ -64,7 +73,7 @@ namespace VRKeyboard.Core.Text
         {
             if (string.IsNullOrEmpty(text)) throw new ArgumentException("空の文字列は挿入できません。", nameof(text));
             // 未確定の確定は長さを変えないため、挿入できるかを先に判定すれば全体として失敗時に何も変わらない。
-            if (Length + text.Length > _maxLength) return EditResult.TooLong;
+            if (Exceeds(Length + text.Length)) return EditResult.TooLong;
             CommitComposition();
             _committed = _committed.Insert(_committedCursor, text);
             _committedCursor += text.Length;
@@ -89,7 +98,7 @@ namespace VRKeyboard.Core.Text
         {
             if (converted == null) throw new ArgumentNullException(nameof(converted));
             if (_composition.Length == 0) return EditResult.NothingToDo;
-            if (_committed.Length + converted.Length > _maxLength) return EditResult.TooLong;
+            if (Exceeds(_committed.Length + converted.Length)) return EditResult.TooLong;
             _committed = _committed.Insert(_committedCursor, converted);
             _committedCursor += converted.Length;
             _composition = string.Empty;
@@ -177,6 +186,11 @@ namespace VRKeyboard.Core.Text
             _composition = string.Empty;
             _compositionCursor = 0;
             Version++;
+        }
+
+        bool Exceeds(int length)
+        {
+            return _lengthLimit.HasValue && length > _lengthLimit.Value;
         }
 
         static string Replace(string text, int index, char c)

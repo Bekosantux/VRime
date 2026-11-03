@@ -14,15 +14,14 @@ namespace VRKeyboard.App.View
     /// </summary>
     public sealed class SettingsView : MonoBehaviour
     {
-        [Tooltip("項目の行。各項目に1行ずつ、ちょうど揃える。")]
-        [SerializeField] SettingsRow[] _rows = Array.Empty<SettingsRow>();
+        [Tooltip("カテゴリのページ。各カテゴリに1つずつ、カテゴリの順に並べる（先頭を最初に表示する）。")]
+        [SerializeField] SettingsPage[] _pages = Array.Empty<SettingsPage>();
 
         [SerializeField] SettingsButton _reset;
 
         [Tooltip("通知（設定ファイルの問題・保存の失敗）を表示する。")]
         [SerializeField] TextMeshProUGUI _notice;
 
-        readonly List<SettingsRow> _activeRows = new List<SettingsRow>();
         SettingsForm _form;
         int _renderedVersion = -1;
 
@@ -32,45 +31,38 @@ namespace VRKeyboard.App.View
         {
             SceneChecks.Require(_reset, this, nameof(_reset));
             SceneChecks.Require(_notice, this, nameof(_notice));
-            if (_rows == null || _rows.Length == 0) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_rows) + " が空です。");
-            SceneChecks.RequireAll(_rows, _rows.Length, this, nameof(_rows));
+            if (_pages == null || _pages.Length == 0) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_pages) + " が空です。");
+            SceneChecks.RequireAll(_pages, _pages.Length, this, nameof(_pages));
             SceneChecks.RequireUnder(_reset, this, this, nameof(_reset));
             SceneChecks.RequireUnder(_notice, this, this, nameof(_notice));
-            for (int i = 0; i < _rows.Length; i++)
+            for (int i = 0; i < _pages.Length; i++)
             {
-                SceneChecks.RequireUnder(_rows[i], this, this, nameof(_rows) + "[" + i + "]");
-                _rows[i].Validate();
+                SceneChecks.RequireUnder(_pages[i], this, this, nameof(_pages) + "[" + i + "]");
+                _pages[i].Validate();
             }
             _reset.Validate();
         }
 
         /// <summary>
-        /// シーンの uGUI の矩形から、items の操作の対象の配置を作る。行と項目はキーで対応させ、過不足・重複は例外にする。
-        /// シーンの状態は変えない。
+        /// シーンの uGUI の矩形から、categories の操作の対象の配置を作る。ページとカテゴリは同じ順に並べ、キーで照合する。
+        /// 過不足・順序の違いは例外にする。シーンの状態は変えない。
         /// </summary>
-        public SettingsLayout CreateLayout(IReadOnlyList<SettingItem> items)
+        public SettingsLayout CreateLayout(IReadOnlyList<SettingsCategory> categories)
         {
-            if (items == null) throw new ArgumentNullException(nameof(items));
+            if (categories == null) throw new ArgumentNullException(nameof(categories));
             Validate();
-            Dictionary<string, SettingsRow> rows = RowsByKey();
+            if (categories.Count != _pages.Length)
+                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " のページの数（" + _pages.Length + "）が設定のカテゴリの数（" + categories.Count + "）と一致しません。");
 
-            var layouts = new List<SettingsRowLayout>(items.Count);
-            var used = new HashSet<string>();
-            foreach (SettingItem item in items)
+            var pages = new List<SettingsPageLayout>(categories.Count);
+            for (int i = 0; i < categories.Count; i++)
             {
-                if (item == null) throw new ArgumentException("null の項目があります。", nameof(items));
-                if (!rows.TryGetValue(item.Key, out SettingsRow row))
-                    throw new InvalidOperationException(SceneChecks.PathOf(transform) + " に " + item.Key + " の行がありません。");
-                used.Add(item.Key);
-                layouts.Add(row.BuildLayout(item, Canvas));
+                SettingsCategory category = categories[i] ?? throw new ArgumentException("null のカテゴリがあります。", nameof(categories));
+                if (_pages[i].Key != category.Key)
+                    throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_pages) + "[" + i + "] は " + category.Key + " のページである必要があります（" + _pages[i].Key + " です）。");
+                pages.Add(_pages[i].BuildLayout(category, Canvas));
             }
-            foreach (string key in rows.Keys)
-            {
-                if (!used.Contains(key))
-                    throw new InvalidOperationException(SceneChecks.PathOf(rows[key].transform) + " の " + key + " は設定の項目にありません。");
-            }
-
-            return new SettingsLayout(Canvas.rect.size, layouts, UiRects.RectIn(_reset.Rect, Canvas));
+            return new SettingsLayout(Canvas.rect.size, pages, UiRects.RectIn(_reset.Rect, Canvas));
         }
 
         /// <param name="form">このビューの <see cref="CreateLayout"/> で作った配置を持つ設定画面。</param>
@@ -79,19 +71,11 @@ namespace VRKeyboard.App.View
             Validate();
             _form = form ?? throw new ArgumentNullException(nameof(form));
             if (theme == null) throw new ArgumentNullException(nameof(theme));
-            Dictionary<string, SettingsRow> rows = RowsByKey();
-
-            _activeRows.Clear();
-            foreach (SettingsRowLayout layout in form.Layout.Rows)
-            {
-                if (!rows.TryGetValue(layout.Item.Key, out SettingsRow row))
-                    throw new InvalidOperationException(SceneChecks.PathOf(transform) + " に " + layout.Item.Key + " の行がありません。");
-                row.Initialize(layout.Item, theme);
-                _activeRows.Add(row);
-            }
-            if (_activeRows.Count != _rows.Length)
-                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の行の数が設定の項目の数と一致しません。");
-            _reset.Initialize(theme, new SettingsHit(SettingsTarget.Reset, null));
+            IReadOnlyList<SettingsPageLayout> pages = form.Layout.Pages;
+            if (pages.Count != _pages.Length)
+                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " のページの数が配置のページの数と一致しません。");
+            for (int i = 0; i < pages.Count; i++) _pages[i].Initialize(pages[i], theme);
+            _reset.Initialize(theme, SettingsHit.Reset);
             _renderedVersion = -1;
         }
 
@@ -102,23 +86,11 @@ namespace VRKeyboard.App.View
             if (version == _renderedVersion) return false;
             _renderedVersion = version;
 
-            foreach (SettingsRow row in _activeRows) row.Refresh(_form);
+            foreach (SettingsPage page in _pages) page.Refresh(_form);
             _reset.Refresh(_form);
             string notice = _form.Notice ?? string.Empty;
             if (_notice.text != notice) _notice.text = notice;
             return true;
-        }
-
-        Dictionary<string, SettingsRow> RowsByKey()
-        {
-            var rows = new Dictionary<string, SettingsRow>();
-            foreach (SettingsRow row in _rows)
-            {
-                if (rows.TryGetValue(row.Key, out SettingsRow other))
-                    throw new InvalidOperationException(SceneChecks.PathOf(row.transform) + " と " + SceneChecks.PathOf(other.transform) + " の項目（" + row.Key + "）が重複しています。");
-                rows.Add(row.Key, row);
-            }
-            return rows;
         }
     }
 }

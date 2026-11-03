@@ -2,12 +2,14 @@ using System;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using VRKeyboard.App.Output;
 using VRKeyboard.Core;
 
 namespace VRKeyboard.App.View
 {
     /// <summary>
-    /// 入力欄（確定済みの文字列・未確定のかな・キャレット）と、その下の状態行（通知・残り文字数）。
+    /// 入力欄（確定済みの文字列・未確定のかな・キャレット）と、その下の状態行（通知・送信先・文字数）。
+    /// 文字数は、上限があれば「文字数 / 上限」、なければ「文字数 文字」と表示する。
     /// 未確定のかなは色と下線で確定済みと区別する。行数が入力欄を超えるときは、キャレットの行が見える位置までずらす。
     /// </summary>
     public sealed class InputAreaView : MonoBehaviour
@@ -22,7 +24,12 @@ namespace VRKeyboard.App.View
         [SerializeField] RectTransform _caret;
 
         [SerializeField] TextMeshProUGUI _notice;
-        [SerializeField] TextMeshProUGUI _remaining;
+
+        [Tooltip("送信先の名前。")]
+        [SerializeField] TextMeshProUGUI _target;
+
+        [Tooltip("文字数（上限があれば上限も）。")]
+        [SerializeField] TextMeshProUGUI _length;
 
         KeyboardTheme _theme;
         RectTransform _textRect;
@@ -36,7 +43,8 @@ namespace VRKeyboard.App.View
             SceneChecks.Require(_text, this, nameof(_text));
             SceneChecks.Require(_caret, this, nameof(_caret));
             SceneChecks.Require(_notice, this, nameof(_notice));
-            SceneChecks.Require(_remaining, this, nameof(_remaining));
+            SceneChecks.Require(_target, this, nameof(_target));
+            SceneChecks.Require(_length, this, nameof(_length));
             if (_text.transform.parent != _viewport)
                 throw new InvalidOperationException(SceneChecks.PathOf(_text.transform) + " は " + SceneChecks.PathOf(_viewport) + " の直下に置く必要があります。");
             if (_caret.parent != _text.transform)
@@ -54,15 +62,38 @@ namespace VRKeyboard.App.View
             _compositionOpenTag = "<color=#" + ColorUtility.ToHtmlStringRGBA(theme.Composition) + "><u>";
         }
 
-        public void Refresh(KeyboardSession session)
+        public void Refresh(KeyboardSession session, OutputTarget target)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
+            if (target == null) throw new ArgumentNullException(nameof(target));
             RefreshText(session);
 
             if (_notice.text != session.Notice) _notice.text = session.Notice;
-            string remaining = "あと " + session.RemainingLength + " 文字";
-            if (_remaining.text != remaining) _remaining.text = remaining;
-            _remaining.color = session.RemainingLength == 0 ? _theme.RemainingExhausted : _theme.Remaining;
+            string targetText = "送信先: " + target.Name;
+            if (_target.text != targetText) _target.text = targetText;
+            RefreshLength(session);
+        }
+
+        void RefreshLength(KeyboardSession session)
+        {
+            int length = session.Length;
+            int? limit = session.LengthLimit;
+            string text;
+            Color color;
+            if (limit.HasValue)
+            {
+                text = length + " / " + limit.Value;
+                color = length > limit.Value ? _theme.LengthOverLimit
+                    : length == limit.Value ? _theme.LengthAtLimit
+                    : _theme.Length;
+            }
+            else
+            {
+                text = length + " 文字";
+                color = _theme.Length;
+            }
+            if (_length.text != text) _length.text = text;
+            _length.color = color;
         }
 
         void RefreshText(KeyboardSession session)

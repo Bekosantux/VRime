@@ -28,8 +28,9 @@ MonoBehaviour:
   _chipText: {r: 0.96, g: 0.97, b: 0.98, a: 1}
   _chipTextInactive: {r: 0.36, g: 0.39, b: 0.44, a: 1}
   _composition: {r: 1, g: 0.88, b: 0.51, a: 1}
-  _remaining: {r: 0.6, g: 0.64, b: 0.7, a: 1}
-  _remainingExhausted: {r: 1, g: 0.6, b: 0.35, a: 1}
+  _length: {r: 0.6, g: 0.64, b: 0.7, a: 1}
+  _lengthAtLimit: {r: 1, g: 0.6, b: 0.35, a: 1}
+  _lengthOverLimit: {r: 1, g: 0.36, b: 0.36, a: 1}
   _candidate: {r: 0.17, g: 0.2, b: 0.26, a: 0.96}
   _candidateSelected: {r: 0.14, g: 0.5, b: 0.95, a: 0.98}
   _settingsButton: {r: 0.2, g: 0.23, b: 0.29, a: 1}
@@ -37,3 +38,7 @@ MonoBehaviour:
   _settingsButtonPressed: {r: 0.14, g: 0.5, b: 0.95, a: 1}
   _settingsThumb: {r: 0.96, g: 0.97, b: 0.98, a: 1}
   _settingsThumbActive: {r: 0.45, g: 0.78, b: 1, a: 1}
+  _settingsTab: {r: 0.14, g: 0.16, b: 0.2, a: 1}
+  _settingsTabSelected: {r: 0.14, g: 0.5, b: 0.95, a: 1}
+  _settingsSwitchOn: {r: 0.14, g: 0.5, b: 0.95, a: 1}
+  _settingsSwitchOff: {r: 0.27, g: 0.31, b: 0.39, a: 1}

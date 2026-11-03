@@ -12,13 +12,16 @@ namespace VRKeyboard.App.Output
 
     /// <summary>
     /// VRChat のチャットボックスへ OSC（UDP）で送る（SPEC 7.3）。
-    /// <see cref="Send"/> はキューに積み、毎フレーム呼ぶ <see cref="Update"/> が 1秒以上の間隔を空けて実際に送る。
+    /// <see cref="Send"/> と <see cref="SetPreview"/> は予約だけを行い、毎フレーム呼ぶ <see cref="Update"/> が 1秒以上の間隔を空けて実際に送る。
     /// 送信の失敗（ソケットの例外）は <see cref="Update"/> / <see cref="SetTyping"/> から送出される。
     /// </summary>
     public sealed class VRChatChatbox : IChatboxOutput, IDisposable
     {
+        /// <summary>チャットボックスに表示できる文字数（UTF-16 単位）。</summary>
+        public const int MaxLength = 144;
+
         readonly AppSettings _settings;
-        readonly ChatboxRateLimiter _limiter = new ChatboxRateLimiter();
+        readonly ChatboxOutbox _outbox = new ChatboxOutbox();
 
         // 接続しない UDP ソケットにする。接続済みだと、宛先が未起動のときの ICMP 到達不能が次の送信の例外になる。
         UdpClient _udp;
@@ -34,23 +37,59 @@ namespace VRKeyboard.App.Output
         }
 
         /// <summary>送信待ちの件数。</summary>
-        public int PendingCount => _limiter.PendingCount;
+        public int PendingSendCount => _outbox.PendingSendCount;
 
         /// <summary>送信をキューに積む。実際の送信は <see cref="Update"/> で行う。</summary>
         public void Send(string text)
         {
             ThrowIfDisposed();
             if (string.IsNullOrEmpty(text)) throw new ArgumentException("送信する文字列が空です。", nameof(text));
-            _limiter.Enqueue(text);
+            _outbox.EnqueueSend(text);
         }
 
-        /// <summary>毎フレーム呼ぶ。送信してよい時刻なら、キューの先頭を送る。</summary>
+        /// <summary>
+        /// 入力中の文字をチャットボックスに表示する。null は表示なしで、表示中なら消す。
+        /// 毎フレーム呼んでよく、間隔内の変更は最新のものだけを送る。<see cref="MaxLength"/> を超える分は表示しない。
+        /// </summary>
+        public void SetPreview(string text)
+        {
+            ThrowIfDisposed();
+            _outbox.SetPreview(text != null ? Truncate(text) : null);
+        }
+
+        // サロゲートペアの途中では切らない。
+        static string Truncate(string text)
+        {
+            if (text.Length <= MaxLength) return text;
+            int length = char.IsHighSurrogate(text[MaxLength - 1]) ? MaxLength - 1 : MaxLength;
+            return text.Substring(0, length);
+        }
+
+        /// <summary>
+        /// 入力中の表示を出していれば、間隔を待たずに消す。終了の前に呼ぶ（チャットボックスに入力途中の文字が残らないようにするため）。
+        /// </summary>
+        public void ClearPreviewNow()
+        {
+            ThrowIfDisposed();
+            if (!_outbox.TryClearPreviewNow()) return;
+            SendPacket(OscCodec.Encode("/chatbox/input", string.Empty, true, false));
+        }
+
+        /// <summary>毎フレーム呼ぶ。送信してよい時刻なら、次のメッセージを送る。</summary>
         public void Update(double nowSeconds)
         {
             ThrowIfDisposed();
-            if (_limiter.TryDequeue(nowSeconds, out string text))
+            if (!_outbox.TryDequeue(nowSeconds, out ChatboxMessage message)) return;
+            switch (message.Kind)
             {
-                SendPacket(OscCodec.Encode("/chatbox/input", text, true, _settings.PlayChatboxNotificationSound));
+                case ChatboxMessageKind.Send:
+                    SendPacket(OscCodec.Encode("/chatbox/input", message.Text, true, _settings.PlayChatboxNotificationSound));
+                    break;
+                case ChatboxMessageKind.Preview:
+                    SendPacket(OscCodec.Encode("/chatbox/input", message.Text, true, false));
+                    break;
+                default:
+                    throw new InvalidOperationException("未知のメッセージ: " + message.Kind);
             }
         }
 

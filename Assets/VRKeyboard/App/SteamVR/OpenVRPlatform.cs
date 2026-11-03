@@ -70,6 +70,9 @@ namespace VRKeyboard.App.SteamVR
         public bool IsDashboardHoldingInput { get; private set; }
         public bool IsSettingsVisible { get; private set; }
 
+        /// <summary>コントローラーの入力は SteamVR から読むため、前面のウィンドウによらない。</summary>
+        public bool RequiresOwnWindowFocus => false;
+
         public event Action QuitRequested;
 
         public void BeginFrame()

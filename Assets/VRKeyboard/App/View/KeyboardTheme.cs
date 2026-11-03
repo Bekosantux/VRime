@@ -48,10 +48,14 @@ namespace VRKeyboard.App.View
         [Tooltip("未確定のかな（下線を付ける）。")]
         [SerializeField] Color _composition = new Color(1.00f, 0.88f, 0.51f, 1f);
 
-        [SerializeField] Color _remaining = new Color(0.60f, 0.64f, 0.70f, 1f);
+        [Tooltip("文字数。")]
+        [SerializeField] Color _length = new Color(0.60f, 0.64f, 0.70f, 1f);
 
-        [Tooltip("残りの文字数が 0 のとき。")]
-        [SerializeField] Color _remainingExhausted = new Color(1.00f, 0.60f, 0.35f, 1f);
+        [Tooltip("文字数が上限ちょうどのとき。")]
+        [SerializeField] Color _lengthAtLimit = new Color(1.00f, 0.60f, 0.35f, 1f);
+
+        [Tooltip("文字数が上限を超えているとき（送信できない）。")]
+        [SerializeField] Color _lengthOverLimit = new Color(1.00f, 0.36f, 0.36f, 1f);
 
         [Header("候補欄")]
         [SerializeField] Color _candidate = new Color(0.17f, 0.20f, 0.26f, 0.96f);
@@ -65,6 +69,17 @@ namespace VRKeyboard.App.View
 
         [Tooltip("つまんでいる・指しているスライダーのつまみ。")]
         [SerializeField] Color _settingsThumbActive = new Color(0.45f, 0.78f, 1.00f, 1f);
+
+        [Tooltip("選んでいないカテゴリのタブ。指している・押しているときはボタンと同じ色にする。")]
+        [SerializeField] Color _settingsTab = new Color(0.14f, 0.16f, 0.20f, 1f);
+
+        [SerializeField] Color _settingsTabSelected = new Color(0.14f, 0.50f, 0.95f, 1f);
+
+        [Tooltip("オンのスイッチの地。")]
+        [SerializeField] Color _settingsSwitchOn = new Color(0.14f, 0.50f, 0.95f, 1f);
+
+        [Tooltip("オフのスイッチの地。")]
+        [SerializeField] Color _settingsSwitchOff = new Color(0.27f, 0.31f, 0.39f, 1f);
 
         public Color Cell => _cell;
         public Color CellDisabled => _cellDisabled;
@@ -84,8 +99,9 @@ namespace VRKeyboard.App.View
         public Color ChipTextInactive => _chipTextInactive;
 
         public Color Composition => _composition;
-        public Color Remaining => _remaining;
-        public Color RemainingExhausted => _remainingExhausted;
+        public Color Length => _length;
+        public Color LengthAtLimit => _lengthAtLimit;
+        public Color LengthOverLimit => _lengthOverLimit;
 
         public Color Candidate => _candidate;
         public Color CandidateSelected => _candidateSelected;
@@ -95,6 +111,10 @@ namespace VRKeyboard.App.View
         public Color SettingsButtonPressed => _settingsButtonPressed;
         public Color SettingsThumb => _settingsThumb;
         public Color SettingsThumbActive => _settingsThumbActive;
+        public Color SettingsTab => _settingsTab;
+        public Color SettingsTabSelected => _settingsTabSelected;
+        public Color SettingsSwitchOn => _settingsSwitchOn;
+        public Color SettingsSwitchOff => _settingsSwitchOff;
 
         /// <summary>値が使えない範囲にあれば例外にする。</summary>
         public void Validate()

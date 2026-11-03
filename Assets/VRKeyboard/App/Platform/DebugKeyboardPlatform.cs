@@ -28,6 +28,9 @@ namespace VRKeyboard.App.Platform
 
         public bool IsSettingsVisible { get; private set; }
 
+        /// <summary>PC のキーボードの入力は、前面のウィンドウにしか届かない。</summary>
+        public bool RequiresOwnWindowFocus => true;
+
         public event Action QuitRequested
         {
             add { }

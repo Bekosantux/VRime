@@ -256,13 +256,25 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 最大長を超える入力は拒否して振動で知らせる()
+        public void 既定では文字数の上限がない()
         {
-            var rig = new Rig(new KeyboardSettings(maxLength: 3));
+            var rig = new Rig();
+            Assert.IsNull(rig.Session.LengthLimit);
+            for (int i = 0; i < 200; i++) rig.Type(0, StickDirection.Center);
+            Assert.AreEqual(200, rig.Session.Length);
+            Assert.IsFalse(rig.Session.IsOverLengthLimit);
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+        }
+
+        [Test]
+        public void 上限を超える入力は拒否して振動で知らせる()
+        {
+            var rig = new Rig();
+            rig.Session.SetLengthLimit(3);
             rig.Type(0, StickDirection.Center);
             rig.Type(0, StickDirection.Left);
             rig.Type(0, StickDirection.Up);
-            Assert.AreEqual(0, rig.Session.RemainingLength);
+            Assert.AreEqual(3, rig.Session.Length);
             Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
 
             rig.Type(0, StickDirection.Right);
@@ -271,28 +283,16 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 既定の最大長は144文字()
+        public void 上限は確定済みと未確定の合計に適用する()
         {
             var rig = new Rig();
-            Assert.AreEqual(144, rig.Session.RemainingLength);
-            for (int i = 0; i < 144; i++) rig.Type(0, StickDirection.Center);
-            Assert.AreEqual(144, rig.Session.Composition.Length);
-            Assert.AreEqual(0, rig.Session.RemainingLength);
-            rig.Type(0, StickDirection.Center);
-            Assert.AreEqual(144, rig.Session.Composition.Length);
-            Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
-        }
-
-        [Test]
-        public void 最大長は確定済みと未確定の合計に適用する()
-        {
-            var rig = new Rig(new KeyboardSettings(maxLength: 3));
+            rig.Session.SetLengthLimit(3);
             rig.Type(0, StickDirection.Center);       // 未確定 あ
             rig.VowelFunction(Language);              // 英字へ
             rig.Type(1, StickDirection.Center);       // a（先に あ が確定される）
             rig.Type(1, StickDirection.Center);       // a
             Assert.AreEqual("あaa", rig.Session.Committed);
-            Assert.AreEqual(0, rig.Session.RemainingLength);
+            Assert.AreEqual(3, rig.Session.Length);
             rig.Effects.ClearAll();
 
             rig.Type(1, StickDirection.Center);
@@ -301,15 +301,99 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 最大長に達した後でも消去はできる()
+        public void 上限に達した後でも消去はできる()
         {
-            var rig = new Rig(new KeyboardSettings(maxLength: 2));
+            var rig = new Rig();
+            rig.Session.SetLengthLimit(2);
             rig.Type(0, StickDirection.Center);
             rig.Type(0, StickDirection.Left);
             rig.ConsonantFunction(2);
-            Assert.AreEqual(1, rig.Session.RemainingLength);
+            Assert.AreEqual(1, rig.Session.Length);
             rig.Type(0, StickDirection.Up);
             Assert.AreEqual("あう", rig.Session.Composition);
+        }
+
+        [Test]
+        public void 上限を下げても入力済みの内容は切り詰めない()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.Type(0, StickDirection.Left);
+            rig.Type(0, StickDirection.Up);
+            rig.Session.SetLengthLimit(2);
+            Assert.AreEqual("あいう", rig.Session.Composition);
+            Assert.IsTrue(rig.Session.IsOverLengthLimit);
+
+            rig.Session.SetLengthLimit(null);
+            Assert.IsFalse(rig.Session.IsOverLengthLimit);
+        }
+
+        [Test]
+        public void 上限を超えている間は送信せず振動で知らせる()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.Type(0, StickDirection.Left);
+            rig.VowelFunction(Commit);
+            rig.Session.SetLengthLimit(1);
+            rig.Effects.ClearAll();
+
+            rig.VowelFunction(Commit);
+            Assert.AreEqual(0, rig.Effects.Sends.Count);
+            Assert.AreEqual("あい", rig.Session.Committed);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
+
+            // 上限以内に戻せば送信できる。
+            rig.ConsonantFunction(2);
+            rig.VowelFunction(Commit);
+            CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
+        }
+
+        [Test]
+        public void 上限を超えていても未確定のかなは確定できる()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.Type(0, StickDirection.Left);
+            rig.Session.SetLengthLimit(1);
+            rig.Effects.ClearAll();
+
+            rig.VowelFunction(Commit);
+            Assert.AreEqual("あい", rig.Session.Committed);
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+        }
+
+        [Test]
+        public void 上限を変えるとViewVersionが増え_同じ値では増えない()
+        {
+            var rig = new Rig();
+            int version = rig.Session.ViewVersion;
+            rig.Session.SetLengthLimit(144);
+            Assert.Greater(rig.Session.ViewVersion, version);
+            version = rig.Session.ViewVersion;
+            rig.Session.SetLengthLimit(144);
+            Assert.AreEqual(version, rig.Session.ViewVersion);
+            rig.Session.SetLengthLimit(null);
+            Assert.Greater(rig.Session.ViewVersion, version);
+        }
+
+        [Test]
+        public void 上限の変更では通知を消さない()
+        {
+            var rig = new Rig();
+            rig.Session.SetNotice("送信しました");
+            rig.Session.SetLengthLimit(144);
+            rig.Tick();
+            Assert.AreEqual("送信しました", rig.Session.Notice);
+        }
+
+        [Test]
+        public void 不正な上限は例外()
+        {
+            var rig = new Rig();
+            Assert.Throws<ArgumentOutOfRangeException>(() => rig.Session.SetLengthLimit(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => rig.Session.SetLengthLimit(-1));
         }
 
         [Test]
@@ -333,7 +417,7 @@ namespace VRKeyboard.Core.Tests
             CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
             Assert.AreEqual("", rig.Session.Committed);
             Assert.AreEqual(0, rig.Session.CommittedCursor);
-            Assert.AreEqual(144, rig.Session.RemainingLength);
+            Assert.AreEqual(0, rig.Session.Length);
         }
 
         [Test]
@@ -827,9 +911,10 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 変換結果が最大長を超えるなら確定せず選び直せる()
+        public void 変換結果が上限を超えるなら確定せず選び直せる()
         {
-            var rig = new Rig(new KeyboardSettings(maxLength: 4));
+            var rig = new Rig();
+            rig.Session.SetLengthLimit(4);
             int id = StartConversion(rig);
             rig.Session.CompleteConversion(id, new[] { Segment("あい", "あいうえお", "愛") });
             rig.Effects.ClearAll();
@@ -997,7 +1082,6 @@ namespace VRKeyboard.Core.Tests
         {
             var rig = new Rig();
             Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(consonantHand: Hand.Left)));
-            Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(maxLength: 10)));
             Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(chordWindowSeconds: 0.3)));
             Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(doubleChordWindowSeconds: 0.8)));
             Assert.Throws<ArgumentNullException>(() => rig.Session.ApplySettings(null));

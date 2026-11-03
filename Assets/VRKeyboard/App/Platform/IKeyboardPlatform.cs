@@ -32,6 +32,12 @@ namespace VRKeyboard.App.Platform
         /// </summary>
         bool IsSettingsVisible { get; }
 
+        /// <summary>
+        /// 入力を読むのに、本アプリのウィンドウが前面である必要があるか（PC のキーボードで入力する開発用の環境）。
+        /// true のときは、起動時に VRChat を前面にしない（SPEC 8.1）。
+        /// </summary>
+        bool RequiresOwnWindowFocus { get; }
+
         /// <summary>毎フレームの最初に呼ぶ。環境のイベントの処理と、状態の読み取りを行う。</summary>
         void BeginFrame();
 

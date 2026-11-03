@@ -6,10 +6,10 @@ using System.Text;
 
 namespace VRKeyboard.App.Output
 {
-    /// <summary>送信時点の前面ウィンドウの情報。タイトルには文書名などが含まれるため、ログに出さない。</summary>
+    /// <summary>前面ウィンドウの情報。</summary>
     public sealed class ForegroundWindowInfo
     {
-        public ForegroundWindowInfo(IntPtr handle, int processId, string processName, string displayName, string title)
+        public ForegroundWindowInfo(IntPtr handle, int processId, string processName, string displayName)
         {
             if (handle == IntPtr.Zero) throw new ArgumentException("ウィンドウハンドルが 0 です。", nameof(handle));
             if (processId <= 0) throw new ArgumentOutOfRangeException(nameof(processId), processId, "プロセス ID は正の値である必要があります。");
@@ -17,7 +17,6 @@ namespace VRKeyboard.App.Output
             ProcessId = processId;
             ProcessName = processName;
             DisplayName = displayName;
-            Title = title ?? throw new ArgumentNullException(nameof(title));
         }
 
         public IntPtr Handle { get; }
@@ -29,28 +28,20 @@ namespace VRKeyboard.App.Output
         /// <summary>利用者に見せるアプリ名（実行ファイルの説明。例: メモ帳）。取得できなかったときは null。</summary>
         public string DisplayName { get; }
 
-        public string Title { get; }
-
         public static int CurrentProcessId => (int)Win32.GetCurrentProcessId();
 
-        /// <summary>現在の前面ウィンドウを取得する。前面のウィンドウがなければ null。</summary>
-        public static ForegroundWindowInfo Capture()
+        /// <summary>ウィンドウを持つプロセスの名前を調べる。プロセスの照会とファイルの読み取りを伴うため、毎フレームは呼ばない。</summary>
+        public static ForegroundWindowInfo Describe(IntPtr handle, int processId)
         {
-            IntPtr handle = Win32.GetForegroundWindow();
-            if (handle == IntPtr.Zero) return null;
-
-            if (Win32.GetWindowThreadProcessId(handle, out uint pid) == 0 || pid == 0) return null;
-
             string processName = null;
             string displayName = null;
-            string path = QueryProcessPath(pid);
+            string path = QueryProcessPath((uint)processId);
             if (path != null)
             {
                 processName = Path.GetFileNameWithoutExtension(path);
                 displayName = QueryFileDescription(path);
             }
-
-            return new ForegroundWindowInfo(handle, (int)pid, processName, displayName, QueryTitle(handle));
+            return new ForegroundWindowInfo(handle, processId, processName, displayName);
         }
 
         // 昇格したプロセスでも、制限付きの照会権限なら開ける。開けないもの（保護されたプロセスなど）は null。
@@ -85,15 +76,6 @@ namespace VRKeyboard.App.Output
             {
                 return null;
             }
-        }
-
-        static string QueryTitle(IntPtr handle)
-        {
-            int length = Win32.GetWindowTextLength(handle);
-            if (length <= 0) return string.Empty;
-            var buffer = new StringBuilder(length + 1);
-            Win32.GetWindowText(handle, buffer, buffer.Capacity);
-            return buffer.ToString();
         }
     }
 }

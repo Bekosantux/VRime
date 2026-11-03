@@ -24,6 +24,9 @@ namespace VRKeyboard.App.Settings
         const string TriggerKey = "triggerThreshold";
         const string StickKey = "stickThreshold";
         const string RepeatDelayKey = "repeatDelaySeconds";
+        const string VRChatKey = "vrchat";
+        const string FocusOnStartupKey = "focusOnStartup";
+        const string ShowTypingTextKey = "showTypingText";
 
         public static string Serialize(UserSettings settings)
         {
@@ -45,6 +48,11 @@ namespace VRKeyboard.App.Settings
                     [TriggerKey] = Number(settings.TriggerThreshold),
                     [StickKey] = Number(settings.StickThreshold),
                     [RepeatDelayKey] = Number(settings.RepeatDelaySeconds),
+                },
+                [VRChatKey] = new JObject
+                {
+                    [FocusOnStartupKey] = settings.VRChat.FocusOnStartup,
+                    [ShowTypingTextKey] = settings.VRChat.ShowTypingText,
                 },
             };
             return root.ToString(Formatting.Indented);
@@ -74,6 +82,10 @@ namespace VRKeyboard.App.Settings
             KeyboardPlacement dp = defaults.Placement;
             JObject display = OptionalObject(root, DisplayKey);
             JObject grip = OptionalObject(root, GripKey);
+            JObject vrchat = OptionalObject(root, VRChatKey);
+            var vrchatSettings = new VRChatSettings(
+                OptionalBool(vrchat, FocusOnStartupKey, defaults.VRChat.FocusOnStartup),
+                OptionalBool(vrchat, ShowTypingTextKey, defaults.VRChat.ShowTypingText));
 
             try
             {
@@ -87,7 +99,8 @@ namespace VRKeyboard.App.Settings
                     placement,
                     OptionalNumber(grip, TriggerKey, defaults.TriggerThreshold),
                     OptionalNumber(grip, StickKey, defaults.StickThreshold),
-                    OptionalNumber(grip, RepeatDelayKey, defaults.RepeatDelaySeconds));
+                    OptionalNumber(grip, RepeatDelayKey, defaults.RepeatDelaySeconds),
+                    vrchatSettings);
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -122,6 +135,15 @@ namespace VRKeyboard.App.Settings
             if (double.IsNaN(value) || double.IsInfinity(value) || Math.Abs(value) > float.MaxValue)
                 throw new FormatException("\"" + key + "\" が有限の数値ではありません。");
             return (float)value;
+        }
+
+        // 親または項目が欠けていれば既定値。真偽値以外は不正。
+        static bool OptionalBool(JObject parent, string key, bool defaultValue)
+        {
+            JToken token = parent?[key];
+            if (token == null) return defaultValue;
+            if (token.Type != JTokenType.Boolean) throw new FormatException("\"" + key + "\" が真偽値ではありません。");
+            return (bool)token;
         }
     }
 }

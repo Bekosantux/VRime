@@ -27,7 +27,7 @@ namespace VRKeyboard.App.View
         {
             Validate();
             _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
-            if (hit.Target == SettingsTarget.None || hit.Target == SettingsTarget.Slider)
+            if (hit.Target != SettingsTarget.Decrease && hit.Target != SettingsTarget.Increase && hit.Target != SettingsTarget.Reset)
                 throw new ArgumentException("ボタンの操作ではありません: " + hit.Target, nameof(hit));
             _hit = hit;
         }

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net.Sockets;
 using TMPro;
 using UnityEngine;
 using VRKeyboard.App.Conversion;
@@ -28,6 +29,7 @@ namespace VRKeyboard.App
     /// Core からの通知（<see cref="IKeyboardEffects"/>）を、振動・変換の通信・送信・環境の切り替えへ振り分ける。
     /// 実行環境（OpenVR / 開発用のキーボード）は <see cref="IKeyboardPlatform"/> の差し替えで切り替える。
     /// 設定画面で変えた値は、キーボードの動作と表示位置へ随時反映し、確定したときに保存する。
+    /// 前面のウィンドウ（<see cref="ForegroundWindowMonitor"/>）を毎フレーム調べ、送信先の表示・文字数の上限・チャットボックスへの入力中の表示を合わせる。
     /// キーボードと設定画面の uGUI はシーンに置き、起動時に検証してから組み立てる（<see cref="ValidateScene"/>）。
     /// </summary>
     public sealed class KeyboardApp : MonoBehaviour, IKeyboardEffects
@@ -74,6 +76,7 @@ namespace VRKeyboard.App
         SettingsForm _settingsForm;
         string _loadNotice;
         ConversionRunner _runner;
+        ForegroundWindowMonitor _monitor;
         VRChatChatbox _chatbox;
         TextOutputRouter _router;
         bool _quitting;
@@ -118,7 +121,7 @@ namespace VRKeyboard.App
             RequireOnCanvas(_settingsView, _settingsTarget, nameof(_settingsView));
 
             _keyboardView.Validate();
-            _settingsView.CreateLayout(SettingsCatalog.Items);
+            _settingsView.CreateLayout(SettingsCatalog.Categories);
             KeyboardFonts.ValidateTexts(_keyboardTarget.transform, _regularFont, _boldFont);
             KeyboardFonts.ValidateTexts(_settingsTarget.transform, _regularFont, _boldFont);
         }
@@ -154,9 +157,10 @@ namespace VRKeyboard.App
 
             _keyboardTarget.Initialize(KeyboardLayer);
             _settingsTarget.Initialize(SettingsLayer);
-            _keyboardView.Initialize(_session, settings.ConsonantHand, _theme);
+            _monitor = ForegroundWindowMonitor.CreateForSystem();
+            _keyboardView.Initialize(_session, _monitor, settings.ConsonantHand, _theme);
 
-            _settingsForm = new SettingsForm(_settingsView.CreateLayout(SettingsCatalog.Items), loaded.Settings);
+            _settingsForm = new SettingsForm(_settingsView.CreateLayout(SettingsCatalog.Categories), loaded.Settings);
             _settingsForm.SetNotice(_loadNotice);
             _settingsForm.Changed += OnSettingsChanged;
             _settingsForm.Committed += OnSettingsCommitted;
@@ -165,7 +169,7 @@ namespace VRKeyboard.App
 
             var appSettings = new AppSettings();
             _chatbox = new VRChatChatbox(appSettings);
-            _router = TextOutputRouter.Create(appSettings, _chatbox, new DesktopTextSender());
+            _router = TextOutputRouter.Create(appSettings, _chatbox, new DesktopTextSender(), _monitor);
 
             // 環境の作成は、描画先が揃ったあとに行う。OpenVR の初期化に失敗した場合は例外にする（別の環境へは切り替えない）。
             _platform = CreatePlatform();
@@ -175,6 +179,26 @@ namespace VRKeyboard.App
             _preview = new KeyboardPreview(_session, _platform, _keyboardTarget.Texture, _settingsTarget.Texture,
                 debugPlatform?.DebugHaptics, debugPlatform != null ? _settingsForm : null);
 #endif
+
+            // 開発用のキーボードの入力は前面のウィンドウにしか届かないため、その環境では前面を移さない。
+            if (loaded.Settings.VRChat.FocusOnStartup && !_platform.RequiresOwnWindowFocus) FocusVRChat();
+        }
+
+        static void FocusVRChat()
+        {
+            VRChatFocusResult result = VRChatWindow.Focus();
+            switch (result)
+            {
+                case VRChatFocusResult.Focused:
+                case VRChatFocusResult.NotRunning:
+                    break;
+                case VRChatFocusResult.NoWindow:
+                case VRChatFocusResult.Refused:
+                    Debug.LogWarning("VRChat を前面にできませんでした: " + result);
+                    break;
+                default:
+                    throw new InvalidOperationException("未知の結果: " + result);
+            }
         }
 
         IKeyboardPlatform CreatePlatform()
@@ -206,6 +230,10 @@ namespace VRKeyboard.App
             // 終了を求められたあとは、環境の API を呼ばない。
             if (_quitting) return;
 
+            // 送信先は、このフレームの入力を処理する前に決める。送信と文字数の上限が同じ送信先に従うようにするため。
+            _monitor.Update();
+            _session.SetLengthLimit(_monitor.Target.Kind == OutputTargetKind.VRChat ? VRChatChatbox.MaxLength : (int?)null);
+
             // ダッシュボードが入力を持っている間は、手動で閉じるのと同じ処理でキーボードを閉じる（SPEC 4.4）。
             _session.SetDashboardVisible(_platform.IsDashboardHoldingInput);
 
@@ -219,8 +247,16 @@ namespace VRKeyboard.App
             _keyboardShown = keyboardShown;
             if (_settingsView.RefreshIfChanged()) _settingsTarget.Render();
 
-            // 送信先は送信の時点まで決まらないため、入力中の表示は出力先を問わず送る（SPEC 7.3）。
-            _chatbox.SetTyping(_session.IsOpen && (_session.Committed.Length > 0 || _session.Composition.Length > 0));
+            UpdateChatbox(now);
+        }
+
+        void UpdateChatbox(double now)
+        {
+            // 送信先は送信の時点まで決まらないため、入力中であることの表示は送信先を問わず送る（SPEC 7.3）。
+            bool typing = _session.IsOpen && _session.Length > 0;
+            _chatbox.SetTyping(typing);
+            bool showText = typing && _settingsForm.Settings.VRChat.ShowTypingText && _monitor.Target.Kind == OutputTargetKind.VRChat;
+            _chatbox.SetPreview(showText ? _session.Text : null);
             _chatbox.Update(now);
         }
 
@@ -234,6 +270,7 @@ namespace VRKeyboard.App
         void OnDestroy()
         {
             _runner?.Dispose();
+            ClearChatboxPreview();
             _chatbox?.Dispose();
             // オーバーレイ（OpenVR 側）が描画先のテクスチャを参照しているため、先に環境を閉じる。
             if (_platform != null) _platform.QuitRequested -= OnQuitRequested;
@@ -242,6 +279,20 @@ namespace VRKeyboard.App
             if (_keyboardTarget is not null) _keyboardTarget.Release();
             if (_settingsTarget is not null) _settingsTarget.Release();
             _fonts?.Dispose();
+        }
+
+        // 終了の前に、チャットボックスに入力途中の文字を残さない。送れなくても終了は続ける。
+        void ClearChatboxPreview()
+        {
+            if (_chatbox == null) return;
+            try
+            {
+                _chatbox.ClearPreviewNow();
+            }
+            catch (SocketException e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         void OnQuitRequested()

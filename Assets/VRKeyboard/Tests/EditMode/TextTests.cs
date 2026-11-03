@@ -136,7 +136,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 未確定のかなを挿入しカーソルが進む()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             Assert.AreEqual(EditResult.Done, buffer.InsertComposition("あ"));
             buffer.InsertComposition("い");
             Assert.AreEqual("あい", buffer.Composition);
@@ -148,7 +148,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 未確定のカーソル位置に挿入する()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertComposition("あう");
             buffer.MoveCursorLeft();
             buffer.InsertComposition("い");
@@ -159,7 +159,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 未確定をそのまま確定するとカーソルは確定した文字の後ろ()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertComposition("あい");
             buffer.MoveCursorLeft(); // 未確定の中のカーソルは確定後に影響しない
             Assert.AreEqual(EditResult.Done, buffer.CommitComposition());
@@ -173,7 +173,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 未確定のかなは確定済みのカーソル位置にある()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("ab");
             buffer.MoveCursorLeft(); // 確定済みのカーソルは 1
             buffer.InsertComposition("あ");
@@ -185,7 +185,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 確定済みへの直接挿入は未確定があれば先にそのまま確定する()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertComposition("あ");
             Assert.AreEqual(EditResult.Done, buffer.InsertCommitted("A"));
             Assert.AreEqual("あA", buffer.Committed);
@@ -196,7 +196,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 変換結果で置き換えて確定する()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("前");
             buffer.InsertComposition("きょう");
             Assert.AreEqual(EditResult.Done, buffer.CommitConverted("今日"));
@@ -209,7 +209,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 消去は未確定があればその中で動作する()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("確定");
             buffer.InsertComposition("あい");
             Assert.AreEqual(EditResult.Done, buffer.Erase());
@@ -230,7 +230,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 消去はカーソルの直前を消す()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("abc");
             buffer.MoveCursorLeft();
             buffer.Erase();
@@ -244,7 +244,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void カーソル移動は未確定があればその中で動作する()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("ab");
             buffer.InsertComposition("あい");
             Assert.AreEqual(EditResult.NothingToDo, buffer.MoveCursorRight());
@@ -262,7 +262,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void カーソル移動は確定済みの両端で止まる()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("ab");
             Assert.AreEqual(EditResult.NothingToDo, buffer.MoveCursorRight());
             buffer.MoveCursorLeft();
@@ -274,7 +274,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 文字の切り替えは未確定の中で動作する()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("か");
             buffer.InsertComposition("は");
             Assert.AreEqual(EditResult.Done, buffer.ApplyCharacterModifier());
@@ -287,7 +287,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 文字の切り替えは未確定がなければ確定済みで動作する()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("かつ");
             buffer.ApplyCharacterModifier();
             Assert.AreEqual("かっ", buffer.Committed);
@@ -300,7 +300,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 文字の切り替えは対象がなければ何もしない()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             Assert.AreEqual(EditResult.NothingToDo, buffer.ApplyCharacterModifier());
             buffer.InsertComposition("な");
             Assert.AreEqual(EditResult.NothingToDo, buffer.ApplyCharacterModifier());
@@ -310,7 +310,7 @@ namespace VRKeyboard.Core.Tests
         [Test]
         public void 全消去()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("ab");
             buffer.InsertComposition("あ");
             buffer.Clear();
@@ -321,14 +321,12 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 合計長が最大長を超える操作は実行しない()
+        public void 合計長が上限を超える操作は実行しない()
         {
-            var buffer = new InputBuffer(5);
+            var buffer = Limited(5);
             buffer.InsertCommitted("abc");
             buffer.InsertComposition("あ");
-            Assert.AreEqual(1, buffer.Remaining);
             Assert.AreEqual(EditResult.Done, buffer.InsertComposition("い"));
-            Assert.AreEqual(0, buffer.Remaining);
 
             Assert.AreEqual(EditResult.TooLong, buffer.InsertComposition("う"));
             Assert.AreEqual(EditResult.TooLong, buffer.InsertCommitted("x"));
@@ -339,18 +337,29 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 最大長ちょうどまでは入力できる()
+        public void 上限ちょうどまでは入力できる()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = Limited(144);
             for (int i = 0; i < 144; i++) Assert.AreEqual(EditResult.Done, buffer.InsertComposition("あ"), "文字 " + i);
+            Assert.IsFalse(buffer.IsOverLengthLimit);
             Assert.AreEqual(EditResult.TooLong, buffer.InsertComposition("あ"));
             Assert.AreEqual(144, buffer.Length);
         }
 
         [Test]
+        public void 既定では上限がない()
+        {
+            var buffer = new InputBuffer();
+            Assert.IsNull(buffer.LengthLimit);
+            for (int i = 0; i < 300; i++) Assert.AreEqual(EditResult.Done, buffer.InsertComposition("あ"), "文字 " + i);
+            Assert.AreEqual(EditResult.Done, buffer.CommitConverted(new string('亜', 400)));
+            Assert.IsFalse(buffer.IsOverLengthLimit);
+        }
+
+        [Test]
         public void 長さはUTF16単位で数える()
         {
-            var buffer = new InputBuffer(3);
+            var buffer = Limited(3);
             Assert.AreEqual(EditResult.Done, buffer.InsertCommitted("\U0001F600")); // 絵文字は2
             Assert.AreEqual(2, buffer.Length);
             Assert.AreEqual(EditResult.TooLong, buffer.InsertCommitted("\U0001F600"));
@@ -358,9 +367,9 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 変換結果が最大長を超えるなら確定しない()
+        public void 変換結果が上限を超えるなら確定しない()
         {
-            var buffer = new InputBuffer(3);
+            var buffer = Limited(3);
             buffer.InsertComposition("あい");
             Assert.AreEqual(EditResult.TooLong, buffer.CommitConverted("あいうえ"));
             Assert.AreEqual("あい", buffer.Composition);
@@ -368,9 +377,52 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
+        public void 上限を超えたままでも長さを増やさない操作はできる()
+        {
+            var buffer = new InputBuffer();
+            buffer.InsertCommitted("abc");
+            buffer.InsertComposition("あい");
+            buffer.SetLengthLimit(3);
+            Assert.IsTrue(buffer.IsOverLengthLimit);
+            Assert.AreEqual("abc", buffer.Committed);
+            Assert.AreEqual("あい", buffer.Composition);
+
+            Assert.AreEqual(EditResult.TooLong, buffer.InsertComposition("う"));
+            Assert.AreEqual(EditResult.Done, buffer.MoveCursorLeft());
+            Assert.AreEqual(EditResult.Done, buffer.CommitComposition());
+            Assert.AreEqual(EditResult.Done, buffer.Erase());
+            Assert.AreEqual("abcあ", buffer.Committed);
+            Assert.IsTrue(buffer.IsOverLengthLimit);
+            Assert.AreEqual(EditResult.Done, buffer.Erase());
+            Assert.IsFalse(buffer.IsOverLengthLimit);
+        }
+
+        [Test]
+        public void 上限の変更ではVersionが増えない()
+        {
+            var buffer = new InputBuffer();
+            int version = buffer.Version;
+            buffer.SetLengthLimit(10);
+            buffer.SetLengthLimit(null);
+            Assert.AreEqual(version, buffer.Version);
+        }
+
+        [Test]
+        public void Textは確定済みのカーソル位置に未確定を挟む()
+        {
+            var buffer = new InputBuffer();
+            Assert.AreEqual("", buffer.Text);
+            buffer.InsertCommitted("ab");
+            Assert.AreEqual("ab", buffer.Text);
+            buffer.MoveCursorLeft();
+            buffer.InsertComposition("あい");
+            Assert.AreEqual("aあいb", buffer.Text);
+        }
+
+        [Test]
         public void サロゲートペアは1文字として消去とカーソル移動をする()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             buffer.InsertCommitted("a\U0001F600");
             buffer.MoveCursorLeft();
             Assert.AreEqual(1, buffer.CommittedCursor);
@@ -381,25 +433,33 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 空の挿入と不正な最大長は例外()
+        public void 空の挿入と不正な上限は例外()
         {
-            var buffer = new InputBuffer(10);
+            var buffer = new InputBuffer();
             Assert.Throws<ArgumentException>(() => buffer.InsertComposition(""));
             Assert.Throws<ArgumentException>(() => buffer.InsertCommitted(null));
             Assert.Throws<ArgumentNullException>(() => buffer.CommitConverted(null));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new InputBuffer(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => buffer.SetLengthLimit(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => buffer.SetLengthLimit(-1));
         }
 
         [Test]
         public void 内容が変わるとVersionが増え_変わらないと増えない()
         {
-            var buffer = new InputBuffer(144);
+            var buffer = new InputBuffer();
             int version = buffer.Version;
             buffer.InsertComposition("あ");
             Assert.Greater(buffer.Version, version);
             version = buffer.Version;
             buffer.MoveCursorRight(); // 末尾なので何も変わらない
             Assert.AreEqual(version, buffer.Version);
+        }
+
+        static InputBuffer Limited(int limit)
+        {
+            var buffer = new InputBuffer();
+            buffer.SetLengthLimit(limit);
+            return buffer;
         }
     }
 }
