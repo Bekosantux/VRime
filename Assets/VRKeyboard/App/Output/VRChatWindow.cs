@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace VRKeyboard.App.Output
@@ -10,11 +9,8 @@ namespace VRKeyboard.App.Output
         /// <summary>VRChat を前面にした。</summary>
         Focused,
 
-        /// <summary>VRChat が起動していない。</summary>
-        NotRunning,
-
-        /// <summary>VRChat のプロセスはあるが、前面にできるウィンドウがない（起動中など）。</summary>
-        NoWindow,
+        /// <summary>VRChat のウィンドウがない（起動していない、または起動の途中）。</summary>
+        NotFound,
 
         /// <summary>Windows が前面の切り替えを許さなかった。</summary>
         Refused,
@@ -25,11 +21,8 @@ namespace VRKeyboard.App.Output
     {
         public static VRChatFocusResult Focus()
         {
-            HashSet<int> processIds = FindProcessIds();
-            if (processIds.Count == 0) return VRChatFocusResult.NotRunning;
-
-            IntPtr window = FindMainWindow(processIds);
-            if (window == IntPtr.Zero) return VRChatFocusResult.NoWindow;
+            IntPtr window = FindWindow();
+            if (window == IntPtr.Zero) return VRChatFocusResult.NotFound;
 
             if (Win32.IsIconic(window)) Win32.ShowWindow(window, Win32.SW_RESTORE);
             if (TrySetForeground(window)) return VRChatFocusResult.Focused;
@@ -42,20 +35,10 @@ namespace VRKeyboard.App.Output
             return focused ? VRChatFocusResult.Focused : VRChatFocusResult.Refused;
         }
 
-        static HashSet<int> FindProcessIds()
+        // 所有者を持たない、表示中のトップレベルウィンドウのうち、プロセス名が VRChat のものを VRChat の画面とみなす。
+        static IntPtr FindWindow()
         {
-            var ids = new HashSet<int>();
-            foreach (Process process in Process.GetProcessesByName(OutputTarget.VRChatProcessName))
-            {
-                using (process) ids.Add(process.Id);
-            }
-            return ids;
-        }
-
-        // 所有者を持たない、表示中のトップレベルウィンドウを VRChat の画面とみなす。
-        static IntPtr FindMainWindow(HashSet<int> processIds)
-        {
-            var search = new WindowSearch(processIds);
+            var search = new WindowSearch();
             GCHandle handle = GCHandle.Alloc(search);
             try
             {
@@ -75,7 +58,7 @@ namespace VRKeyboard.App.Output
             if (!Win32.IsWindowVisible(window)) return true;
             if (Win32.GetWindow(window, Win32.GW_OWNER) != IntPtr.Zero) return true;
             if (Win32.GetWindowThreadProcessId(window, out uint pid) == 0) return true;
-            if (!search.ProcessIds.Contains((int)pid)) return true;
+            if (!search.IsVRChat(pid)) return true;
             search.Found = window;
             return false;
         }
@@ -93,13 +76,18 @@ namespace VRKeyboard.App.Output
 
         sealed class WindowSearch
         {
-            public WindowSearch(HashSet<int> processIds)
-            {
-                ProcessIds = processIds;
-            }
+            // 1 つのプロセスが複数のウィンドウを持つため、プロセスごとの判定を覚えておく。
+            readonly Dictionary<uint, bool> _isVRChat = new Dictionary<uint, bool>();
 
-            public HashSet<int> ProcessIds { get; }
             public IntPtr Found { get; set; }
+
+            public bool IsVRChat(uint processId)
+            {
+                if (_isVRChat.TryGetValue(processId, out bool known)) return known;
+                bool isVRChat = OutputTarget.IsVRChatProcess(ProcessImage.QueryName(processId));
+                _isVRChat.Add(processId, isVRChat);
+                return isVRChat;
+            }
         }
     }
 }

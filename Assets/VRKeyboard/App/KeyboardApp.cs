@@ -190,9 +190,8 @@ namespace VRKeyboard.App
             switch (result)
             {
                 case VRChatFocusResult.Focused:
-                case VRChatFocusResult.NotRunning:
+                case VRChatFocusResult.NotFound:
                     break;
-                case VRChatFocusResult.NoWindow:
                 case VRChatFocusResult.Refused:
                     Debug.LogWarning("VRChat を前面にできませんでした: " + result);
                     break;

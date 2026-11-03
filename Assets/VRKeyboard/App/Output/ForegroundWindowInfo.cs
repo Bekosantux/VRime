@@ -2,7 +2,6 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 
 namespace VRKeyboard.App.Output
 {
@@ -35,30 +34,13 @@ namespace VRKeyboard.App.Output
         {
             string processName = null;
             string displayName = null;
-            string path = QueryProcessPath((uint)processId);
+            string path = ProcessImage.QueryPath((uint)processId);
             if (path != null)
             {
-                processName = Path.GetFileNameWithoutExtension(path);
+                processName = ProcessImage.NameOf(path);
                 displayName = QueryFileDescription(path);
             }
             return new ForegroundWindowInfo(handle, processId, processName, displayName);
-        }
-
-        // 昇格したプロセスでも、制限付きの照会権限なら開ける。開けないもの（保護されたプロセスなど）は null。
-        static string QueryProcessPath(uint pid)
-        {
-            IntPtr process = Win32.OpenProcess(Win32.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-            if (process == IntPtr.Zero) return null;
-            try
-            {
-                var buffer = new StringBuilder(1024);
-                uint size = (uint)buffer.Capacity;
-                return Win32.QueryFullProcessImageName(process, 0, buffer, ref size) ? buffer.ToString() : null;
-            }
-            finally
-            {
-                Win32.CloseHandle(process);
-            }
         }
 
         static string QueryFileDescription(string path)

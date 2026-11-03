@@ -20,7 +20,7 @@ namespace VRKeyboard.App.Output
     /// <summary>前面のウィンドウから決まる送信先（SPEC 7.2）。</summary>
     public sealed class OutputTarget
     {
-        public const string VRChatProcessName = "VRChat";
+        const string VRChatProcessName = "VRChat";
 
         public static readonly OutputTarget None = new OutputTarget(OutputTargetKind.None, null);
 
@@ -59,9 +59,14 @@ namespace VRKeyboard.App.Output
         {
             if (window == null) return None;
             if (window.ProcessId == ownProcessId) return new OutputTarget(OutputTargetKind.OwnWindow, window);
-            if (string.Equals(window.ProcessName, VRChatProcessName, StringComparison.OrdinalIgnoreCase))
-                return new OutputTarget(OutputTargetKind.VRChat, window);
+            if (IsVRChatProcess(window.ProcessName)) return new OutputTarget(OutputTargetKind.VRChat, window);
             return new OutputTarget(OutputTargetKind.Desktop, window);
+        }
+
+        /// <summary>プロセス名（拡張子なし。調べられなかったときは null）が VRChat か。</summary>
+        public static bool IsVRChatProcess(string processName)
+        {
+            return string.Equals(processName, VRChatProcessName, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -239,6 +239,23 @@ namespace VRKeyboard.App.Tests
         }
     }
 
+    public sealed class ProcessImageTests
+    {
+        [Test]
+        public void 自プロセスの実行ファイル名を調べられる()
+        {
+            string expected = System.IO.Path.GetFileNameWithoutExtension(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+            Assert.AreEqual(expected, ProcessImage.QueryName((uint)ForegroundWindowInfo.CurrentProcessId));
+        }
+
+        [Test]
+        public void 存在しないプロセスはnull()
+        {
+            // プロセス ID は 4 の倍数で割り当てられるため、4 の倍数でない値は存在しない。
+            Assert.IsNull(ProcessImage.QueryName(uint.MaxValue));
+        }
+    }
+
     public sealed class ForegroundWindowMonitorTests
     {
         sealed class FakeSource : IForegroundWindowSource

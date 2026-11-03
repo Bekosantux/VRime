@@ -111,7 +111,8 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `DesktopTextSender` | `SendInput` + `KEYEVENTF_UNICODE`。送信前に `ProcessElevation` で対象の昇格状態を調べ、届かない相手には送らない |
 | | `ProcessElevation` / `Win32` | トークンの昇格状態の照会と、Win32 API の宣言（`INPUT` は x64 の 40 バイト前提） |
 | | `ForegroundWindowInfo` | 前面ウィンドウのハンドル・プロセス ID・プロセス名・表示名・タイトル。タイトルは内容を含みうるため、ログに出さない |
-| | `VRChatWindow` | 起動中の VRChat の、所有者のない表示中のトップレベルウィンドウを前面にする。Windows が前面の切り替えを拒んだときは、Alt キーを押している間に切り替えを試す（Alt の押下中は切り替えが許されるため） |
+| | `ProcessImage` | プロセスの実行ファイルのパスと名前を、制限付きの照会権限（`PROCESS_QUERY_LIMITED_INFORMATION`）で調べる。Mono の `System.Diagnostics.Process` は VRChat（保護されたプロセス）の名前を読めないため、プロセス名はすべてこれで調べる |
+| | `VRChatWindow` | 所有者のない表示中のトップレベルウィンドウを列挙し、プロセス名が VRChat のもの（判定は `OutputTarget.IsVRChatProcess`）を前面にする。Windows が前面の切り替えを拒んだときは、Alt キーを押している間に切り替えを試す（Alt の押下中は切り替えが許されるため） |
 | | `AppSettings` | App 層の設定値（通知音・Enter・OSC の宛先）。不正な値は例外。設定画面と設定ファイルにはまだ含めていない |
 
 - 出力の `TextOutputRouter` は送信先・チャットボックス・デスクトップ送信を、`ForegroundWindowMonitor` はウィンドウの取得元を差し替えられるため、振り分けと監視の規則は Win32 なしでテストできる。
