@@ -255,10 +255,10 @@ namespace VRKeyboard.App
 
         void UpdateChatbox(double now)
         {
-            // 送信先は送信の時点まで決まらないため、入力中であることの表示は送信先を問わず送る（SPEC 7.3）。
-            bool typing = _session.IsOpen && _session.Length > 0;
+            // 入力中であることの表示は、送信先が VRChat の間だけ送る（SPEC 7.3）。送信先が変われば次のフレームで取り下げる。
+            bool typing = _session.IsOpen && _session.Length > 0 && _monitor.Target.Kind == OutputTargetKind.VRChat;
             _chatbox.SetTyping(typing);
-            bool showText = typing && _settingsForm.Settings.VRChat.ShowTypingText && _monitor.Target.Kind == OutputTargetKind.VRChat;
+            bool showText = typing && _settingsForm.Settings.VRChat.ShowTypingText;
             _chatbox.SetPreview(showText ? _session.Text : null);
             _chatbox.Update(now);
         }
