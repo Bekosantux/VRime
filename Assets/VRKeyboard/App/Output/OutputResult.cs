@@ -15,6 +15,9 @@ namespace VRKeyboard.App.Output
         /// <summary>管理者権限のウィンドウへは Windows の仕様で送れない。</summary>
         ElevatedWindow,
 
+        /// <summary>他のアプリがクリップボードを開いたままのため、デスクトップへ貼り付けられない。</summary>
+        ClipboardBusy,
+
         /// <summary>送信の API が失敗した。</summary>
         SendFailed,
     }

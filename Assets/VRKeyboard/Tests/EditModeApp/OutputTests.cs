@@ -183,6 +183,15 @@ namespace VRKeyboard.App.Tests
         }
 
         [Test]
+        public void クリップボードが使用中なら失敗として通知する()
+        {
+            var desktop = new FakeDesktop { Result = DesktopSendResult.ClipboardBusy };
+            OutputResult result = Router(new AppSettings(), new FakeChatbox(), desktop, Window(200, "notepad")).Send("a");
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(OutputFailure.ClipboardBusy, result.Failure);
+        }
+
+        [Test]
         public void 通知に送信内容を含めない()
         {
             const string secret = "ひみつの文章";
@@ -199,6 +208,109 @@ namespace VRKeyboard.App.Tests
         {
             var router = Router(new AppSettings(), new FakeChatbox(), new FakeDesktop(), Window(200, "notepad"));
             Assert.Throws<ArgumentException>(() => router.Send(""));
+        }
+    }
+
+    public sealed class ClipboardRestoreScheduleTests
+    {
+        const double Delay = 1.0;
+        const double GiveUp = 5.0;
+
+        static ClipboardRestoreSchedule<string> Armed(string snapshot = "元の内容", uint sequence = 10, double now = 100.0)
+        {
+            var schedule = new ClipboardRestoreSchedule<string>(Delay, GiveUp);
+            schedule.Arm(snapshot, sequence, now);
+            return schedule;
+        }
+
+        [Test]
+        public void 復元待ちがなければ何もしない()
+        {
+            var schedule = new ClipboardRestoreSchedule<string>(Delay, GiveUp);
+            Assert.IsFalse(schedule.HasPending);
+            Assert.AreEqual(ClipboardRestoreAction.None, schedule.Poll(100.0, 10));
+        }
+
+        [Test]
+        public void 時間が経つまでは戻さず経ったら戻す()
+        {
+            ClipboardRestoreSchedule<string> schedule = Armed();
+            Assert.AreEqual(ClipboardRestoreAction.None, schedule.Poll(100.5, 10));
+            Assert.AreEqual(ClipboardRestoreAction.Restore, schedule.Poll(101.0, 10));
+            Assert.AreEqual("元の内容", schedule.Pending);
+
+            schedule.Complete();
+            Assert.IsFalse(schedule.HasPending);
+            Assert.AreEqual(ClipboardRestoreAction.None, schedule.Poll(102.0, 10));
+        }
+
+        [Test]
+        public void 戻せないうちは繰り返し戻すよう求め期限を過ぎたら諦める()
+        {
+            ClipboardRestoreSchedule<string> schedule = Armed();
+            Assert.AreEqual(ClipboardRestoreAction.Restore, schedule.Poll(101.0, 10));
+            Assert.AreEqual(ClipboardRestoreAction.Restore, schedule.Poll(105.9, 10));
+            Assert.AreEqual(ClipboardRestoreAction.GaveUp, schedule.Poll(106.0, 10));
+            Assert.IsFalse(schedule.HasPending);
+        }
+
+        [Test]
+        public void 書き換えられていたら時刻を待たずに捨てる()
+        {
+            ClipboardRestoreSchedule<string> schedule = Armed();
+            Assert.AreEqual(ClipboardRestoreAction.Discarded, schedule.Poll(100.1, 11));
+            Assert.IsFalse(schedule.HasPending);
+        }
+
+        [Test]
+        public void 書き換えられていなければ続けて送るときに退避を引き継ぐ()
+        {
+            ClipboardRestoreSchedule<string> schedule = Armed();
+            Assert.IsTrue(schedule.TryTakePending(10, out string snapshot));
+            Assert.AreEqual("元の内容", snapshot);
+            Assert.IsFalse(schedule.HasPending);
+
+            // 引き継いだ退避で書き込み直すと、戻す時刻は新しい書き込みから数える。
+            schedule.Arm(snapshot, 12, 100.8);
+            Assert.AreEqual(ClipboardRestoreAction.None, schedule.Poll(101.0, 12));
+            Assert.AreEqual(ClipboardRestoreAction.Restore, schedule.Poll(101.8, 12));
+        }
+
+        [Test]
+        public void 書き換えられていれば続けて送るときに退避を引き継がない()
+        {
+            ClipboardRestoreSchedule<string> schedule = Armed();
+            Assert.IsFalse(schedule.TryTakePending(11, out string snapshot));
+            Assert.IsNull(snapshot);
+            Assert.IsFalse(schedule.HasPending);
+        }
+
+        [Test]
+        public void 復元待ちがなければ引き継がない()
+        {
+            var schedule = new ClipboardRestoreSchedule<string>(Delay, GiveUp);
+            Assert.IsFalse(schedule.TryTakePending(10, out string snapshot));
+            Assert.IsNull(snapshot);
+        }
+
+        [Test]
+        public void 通番が書き込んだときのままかを調べられる()
+        {
+            ClipboardRestoreSchedule<string> schedule = Armed();
+            Assert.IsTrue(schedule.IsUnchanged(10));
+            Assert.IsFalse(schedule.IsUnchanged(11));
+            Assert.IsFalse(new ClipboardRestoreSchedule<string>(Delay, GiveUp).IsUnchanged(0));
+        }
+
+        [Test]
+        public void 不正な引数と状態は例外()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ClipboardRestoreSchedule<string>(0, GiveUp));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ClipboardRestoreSchedule<string>(Delay, double.NaN));
+            var schedule = new ClipboardRestoreSchedule<string>(Delay, GiveUp);
+            Assert.Throws<ArgumentNullException>(() => schedule.Arm(null, 1, 0));
+            Assert.Throws<InvalidOperationException>(() => _ = schedule.Pending);
+            Assert.Throws<InvalidOperationException>(() => schedule.Complete());
         }
     }
 

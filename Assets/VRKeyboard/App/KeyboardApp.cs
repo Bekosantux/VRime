@@ -78,6 +78,7 @@ namespace VRKeyboard.App
         ConversionRunner _runner;
         ForegroundWindowMonitor _monitor;
         VRChatChatbox _chatbox;
+        DesktopTextSender _desktop;
         TextOutputRouter _router;
         bool _quitting;
 
@@ -169,7 +170,9 @@ namespace VRKeyboard.App
 
             var appSettings = new AppSettings();
             _chatbox = new VRChatChatbox(appSettings);
-            _router = TextOutputRouter.Create(appSettings, _chatbox, new DesktopTextSender(), _monitor);
+            // 時刻は Update と同じく Time.timeScale に影響されないものを使う。
+            _desktop = new DesktopTextSender(() => Time.realtimeSinceStartupAsDouble);
+            _router = TextOutputRouter.Create(appSettings, _chatbox, _desktop, _monitor);
 
             // 環境の作成は、描画先が揃ったあとに行う。OpenVR の初期化に失敗した場合は例外にする（別の環境へは切り替えない）。
             _platform = CreatePlatform();
@@ -247,6 +250,7 @@ namespace VRKeyboard.App
             if (_settingsView.RefreshIfChanged()) _settingsTarget.Render();
 
             UpdateChatbox(now);
+            UpdateDesktop();
         }
 
         void UpdateChatbox(double now)
@@ -257,6 +261,12 @@ namespace VRKeyboard.App
             bool showText = typing && _settingsForm.Settings.VRChat.ShowTypingText && _monitor.Target.Kind == OutputTargetKind.VRChat;
             _chatbox.SetPreview(showText ? _session.Text : null);
             _chatbox.Update(now);
+        }
+
+        void UpdateDesktop()
+        {
+            if (_desktop.Update() == ClipboardRestoreAction.GaveUp)
+                Debug.LogWarning("クリップボードを開けなかったため、送信前の内容を戻せませんでした。");
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -271,6 +281,8 @@ namespace VRKeyboard.App
             _runner?.Dispose();
             ClearChatboxPreview();
             _chatbox?.Dispose();
+            RestoreClipboard();
+            _desktop?.Dispose();
             // オーバーレイ（OpenVR 側）が描画先のテクスチャを参照しているため、先に環境を閉じる。
             if (_platform != null) _platform.QuitRequested -= OnQuitRequested;
             _platform?.Dispose();
@@ -289,6 +301,21 @@ namespace VRKeyboard.App
                 _chatbox.ClearPreviewNow();
             }
             catch (SocketException e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        // 送信の直後に終了しても、クリップボードを送信前の内容に戻す。戻せなくても終了は続ける。
+        void RestoreClipboard()
+        {
+            if (_desktop == null) return;
+            try
+            {
+                if (!_desktop.RestoreNow())
+                    Debug.LogWarning("クリップボードを開けなかったため、送信前の内容を戻せませんでした。");
+            }
+            catch (System.ComponentModel.Win32Exception e)
             {
                 Debug.LogException(e);
             }

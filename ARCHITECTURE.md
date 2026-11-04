@@ -108,14 +108,16 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | `Output/` | `ForegroundWindowMonitor` / `OutputTarget` | 前面のウィンドウを毎フレーム調べ、送信先（なし・本アプリ自身・VRChat・デスクトップ）を保つ。ウィンドウの詳細（`ForegroundWindowInfo`）はハンドルかプロセスが変わったときだけ調べ直す。送信・状態行の表示・文字数の上限・入力中の文字の表示が同じ送信先に従うよう、`KeyboardApp` はフレームの入力の処理の前に `Update` を呼ぶ。取得元は `IForegroundWindowSource` で差し替えられる |
 | | `TextOutputRouter` | `OutputTarget` に従って送る。前面なし・自プロセスは送らず、VRChat は `VRChatChatbox`、それ以外は `DesktopTextSender`。結果は `OutputResult`（成否・失敗の種類・通知文）で返す |
 | | `VRChatChatbox` | OSC（UDP）の送信。`Send`（送信）と `SetPreview`（入力中の文字。144文字を超える分は切る）は `ChatboxOutbox` に予約するだけで、毎フレームの `Update(now)` で間隔を守って送る。`ClearPreviewNow` は終了前に間隔を待たずに入力中の文字を消す。`SetTyping` は値が変わったときだけ送る。接続しないソケットを使う（接続済みだと宛先未起動の ICMP が次の送信の例外になる） |
-| | `DesktopTextSender` | `SendInput` + `KEYEVENTF_UNICODE`。送信前に `ProcessElevation` で対象の昇格状態を調べ、届かない相手には送らない |
+| | `DesktopTextSender` | クリップボードに文字列を置き、`SendInput` で Ctrl+V（設定により続けて Enter）を送る。送信前に `ProcessElevation` で対象の昇格状態を調べ、届かない相手には送らない。元の内容は退避し、毎フレームの `Update` で戻す時刻・書き換えの有無を `ClipboardRestoreSchedule` に問い合わせて戻す。終了前に `RestoreNow` で時刻を待たずに戻す |
+| | `ClipboardRestoreSchedule` | 退避した内容を戻す時刻と、戻すかどうかの判定（Win32 に依存しない）。書き換えの検出は、送信で書き込んだ直後のクリップボードの通番との比較。続けて送るときは、通番が変わっていなければ退避を引き継ぐ |
+| | `ClipboardAccess` / `ClipboardSnapshot` | クリップボードの開閉・送信用の文字列の書き込み・履歴に残さない印の付与と、内容の全形式の退避・復元。所有者なしで開くと空にした後の `SetClipboardData` が失敗するため、メッセージ専用のウィンドウを所有者にする |
 | | `ProcessElevation` / `Win32` | トークンの昇格状態の照会と、Win32 API の宣言（`INPUT` は x64 の 40 バイト前提） |
 | | `ForegroundWindowInfo` | 前面ウィンドウのハンドル・プロセス ID・プロセス名・表示名・タイトル。タイトルは内容を含みうるため、ログに出さない |
 | | `ProcessImage` | プロセスの実行ファイルのパスと名前を、制限付きの照会権限（`PROCESS_QUERY_LIMITED_INFORMATION`）で調べる。Mono の `System.Diagnostics.Process` は VRChat（保護されたプロセス）の名前を読めないため、プロセス名はすべてこれで調べる |
 | | `VRChatWindow` | 所有者のない表示中のトップレベルウィンドウを列挙し、プロセス名が VRChat のもの（判定は `OutputTarget.IsVRChatProcess`）を前面にする。Windows が前面の切り替えを拒んだときは、Alt キーを押している間に切り替えを試す（Alt の押下中は切り替えが許されるため） |
 | | `AppSettings` | App 層の設定値（通知音・Enter・OSC の宛先）。不正な値は例外。設定画面と設定ファイルにはまだ含めていない |
 
-- 出力の `TextOutputRouter` は送信先・チャットボックス・デスクトップ送信を、`ForegroundWindowMonitor` はウィンドウの取得元を差し替えられるため、振り分けと監視の規則は Win32 なしでテストできる。
+- 出力の `TextOutputRouter` は送信先・チャットボックス・デスクトップ送信を、`ForegroundWindowMonitor` はウィンドウの取得元を差し替えられるため、振り分けと監視の規則は Win32 なしでテストできる。クリップボードの復元の規則も `ClipboardRestoreSchedule` に分けてテストする（実際のクリップボードはテストで触らない）。
 
 **描画の流れと構成**
 

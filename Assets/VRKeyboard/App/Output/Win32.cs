@@ -9,9 +9,28 @@ namespace VRKeyboard.App.Output
     {
         public const uint INPUT_KEYBOARD = 1;
         public const uint KEYEVENTF_KEYUP = 0x0002;
-        public const uint KEYEVENTF_UNICODE = 0x0004;
         public const ushort VK_RETURN = 0x0D;
+        public const ushort VK_CONTROL = 0x11;
         public const ushort VK_MENU = 0x12;
+        public const ushort VK_V = 0x56;
+        public const uint MAPVK_VK_TO_VSC = 0;
+
+        public const uint CF_BITMAP = 2;
+        public const uint CF_METAFILEPICT = 3;
+        public const uint CF_PALETTE = 9;
+        public const uint CF_UNICODETEXT = 13;
+        public const uint CF_ENHMETAFILE = 14;
+        public const uint CF_OWNERDISPLAY = 0x0080;
+        public const uint CF_DSPBITMAP = 0x0082;
+        public const uint CF_DSPMETAFILEPICT = 0x0083;
+        public const uint CF_DSPENHMETAFILE = 0x008E;
+        public const uint CF_PRIVATEFIRST = 0x0200;
+        public const uint CF_GDIOBJLAST = 0x03FF;
+        public const uint GMEM_MOVEABLE = 0x0002;
+        public const int ERROR_SUCCESS = 0;
+
+        /// <summary>CreateWindowEx の親に渡すと、メッセージ専用のウィンドウになる。</summary>
+        public static readonly IntPtr HWND_MESSAGE = new IntPtr(-3);
 
         public const uint GW_OWNER = 4;
         public const int SW_RESTORE = 9;
@@ -44,6 +63,70 @@ namespace VRKeyboard.App.Output
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern uint SendInput(uint count, INPUT[] inputs, int size);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        public static extern uint MapVirtualKey(uint code, uint mapType);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool OpenClipboard(IntPtr newOwner);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool CloseClipboard();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool EmptyClipboard();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern uint EnumClipboardFormats(uint format);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr GetClipboardData(uint format);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr SetClipboardData(uint format, IntPtr data);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern uint RegisterClipboardFormat(string name);
+
+        [DllImport("user32.dll")]
+        public static extern uint GetClipboardSequenceNumber();
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr CreateWindowEx(uint exStyle, string className, string windowName, uint style,
+            int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool DestroyWindow(IntPtr hWnd);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GlobalAlloc(uint flags, UIntPtr bytes);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GlobalFree(IntPtr memory);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GlobalLock(IntPtr memory);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GlobalUnlock(IntPtr memory);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern UIntPtr GlobalSize(IntPtr memory);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        public static extern uint GetEnhMetaFileBits(IntPtr metafile, uint size, byte[] data);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        public static extern IntPtr SetEnhMetaFileBits(uint size, byte[] data);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool DeleteEnhMetaFile(IntPtr metafile);
 
         [DllImport("user32.dll")]
         public static extern IntPtr GetForegroundWindow();

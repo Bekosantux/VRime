@@ -59,6 +59,8 @@ namespace VRKeyboard.App.Output
                     return OutputResult.Succeeded(target.Name + " に送信しました");
                 case DesktopSendResult.TargetElevated:
                     return OutputResult.Failed(OutputFailure.ElevatedWindow, "管理者権限のウィンドウには送信できません");
+                case DesktopSendResult.ClipboardBusy:
+                    return OutputResult.Failed(OutputFailure.ClipboardBusy, "クリップボードが使用中のため送信できません");
                 case DesktopSendResult.Failed:
                     return OutputResult.Failed(OutputFailure.SendFailed, "送信に失敗しました");
                 default:
