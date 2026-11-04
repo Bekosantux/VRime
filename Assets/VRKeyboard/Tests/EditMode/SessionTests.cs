@@ -382,10 +382,10 @@ namespace VRKeyboard.Core.Tests
         public void 上限の変更では通知を消さない()
         {
             var rig = new Rig();
-            rig.Session.SetNotice("送信しました");
+            rig.Session.SetNotice("通知");
             rig.Session.SetLengthLimit(144);
             rig.Tick();
-            Assert.AreEqual("送信しました", rig.Session.Notice);
+            Assert.AreEqual("通知", rig.Session.Notice);
         }
 
         [Test]
@@ -497,9 +497,9 @@ namespace VRKeyboard.Core.Tests
             rig.TickMany(5);
             Assert.AreEqual(version, rig.Session.ViewVersion);
 
-            rig.Session.SetNotice("送信しました");
+            rig.Session.SetNotice("通知");
             Assert.Greater(rig.Session.ViewVersion, version);
-            Assert.AreEqual("送信しました", rig.Session.Notice);
+            Assert.AreEqual("通知", rig.Session.Notice);
         }
 
         [Test]
@@ -551,19 +551,20 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void 送信の成功で入力バッファが空になっても送信結果の通知は残る()
+        public void 送信の成功で入力バッファが空になると前の失敗の通知は消える()
         {
             var rig = new Rig();
-            rig.Effects.SendHook = text => rig.Session.SetNotice("送信しました");
+            rig.Effects.SendSucceeds = false;
             rig.Type(0, StickDirection.Center);
             rig.VowelFunction(Commit);
+            rig.Session.SetNotice("送信できません");
             rig.VowelFunction(Commit);
-            Assert.AreEqual(1, rig.Effects.Sends.Count);
-            Assert.AreEqual(string.Empty, rig.Session.Committed);
-            Assert.AreEqual("送信しました", rig.Session.Notice);
+            Assert.AreEqual("送信できません", rig.Session.Notice);
 
-            // 次に入力すると消える。
-            rig.Type(0, StickDirection.Center);
+            rig.Effects.SendSucceeds = true;
+            rig.VowelFunction(Commit);
+            Assert.AreEqual(2, rig.Effects.Sends.Count);
+            Assert.AreEqual(string.Empty, rig.Session.Committed);
             Assert.AreEqual(string.Empty, rig.Session.Notice);
         }
 

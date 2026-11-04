@@ -5,7 +5,7 @@ namespace VRKeyboard.App.Output
     /// <summary>
     /// 送信先（<see cref="OutputTarget"/>）に応じて送る（SPEC 7.2）。
     /// VRChat なら OSC、それ以外ならデスクトップへ送る。前面が本アプリ自身のときは送らない。
-    /// 結果の通知に送信内容は含めない。
+    /// 失敗の通知に送信内容は含めない。
     /// </summary>
     public sealed class TextOutputRouter
     {
@@ -43,7 +43,7 @@ namespace VRKeyboard.App.Output
                     return OutputResult.Failed(OutputFailure.OwnWindow, "キーボード自身には送信できません");
                 case OutputTargetKind.VRChat:
                     _chatbox.Send(text);
-                    return OutputResult.Succeeded(target.Name + " に送信しました");
+                    return OutputResult.Succeeded;
                 case OutputTargetKind.Desktop:
                     return SendToDesktop(target, text);
                 default:
@@ -56,7 +56,7 @@ namespace VRKeyboard.App.Output
             switch (_desktop.Send(target.Window, text, _settings.PressEnterAfterDesktopSend))
             {
                 case DesktopSendResult.Sent:
-                    return OutputResult.Succeeded(target.Name + " に送信しました");
+                    return OutputResult.Succeeded;
                 case DesktopSendResult.TargetElevated:
                     return OutputResult.Failed(OutputFailure.ElevatedWindow, "管理者権限のウィンドウには送信できません");
                 case DesktopSendResult.ClipboardBusy:

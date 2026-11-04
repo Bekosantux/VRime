@@ -112,7 +112,6 @@ namespace VRKeyboard.App.Tests
             var desktop = new FakeDesktop();
             OutputResult result = Router(new AppSettings(), chatbox, desktop, Window(200, "vrchat")).Send("こんにちは");
             Assert.IsTrue(result.Success);
-            Assert.AreEqual("VRChat に送信しました", result.Notice);
             CollectionAssert.AreEqual(new[] { "こんにちは" }, chatbox.Sent);
             Assert.AreEqual(0, desktop.Sent.Count);
         }
@@ -125,24 +124,23 @@ namespace VRKeyboard.App.Tests
             var settings = new AppSettings { PressEnterAfterDesktopSend = true };
             OutputResult result = Router(settings, chatbox, desktop, Window(200, "notepad", "メモ帳")).Send("a");
             Assert.IsTrue(result.Success);
-            Assert.AreEqual("メモ帳 に送信しました", result.Notice);
             Assert.IsTrue(desktop.LastPressEnter);
             Assert.AreEqual(0, chatbox.Sent.Count);
         }
 
         [Test]
-        public void 表示名がなければプロセス名を通知に使う()
+        public void 成功の結果は通知を持たない()
         {
             OutputResult result = Router(new AppSettings(), new FakeChatbox(), new FakeDesktop(), Window(200, "notepad")).Send("a");
-            Assert.AreEqual("notepad に送信しました", result.Notice);
+            Assert.IsTrue(result.Success);
+            Assert.Throws<InvalidOperationException>(() => _ = result.Notice);
         }
 
         [Test]
-        public void プロセス名が不明でも通知を作れる()
+        public void プロセス名が不明でも送れる()
         {
             OutputResult result = Router(new AppSettings(), new FakeChatbox(), new FakeDesktop(), Window(200, null)).Send("a");
             Assert.IsTrue(result.Success);
-            Assert.IsNotEmpty(result.Notice);
         }
 
         [Test]
@@ -199,7 +197,7 @@ namespace VRKeyboard.App.Tests
             {
                 var desktop = new FakeDesktop { Result = r };
                 OutputResult result = Router(new AppSettings(), new FakeChatbox(), desktop, Window(200, "notepad")).Send(secret);
-                StringAssert.DoesNotContain(secret, result.Notice);
+                if (!result.Success) StringAssert.DoesNotContain(secret, result.Notice);
             }
         }
 

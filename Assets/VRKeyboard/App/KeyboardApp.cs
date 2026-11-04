@@ -374,7 +374,8 @@ namespace VRKeyboard.App
         bool IKeyboardEffects.OnSendRequested(string text)
         {
             OutputResult result = _router.Send(text);
-            _session.SetNotice(result.Notice);
+            // 成功は通知しない（入力バッファが空になることで分かる）。
+            if (!result.Success) _session.SetNotice(result.Notice);
             return result.Success;
         }
     }

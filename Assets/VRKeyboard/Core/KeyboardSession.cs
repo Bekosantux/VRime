@@ -319,9 +319,8 @@ namespace VRKeyboard.Core
             {
                 if (_effects.OnSendRequested(_buffer.Committed))
                 {
+                    // バッファが変わるため、それまでの通知（前回の送信の失敗など）は消える。
                     _buffer.Clear();
-                    // 送信によるバッファの消去では、送信結果の通知（OnSendRequested の中で設定される）を消さない。
-                    _noticeBufferVersion = _buffer.Version;
                     _haptics.Add(new HapticEvent(hand, HapticKind.Input));
                 }
                 else

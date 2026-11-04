@@ -70,7 +70,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 | 場所 | クラス | 責務 |
 |---|---|---|
-| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「環境のイベント（`BeginFrame`）→ 前面のウィンドウの監視と文字数の上限 → ダッシュボードの状態を渡す → 入力を読む → `Tick` → 変換の中止判定 → 表示の更新 → `/chatbox/typing` と入力中の文字の表示（どちらも送信先が VRChat の間だけ）→ チャットボックスの送信」を行う。起動時は設定に従って `VRChatWindow.Focus` を呼び、終了時はチャットボックスの入力中の文字を消す。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない。編集用のフォントアセット・`KeyboardTheme`・2つの描画先とビューはシリアライズフィールドで受け取り、起動時に `ValidateScene()` でシーンの構成を検証する（誤りは場所を示す例外） |
+| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「環境のイベント（`BeginFrame`）→ 前面のウィンドウの監視と文字数の上限 → ダッシュボードの状態を渡す → 入力を読む → `Tick` → 変換の中止判定 → 表示の更新 → `/chatbox/typing` と入力中の文字の表示（どちらも送信先が VRChat の間だけ）→ チャットボックスの送信」を行う。送信は失敗したときだけ通知を入力欄に出す。起動時は設定に従って `VRChatWindow.Focus` を呼び、終了時はチャットボックスの入力中の文字を消す。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない。編集用のフォントアセット・`KeyboardTheme`・2つの描画先とビューはシリアライズフィールドで受け取り、起動時に `ValidateScene()` でシーンの構成を検証する（誤りは場所を示す例外） |
 | `Input/` | `IControllerSource` / `IHapticOutput` | 入力元（1フレーム分の `ControllerFrame` を返す）と振動の出力先の境界。OpenVR 実装はこの境界に差す |
 | | `DebugKeyboardControllerSource` / `DebugHapticOutput` | PC のキーボード（旧 Input Manager）で両手を模す開発用の入力元と、直近の振動を保持して表示に渡す出力先。**キー割り当ては `DebugKeyboardControllerSource.Read` が唯一の定義**（画面への表示は `KeyboardPreview`） |
 | `Platform/` | `IKeyboardPlatform` | 実行環境の境界。`Controller`・`Haptics`・`IsDashboardHoldingInput`・`IsSettingsVisible`・`QuitRequested`、毎フレームの `BeginFrame()`（環境のイベントの処理）、開閉の通知 `OnOpenChanged(bool)`、キーボードの位置の変更 `SetPlacement`、入力を読むのに本アプリのウィンドウが前面である必要があるか（`RequiresOwnWindowFocus`。true の環境では起動時に VRChat を前面にしない）を持つ。実装は `OpenVRPlatform` と `DebugKeyboardPlatform` |
@@ -106,7 +106,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `GoogleTransliterateClient` | `TransliterateApi` の URL に `UnityWebRequest` で GET し、文節の一覧を返す（`Awaitable`・メインスレッド専用）。制限時間は 2秒で、自前の時計で測る。ログや例外に読みを含めない |
 | | `ConversionFailedException` | 失敗の種類（接続・タイムアウト・HTTP エラー・応答の形式）と、入力欄に出す短い日本語（`UserMessage`）を持つ。キャンセルは `OperationCanceledException` |
 | `Output/` | `ForegroundWindowMonitor` / `OutputTarget` | 前面のウィンドウを毎フレーム調べ、送信先（なし・本アプリ自身・VRChat・デスクトップ）を保つ。ウィンドウの詳細（`ForegroundWindowInfo`）はハンドルかプロセスが変わったときだけ調べ直す。送信・状態行の表示・文字数の上限・入力中の文字の表示が同じ送信先に従うよう、`KeyboardApp` はフレームの入力の処理の前に `Update` を呼ぶ。取得元は `IForegroundWindowSource` で差し替えられる |
-| | `TextOutputRouter` | `OutputTarget` に従って送る。前面なし・自プロセスは送らず、VRChat は `VRChatChatbox`、それ以外は `DesktopTextSender`。結果は `OutputResult`（成否・失敗の種類・通知文）で返す |
+| | `TextOutputRouter` | `OutputTarget` に従って送る。前面なし・自プロセスは送らず、VRChat は `VRChatChatbox`、それ以外は `DesktopTextSender`。結果は `OutputResult`（成否・失敗の種類・失敗の通知文）で返す。成功には通知文がなく、読むと例外 |
 | | `VRChatChatbox` | OSC（UDP）の送信。`Send`（送信）と `SetPreview`（入力中の文字。144文字を超える分は切る）は `ChatboxOutbox` に予約するだけで、毎フレームの `Update(now)` で間隔を守って送る。`ClearPreviewNow` は終了前に間隔を待たずに入力中の文字を消す。`SetTyping` は値が変わったときだけ送る。接続しないソケットを使う（接続済みだと宛先未起動の ICMP が次の送信の例外になる） |
 | | `DesktopTextSender` | クリップボードに文字列を置き、`SendInput` で Ctrl+V（設定により続けて Enter）を送る。送信前に `ProcessElevation` で対象の昇格状態を調べ、届かない相手には送らない。元の内容は退避し、毎フレームの `Update` で戻す時刻・書き換えの有無を `ClipboardRestoreSchedule` に問い合わせて戻す。終了前に `RestoreNow` で時刻を待たずに戻す |
 | | `ClipboardRestoreSchedule` | 退避した内容を戻す時刻と、戻すかどうかの判定（Win32 に依存しない）。書き換えの検出は、送信で書き込んだ直後のクリップボードの通番との比較。続けて送るときは、通番が変わっていなければ退避を引き継ぐ |
