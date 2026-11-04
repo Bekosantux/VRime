@@ -1002,6 +1002,8 @@ namespace VRKeyboard.Core.Tests
     /// <summary>トリガーのしきい値と、実行中の設定の差し替え。</summary>
     public class SettingsApplyTests
     {
+        const int Convert = 7;
+
         static void SelectA(Rig rig)
         {
             rig.SetStick(rig.Consonant, Sticks.Cell(0));
@@ -1079,7 +1081,39 @@ namespace VRKeyboard.Core.Tests
         }
 
         [Test]
-        public void しきい値と連続入力の時間以外の変更は例外()
+        public void 変換を使えない設定では変換が無効のセルになり_押すと要求せずに無効の振動を返す()
+        {
+            var rig = new Rig(new KeyboardSettings(conversionEnabled: false));
+            rig.Type(0, StickDirection.Center);
+            rig.Effects.ClearAll();
+            rig.VowelFunction(Convert);
+            Assert.IsEmpty(rig.Effects.ConversionRequests);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
+            Assert.AreEqual(KeyboardMode.Input, rig.Session.Mode);
+            Assert.AreEqual("あ", rig.Session.Composition);
+
+            rig.SetGrip(rig.Vowel, true); rig.Tick();
+            Assert.IsTrue(rig.Session.GripView.VowelCells[Convert].Disabled);
+        }
+
+        [Test]
+        public void 変換を使えるかを差し替えると表示が変わり次の操作から使われる()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            int version = rig.Session.ViewVersion;
+            rig.Session.ApplySettings(new KeyboardSettings(conversionEnabled: false));
+            Assert.Greater(rig.Session.ViewVersion, version);
+            rig.VowelFunction(Convert);
+            Assert.IsEmpty(rig.Effects.ConversionRequests);
+
+            rig.Session.ApplySettings(new KeyboardSettings(conversionEnabled: true));
+            rig.VowelFunction(Convert);
+            Assert.AreEqual(1, rig.Effects.ConversionRequests.Count);
+        }
+
+        [Test]
+        public void 実行中に変えられない値の変更は例外()
         {
             var rig = new Rig();
             Assert.Throws<NotSupportedException>(() => rig.Session.ApplySettings(new KeyboardSettings(consonantHand: Hand.Left)));

@@ -43,9 +43,9 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 | 種別 | クラス | 責務 |
 |---|---|---|
-| 状態機械 | `KeyboardSession` | 全体の状態機械。開閉・ダッシュボードによる一時停止・モード（入力 / 応答待ち / 変換中）を持ち、操作を `GripInputMethod` と `ConversionController` に振り分ける。しきい値と連続入力の時間の変更は `ApplySettings` で次のフレームから反映する（子音の手・同時押しの判定時間の変更は `NotSupportedException`）。文字数の上限は送信先に合わせて App が `SetLengthLimit` で毎フレーム渡し、上限を超えている間は確定キーで送信を要求しない。グリップの押下エッジは常に追跡し、開いた直後・変換の開始・取り消しの直後に握っていたグリップは離すまで無視する。変換結果は `CompleteConversion` / `FailConversion` で受け取り、リクエスト ID が古いものは捨てる |
+| 状態機械 | `KeyboardSession` | 全体の状態機械。開閉・ダッシュボードによる一時停止・モード（入力 / 応答待ち / 変換中）を持ち、操作を `GripInputMethod` と `ConversionController` に振り分ける。しきい値・連続入力の時間・変換を使えるかの変更は `ApplySettings` で次のフレームから反映する（子音の手・同時押しの判定時間の変更は `NotSupportedException`）。文字数の上限は送信先に合わせて App が `SetLengthLimit` で毎フレーム渡し、上限を超えている間は確定キーで送信を要求しない。グリップの押下エッジは常に追跡し、開いた直後・変換の開始・取り消しの直後に握っていたグリップは離すまで無視する。変換結果は `CompleteConversion` / `FailConversion` で受け取り、リクエスト ID が古いものは捨てる |
 | | `IKeyboardEffects` | Core から App への通知（開閉・振動・変換の要求・送信の要求）。Core は結果をここへ出すだけで、通信や描画は知らない。送信の要求（`OnSendRequested`）だけは成否を `bool` で同期的に返し、`true` のときだけ Core が入力バッファを空にする（失敗時は内容を残して `Invalid` の振動を出す） |
-| | `KeyboardSettings` | 設定値（子音の手・スティックとトリガーのしきい値・連続入力の開始までの時間と間隔・同時押しの窓）。しきい値は 1 つで、倒した・押したと中央に戻った・離したの両方の判定に使う。不正な値は例外 |
+| | `KeyboardSettings` | 設定値（子音の手・スティックとトリガーのしきい値・連続入力の開始までの時間と間隔・同時押しの窓・変換を使えるか）。変換を使えない間、`GripInputMethod` は「変換」を無効のセルにし、押されても要求を出さずに `Invalid` の振動を返す。しきい値は 1 つで、倒した・押したと中央に戻った・離したの両方の判定に使う。不正な値は例外 |
 | 入力 | `ControllerFrame` / `HandState` / `StickValue` | 1フレーム分の両手の状態（スティック・トリガーの引き量 0〜1・グリップ） |
 | | `EdgeTracker` / `FrameEdges` | 前フレームとの差から押下エッジを出す。トリガーは引き量がしきい値以上なら押したとみなす |
 | | `KeyRepeater` | 長押しによる連続入力の時刻管理（どの手のトリガーか・次に繰り返す時刻）。1回の `Poll` で繰り返すのは1回までで、遅れた分は捨てる |
@@ -91,17 +91,18 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `InputAreaView` | 入力欄（確定・未確定・キャレット）と状態行（通知・送信先・文字数）。キャレットは文字の配置から位置と高さを決め、行が溢れたら文字をずらす |
 | | `CandidateAreaView` / `CandidateColumn` / `CandidateLabel` | 候補欄（応答待ち・文節と候補・失敗の帯）。文節の列と候補の行はシーンの雛形を複製し、雛形は起動時に非表示にする |
 | | `SettingsView` / `SettingsPage` / `SettingsTab` | 設定画面（キャンバスに置く）。`SettingsView` はページを `SettingsCatalog.Categories` と同じ順に持ち、`CreateLayout` でシーンの矩形から `SettingsLayout` を作る。`SettingsPage` は `_key` でカテゴリと対応し、行を子に持つ。選んでいるページだけを `SetActive(true)` にし、ページどうしは同じ場所に重ねる。タブはページを隠しても見えるよう、ページの外（キャンバスの直下）に置く。`SettingsForm.Version` が変わったときだけ更新する。操作は持たない |
+| | `SettingsConsentDialog` | 同意が必要な項目の同意の画面（注意事項の文章・同意と取り消しの `SettingsButton`・背景）。`_key` で項目と対応し、`SettingsForm.ConsentItem` がその項目の間だけ表示する。ページの上に描くため、キャンバスの直下でページより後に置く |
 | | `SettingsRow` / `SettingsToggleRow` / `SettingsButton` | 数値の項目の行（［−］・スライダー・［＋］・値）と、オン・オフの項目の行（スイッチ・値。行の矩形全体が当たり判定）。`_key` で `SettingsCatalog` の項目と対応させる |
 | | `OverlayRenderTarget` | 描画先の根（MonoBehaviour）。子に無効な正投影のカメラと World Space のキャンバスを持つ。`Initialize` でキャンバスと同じピクセル数の透明な RenderTexture を作り、カメラをキャンバスの正面に合わせる。`Render()` を呼んだときだけ 1回描き、`Rendered` イベントで通知する。テクスチャの破棄（`Release`）はオーバーレイの破棄の後に `KeyboardApp` が呼ぶ |
 | | `KeyboardFonts` | 編集用のフォントアセットの元のフォントから、実行用の Dynamic SDF フォントアセット（atlas 2048・multi atlas）を作り、描画先の下のすべての文字のフォントを差し替える（保存しない）。最初の描画より前に差し替えるため、編集用のアセットは書き換わらない |
 | | `KeyboardTheme` | 状態によって切り替わる色と文字の大きさ（ScriptableObject。`Assets/VRKeyboard/UI/KeyboardTheme.asset`）。状態によらない見た目はシーンに置く |
 | | `UiRects` / `SceneChecks` | 左上を原点・下向きを正とする矩形の配置と読み取り（当たり判定と盤面の位置に使う）。シーンの参照の検証（どのオブジェクトのどの欄かを示す例外） |
 | | `KeyboardPreview` | エディターと開発ビルド専用。メインカメラを使わず OnGUI で、テクスチャ・振動・操作キーを表示する。設定画面の表示中は設定画面のテクスチャを表示し、開発用の環境ではマウスの操作を `ISettingsPointer` へ渡す |
-| `Settings/` | `UserSettings` / `KeyboardPlacement` / `VRChatSettings` / `SettingRange` | 設定画面で変える値（表示位置・2つのしきい値・長押しの時間・VRChat 関連の2つのオン・オフ）。不変で、範囲外は例外。`SettingRange` は範囲と刻みを持ち、刻みに丸める。しきい値と長押しの時間の既定値は Core の `KeyboardSettings` の既定値から取る。`ToKeyboardSettings` で Core の設定にする |
+| `Settings/` | `UserSettings` / `KeyboardPlacement` / `VRChatSettings` / `PrivacySettings` / `SettingRange` | 設定画面で変える値（表示位置・2つのしきい値・長押しの時間・VRChat 関連の2つのオン・オフ・変換に Google API を使うか）。不変で、範囲外は例外。`SettingRange` は範囲と刻みを持ち、刻みに丸める。しきい値と長押しの時間の既定値は Core の `KeyboardSettings` の既定値から取る。`ToKeyboardSettings` で Core の設定にする |
 | | `SettingsSerializer` / `SettingsStore` / `SettingsLoadResult` | 設定ファイルの JSON（形式は SPEC 8.1）への変換と読み書き。内容が正しくないファイルは別名に移し、既定値と通知を返す。読み書きの IO の失敗は例外のまま上げる。保存は一時ファイルに書いてから置き換える |
-| | `SettingsCatalog` / `SettingsCategory` / `SettingItem` | 設定画面のカテゴリ（タブ）と項目の定義。項目は数値（`NumberSettingItem`。範囲・表示の形式）とオン・オフ（`ToggleSettingItem`）。カテゴリは、表示中に位置の確認用のキーボードを出すか（`ShowsKeyboardPreview`）を持つ。キーは設定ファイルの項目名と同じ。項目を足すときは、ここに加え、シーンの該当するページに同じキーの `SettingsRow` / `SettingsToggleRow` を置く。カテゴリを足すときは、`SettingsPage` とタブを置き、`SettingsView._pages` に同じ順で加える |
-| | `SettingsLayout` / `SettingsPageLayout` / `SettingsRowLayout` / `SettingsToggleLayout` / `SettingsHit` | 設定画面の操作の対象の配置（テクスチャのピクセル、左上が原点）と当たり判定。シーンの矩形から作り（`SettingsView.CreateLayout`）、表示と操作（`SettingsForm`）が同じ配置を使う。当たり判定は、タブと「既定に戻す」に加え、選んでいるページの対象だけを使う。同時に表示される対象どうしの重なり・画面外・大きさが正でないもの・カテゴリの項目の行の過不足は例外 |
-| | `SettingsForm` / `ISettingsPointer` | 設定画面の状態（値・表示しているカテゴリ・指している対象・つまんでいるスライダー・押しているボタン・通知・版）とポインターの操作。ボタン・スイッチ・タブは押したときと離したときの対象が同じなら実行する。タブは表示を切り替えるだけで値を確定しない。値が変わるたびに `Changed`、スライダーを離す・ボタンを実行するなどで値が確定し、前回の確定から変わっていれば `Committed` を出す |
+| | `SettingsCatalog` / `SettingsCategory` / `SettingItem` | 設定画面のカテゴリ（タブ）と項目の定義。項目は数値（`NumberSettingItem`。範囲・表示の形式）とオン・オフ（`ToggleSettingItem`。オンにする前に同意が必要か `RequiresConsentToEnable`）。カテゴリは、表示中に位置の確認用のキーボードを出すか（`ShowsKeyboardPreview`）を持つ。キーは設定ファイルの項目名と同じ。項目を足すときは、ここに加え、シーンの該当するページに同じキーの `SettingsRow` / `SettingsToggleRow` を置く。カテゴリを足すときは、`SettingsPage` とタブを置き、`SettingsView._pages` に同じ順で加える。同意が必要な項目を足すときは、`SettingsConsentDialog` を置き、`SettingsView._consents` に項目の順で加える |
+| | `SettingsLayout` / `SettingsPageLayout` / `SettingsRowLayout` / `SettingsToggleLayout` / `SettingsConsentLayout` / `SettingsHit` | 設定画面の操作の対象の配置（テクスチャのピクセル、左上が原点）と当たり判定。シーンの矩形から作り（`SettingsView.CreateLayout`）、表示と操作（`SettingsForm`）が同じ配置を使う。当たり判定は、タブと「既定に戻す」に加え、選んでいるページの対象だけを使う。同意の画面を開いている間は、その画面のボタンだけを使う（ページの上に重ねるため、ページの対象と重なってよい）。同時に表示される対象どうしの重なり・画面外・大きさが正でないもの・カテゴリの項目の行の過不足・同意が必要な項目と同意の画面の過不足は例外 |
+| | `SettingsForm` / `ISettingsPointer` | 設定画面の状態（値・表示しているカテゴリ・開いている同意の画面・指している対象・つまんでいるスライダー・押しているボタン・通知・版）とポインターの操作。同意が必要なスイッチをオフから押すと、値を変えずに同意の画面を開き（`ConsentItem`）、同意で値をオンにして確定、取り消しで閉じるだけにする。ボタン・スイッチ・タブは押したときと離したときの対象が同じなら実行する。タブは表示を切り替えるだけで値を確定しない。値が変わるたびに `Changed`、スライダーを離す・ボタンを実行するなどで値が確定し、前回の確定から変わっていれば `Committed` を出す |
 | `Conversion/` | `ConversionRunner` | 変換の要求を `GoogleTransliterateClient` に渡し、結果を `CompleteConversion` / `FailConversion` で返す。通信は同時に 1件で、新しい要求・応答待ちの終了・破棄のときは前の通信を中止する |
 | | `GoogleTransliterateClient` | `TransliterateApi` の URL に `UnityWebRequest` で GET し、文節の一覧を返す（`Awaitable`・メインスレッド専用）。制限時間は 2秒で、自前の時計で測る。ログや例外に読みを含めない |
 | | `ConversionFailedException` | 失敗の種類（接続・タイムアウト・HTTP エラー・応答の形式）と、入力欄に出す短い日本語（`UserMessage`）を持つ。キャンセルは `OperationCanceledException` |

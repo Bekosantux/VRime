@@ -18,10 +18,11 @@ namespace VRKeyboard.App.Settings
         public static readonly UserSettings Default = CreateDefault();
 
         public UserSettings(KeyboardPlacement placement, float triggerThreshold, float stickThreshold, float repeatDelaySeconds,
-            VRChatSettings vrchat)
+            VRChatSettings vrchat, PrivacySettings privacy)
         {
             Placement = placement ?? throw new ArgumentNullException(nameof(placement));
             VRChat = vrchat ?? throw new ArgumentNullException(nameof(vrchat));
+            Privacy = privacy ?? throw new ArgumentNullException(nameof(privacy));
             if (!TriggerThresholdRange.Contains(triggerThreshold))
                 throw new ArgumentOutOfRangeException(nameof(triggerThreshold), triggerThreshold,
                     TriggerThresholdRange.Min + "〜" + TriggerThresholdRange.Max + " である必要があります。");
@@ -49,11 +50,14 @@ namespace VRKeyboard.App.Settings
 
         public VRChatSettings VRChat { get; }
 
-        public UserSettings WithPlacement(KeyboardPlacement value) => new UserSettings(value, TriggerThreshold, StickThreshold, RepeatDelaySeconds, VRChat);
-        public UserSettings WithTriggerThreshold(float value) => new UserSettings(Placement, value, StickThreshold, RepeatDelaySeconds, VRChat);
-        public UserSettings WithStickThreshold(float value) => new UserSettings(Placement, TriggerThreshold, value, RepeatDelaySeconds, VRChat);
-        public UserSettings WithRepeatDelaySeconds(float value) => new UserSettings(Placement, TriggerThreshold, StickThreshold, value, VRChat);
-        public UserSettings WithVRChat(VRChatSettings value) => new UserSettings(Placement, TriggerThreshold, StickThreshold, RepeatDelaySeconds, value);
+        public PrivacySettings Privacy { get; }
+
+        public UserSettings WithPlacement(KeyboardPlacement value) => new UserSettings(value, TriggerThreshold, StickThreshold, RepeatDelaySeconds, VRChat, Privacy);
+        public UserSettings WithTriggerThreshold(float value) => new UserSettings(Placement, value, StickThreshold, RepeatDelaySeconds, VRChat, Privacy);
+        public UserSettings WithStickThreshold(float value) => new UserSettings(Placement, TriggerThreshold, value, RepeatDelaySeconds, VRChat, Privacy);
+        public UserSettings WithRepeatDelaySeconds(float value) => new UserSettings(Placement, TriggerThreshold, StickThreshold, value, VRChat, Privacy);
+        public UserSettings WithVRChat(VRChatSettings value) => new UserSettings(Placement, TriggerThreshold, StickThreshold, RepeatDelaySeconds, value, Privacy);
+        public UserSettings WithPrivacy(PrivacySettings value) => new UserSettings(Placement, TriggerThreshold, StickThreshold, RepeatDelaySeconds, VRChat, value);
 
         /// <summary>Core の設定にする。この設定で扱わない値（子音の手など）は Core の既定値。</summary>
         public KeyboardSettings ToKeyboardSettings()
@@ -61,7 +65,8 @@ namespace VRKeyboard.App.Settings
             return new KeyboardSettings(
                 stickThreshold: StickThreshold,
                 triggerThreshold: TriggerThreshold,
-                repeatDelaySeconds: ToDouble(RepeatDelaySeconds));
+                repeatDelaySeconds: ToDouble(RepeatDelaySeconds),
+                conversionEnabled: Privacy.UseGoogleConversion);
         }
 
         public bool Equals(UserSettings other)
@@ -71,7 +76,8 @@ namespace VRKeyboard.App.Settings
                 && TriggerThreshold == other.TriggerThreshold
                 && StickThreshold == other.StickThreshold
                 && RepeatDelaySeconds == other.RepeatDelaySeconds
-                && VRChat.Equals(other.VRChat);
+                && VRChat.Equals(other.VRChat)
+                && Privacy.Equals(other.Privacy);
         }
 
         public override bool Equals(object obj) => Equals(obj as UserSettings);
@@ -85,6 +91,7 @@ namespace VRKeyboard.App.Settings
                 hash = hash * 31 + StickThreshold.GetHashCode();
                 hash = hash * 31 + RepeatDelaySeconds.GetHashCode();
                 hash = hash * 31 + VRChat.GetHashCode();
+                hash = hash * 31 + Privacy.GetHashCode();
                 return hash;
             }
         }
@@ -93,7 +100,7 @@ namespace VRKeyboard.App.Settings
         {
             var core = new KeyboardSettings();
             return new UserSettings(KeyboardPlacement.Default, core.TriggerThreshold, core.StickThreshold, (float)core.RepeatDelaySeconds,
-                VRChatSettings.Default);
+                VRChatSettings.Default, PrivacySettings.Default);
         }
 
         // float を double に広げると 0.35 が 0.34999999403953552 になるため、float として最短の 10進表記を経由する。

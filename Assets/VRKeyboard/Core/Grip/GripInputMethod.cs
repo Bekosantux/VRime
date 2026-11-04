@@ -113,6 +113,8 @@ namespace VRKeyboard.Core.Grip
         /// <summary>設定を差し替える。子音の手は変えられない（呼び出し側の <see cref="KeyboardSession.ApplySettings"/> で検査する）。</summary>
         internal void ApplySettings(KeyboardSettings settings)
         {
+            // 「変換」のセルの無効の表示が変わる。
+            if (settings.ConversionEnabled != _settings.ConversionEnabled) Version++;
             _settings = settings;
         }
 
@@ -331,6 +333,11 @@ namespace VRKeyboard.Core.Grip
                     Done(pressedHand, haptics);
                     break;
                 case GripAction.Convert:
+                    if (!_settings.ConversionEnabled)
+                    {
+                        Invalid(pressedHand, haptics);
+                        break;
+                    }
                     return new GripRequest(GripRequestKind.Convert, pressedHand);
                 case GripAction.Commit:
                     return new GripRequest(GripRequestKind.Commit, pressedHand);
@@ -462,6 +469,7 @@ namespace VRKeyboard.Core.Grip
             {
                 case GripAction.ToggleWidth: return Page == GripPage.Kana;
                 case GripAction.ToggleCase: return Page != GripPage.Alpha;
+                case GripAction.Convert: return !_settings.ConversionEnabled;
                 default: return false;
             }
         }

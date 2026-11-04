@@ -15,7 +15,8 @@ namespace VRKeyboard.Core
             double chordWindowSeconds = 0.20,
             double doubleChordWindowSeconds = 0.60,
             double repeatDelaySeconds = 0.50,
-            double repeatIntervalSeconds = 0.10)
+            double repeatIntervalSeconds = 0.10,
+            bool conversionEnabled = true)
         {
             if (consonantHand != Hand.Left && consonantHand != Hand.Right)
                 throw new ArgumentOutOfRangeException(nameof(consonantHand), consonantHand, null);
@@ -35,6 +36,7 @@ namespace VRKeyboard.Core
             DoubleChordWindowSeconds = doubleChordWindowSeconds;
             RepeatDelaySeconds = repeatDelaySeconds;
             RepeatIntervalSeconds = repeatIntervalSeconds;
+            ConversionEnabled = conversionEnabled;
         }
 
         /// <summary>子音パネルを担当する手。母音パネルは反対の手。</summary>
@@ -59,6 +61,9 @@ namespace VRKeyboard.Core
 
         /// <summary>連続入力の2回目以降の間隔。</summary>
         public double RepeatIntervalSeconds { get; }
+
+        /// <summary>変換を使えるか。false の間、「変換」は無効のセルになり、押すと無効の振動を返す（変換の要求を出さない）。</summary>
+        public bool ConversionEnabled { get; }
 
         // 傾き・引き量は 0..1 で表されるため、1 を超える値には到達できない。0 以下だと、触れていなくても倒した・押したとみなす。
         static void ValidateThreshold(float value, string name)

@@ -13,7 +13,7 @@ namespace VRKeyboard.App.View
     /// </summary>
     public sealed class SettingsToggleRow : MonoBehaviour
     {
-        [Tooltip("項目のキー（設定ファイルの項目名と同じ）。focusOnStartup / showTypingText。")]
+        [Tooltip("項目のキー（設定ファイルの項目名と同じ）。focusOnStartup / showTypingText / useGoogleConversion。")]
         [SerializeField] string _key;
 
         [Tooltip("スイッチの地。色でオン・オフを示す。")]

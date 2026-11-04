@@ -12,7 +12,7 @@ namespace VRKeyboard.App.View
     /// </summary>
     public sealed class SettingsPage : MonoBehaviour
     {
-        [Tooltip("カテゴリのキー。display / grip / vrchat。")]
+        [Tooltip("カテゴリのキー。display / grip / vrchat / privacy。")]
         [SerializeField] string _key;
 
         [Tooltip("このカテゴリを選ぶタブ。ページの外に置く。")]

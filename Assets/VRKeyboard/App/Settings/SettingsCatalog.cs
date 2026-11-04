@@ -58,11 +58,17 @@ namespace VRKeyboard.App.Settings
         readonly Func<UserSettings, bool> _get;
         readonly Func<UserSettings, bool, UserSettings> _set;
 
-        public ToggleSettingItem(string key, Func<UserSettings, bool> get, Func<UserSettings, bool, UserSettings> set) : base(key)
+        /// <param name="requiresConsentToEnable">オンにする前に同意の画面で確認するか。オフにするときは確認しない。</param>
+        public ToggleSettingItem(string key, Func<UserSettings, bool> get, Func<UserSettings, bool, UserSettings> set,
+            bool requiresConsentToEnable = false) : base(key)
         {
             _get = get ?? throw new ArgumentNullException(nameof(get));
             _set = set ?? throw new ArgumentNullException(nameof(set));
+            RequiresConsentToEnable = requiresConsentToEnable;
         }
+
+        /// <summary>オンにする前に同意の画面で確認するか（<see cref="SettingsForm"/>）。</summary>
+        public bool RequiresConsentToEnable { get; }
 
         public bool Get(UserSettings settings) => _get(settings);
 
@@ -152,6 +158,12 @@ namespace VRKeyboard.App.Settings
                     s => s.VRChat.FocusOnStartup, (s, v) => s.WithVRChat(s.VRChat.WithFocusOnStartup(v))),
                 new ToggleSettingItem("showTypingText",
                     s => s.VRChat.ShowTypingText, (s, v) => s.WithVRChat(s.VRChat.WithShowTypingText(v))),
+            }),
+            new SettingsCategory("privacy", new SettingItem[]
+            {
+                new ToggleSettingItem("useGoogleConversion",
+                    s => s.Privacy.UseGoogleConversion, (s, v) => s.WithPrivacy(s.Privacy.WithUseGoogleConversion(v)),
+                    requiresConsentToEnable: true),
             }),
         };
 

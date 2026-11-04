@@ -152,6 +152,29 @@ namespace VRKeyboard.App.Tests
         }
 
         [Test]
+        public void Googleの変換は既定でオフ_Coreの設定では変換を使えない()
+        {
+            Assert.IsFalse(UserSettings.Default.Privacy.UseGoogleConversion);
+            Assert.IsFalse(UserSettings.Default.ToKeyboardSettings().ConversionEnabled);
+            Assert.IsTrue(UserSettings.Default.WithPrivacy(new PrivacySettings(true)).ToKeyboardSettings().ConversionEnabled);
+        }
+
+        [Test]
+        public void ほかの値を変えても個人情報の設定は変わらない()
+        {
+            var privacy = new PrivacySettings(true);
+            UserSettings settings = UserSettings.Default.WithPrivacy(privacy)
+                .WithPlacement(KeyboardPlacement.Default.WithTilt(30f))
+                .WithTriggerThreshold(0.6f)
+                .WithStickThreshold(0.4f)
+                .WithRepeatDelaySeconds(0.7f)
+                .WithVRChat(new VRChatSettings(false, false));
+            Assert.AreEqual(privacy, settings.Privacy);
+            Assert.AreNotEqual(UserSettings.Default.WithPrivacy(privacy), UserSettings.Default);
+            Assert.Throws<ArgumentNullException>(() => UserSettings.Default.WithPrivacy(null));
+        }
+
+        [Test]
         public void ほかの値を変えてもVRChatの設定は変わらない()
         {
             var vrchat = new VRChatSettings(false, true);
@@ -175,7 +198,8 @@ namespace VRKeyboard.App.Tests
                 .WithTriggerThreshold(0.55f)
                 .WithStickThreshold(0.35f)
                 .WithRepeatDelaySeconds(0.65f)
-                .WithVRChat(new VRChatSettings(false, true));
+                .WithVRChat(new VRChatSettings(false, true))
+                .WithPrivacy(new PrivacySettings(true));
             Assert.AreEqual(settings, SettingsSerializer.Deserialize(SettingsSerializer.Serialize(settings)));
         }
 
@@ -189,6 +213,7 @@ namespace VRKeyboard.App.Tests
             StringAssert.Contains("\"repeatDelaySeconds\": 0.5", json);
             StringAssert.Contains("\"focusOnStartup\": true", json);
             StringAssert.Contains("\"showTypingText\": true", json);
+            StringAssert.Contains("\"useGoogleConversion\": false", json);
         }
 
         [Test]
@@ -200,6 +225,7 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(UserSettings.Default.RepeatDelaySeconds, settings.RepeatDelaySeconds);
 
             Assert.AreEqual(VRChatSettings.Default, settings.VRChat);
+            Assert.AreEqual(PrivacySettings.Default, settings.Privacy);
 
             Assert.AreEqual(new VRChatSettings(true, false),
                 SettingsSerializer.Deserialize("{\"version\":1,\"vrchat\":{\"showTypingText\":false}}").VRChat);
@@ -223,6 +249,8 @@ namespace VRKeyboard.App.Tests
         [TestCase("{\"version\":1,\"vrchat\":{\"focusOnStartup\":\"true\"}}")]
         [TestCase("{\"version\":1,\"vrchat\":{\"showTypingText\":1}}")]
         [TestCase("{\"version\":1,\"vrchat\":{\"showTypingText\":null}}")]
+        [TestCase("{\"version\":1,\"privacy\":false}")]
+        [TestCase("{\"version\":1,\"privacy\":{\"useGoogleConversion\":\"true\"}}")]
         public void 正しくない内容はFormatException(string json)
         {
             Assert.Throws<FormatException>(() => SettingsSerializer.Deserialize(json));
@@ -312,11 +340,14 @@ namespace VRKeyboard.App.Tests
     /// <summary>
     /// シーンの設定画面と同じ大きさ（1280×872）の配置。左にカテゴリのタブを縦に並べ、右に選んでいるカテゴリのページを置く。
     /// ページはどれも同じ位置から行を並べるため、別のページの行どうしは重なる。
+    /// 同意の画面はどれも同じ位置に置き、ボタンはページの行と重なる。
     /// </summary>
     internal static class TestSettingsLayout
     {
         public static readonly Vector2 Size = new Vector2(1280f, 872f);
         public static readonly Rect Reset = new Rect(992f, 804f, 240f, 52f);
+        public static readonly Rect ConsentAccept = new Rect(560f, 144f, 360f, 64f);
+        public static readonly Rect ConsentCancel = new Rect(940f, 144f, 240f, 64f);
         public const float FirstRowTop = 144f;
         const float RowHeight = 72f;
 
@@ -324,10 +355,24 @@ namespace VRKeyboard.App.Tests
         {
             var pages = new List<SettingsPageLayout>();
             for (int i = 0; i < SettingsCatalog.Categories.Count; i++) pages.Add(Page(SettingsCatalog.Categories[i], i));
-            return new SettingsLayout(Size, pages, Reset);
+            return Create(pages.ToArray());
         }
 
-        public static SettingsLayout Create(params SettingsPageLayout[] pages) => new SettingsLayout(Size, pages, Reset);
+        /// <summary>pages と、pages にある同意が必要な項目の同意の画面からなる配置。</summary>
+        public static SettingsLayout Create(params SettingsPageLayout[] pages)
+        {
+            var consents = new List<SettingsConsentLayout>();
+            foreach (SettingsPageLayout page in pages)
+            {
+                foreach (SettingsToggleLayout toggle in page.Toggles)
+                {
+                    if (toggle.Item.RequiresConsentToEnable) consents.Add(Consent(toggle.Item));
+                }
+            }
+            return new SettingsLayout(Size, pages, Reset, consents);
+        }
+
+        public static SettingsConsentLayout Consent(ToggleSettingItem item) => new SettingsConsentLayout(item, ConsentAccept, ConsentCancel);
 
         /// <summary>カテゴリの項目を、カテゴリの順に 1 行ずつ上から並べたページ。</summary>
         public static SettingsPageLayout Page(SettingsCategory category, int tabIndex)
@@ -378,20 +423,21 @@ namespace VRKeyboard.App.Tests
         static SettingsCategory Display => SettingsCatalog.FindCategory("display");
         static SettingsCategory Grip => SettingsCatalog.FindCategory("grip");
         static SettingsCategory VRChat => SettingsCatalog.FindCategory("vrchat");
+        static SettingsCategory Privacy => SettingsCatalog.FindCategory("privacy");
 
         [Test]
         public void 当たり判定()
         {
             SettingsRowLayout row = _layout.PageOf(Display).Rows[2];
-            Assert.AreEqual(SettingsHit.Slider(row.Item), _layout.HitTest(row.Slider.center, Display));
-            Assert.AreEqual(SettingsHit.Decrease(row.Item), _layout.HitTest(row.Decrease.center, Display));
-            Assert.AreEqual(SettingsHit.Increase(row.Item), _layout.HitTest(row.Increase.center, Display));
-            Assert.AreEqual(SettingsHit.Reset, _layout.HitTest(_layout.Reset.center, Display));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(TestSettingsLayout.LabelPoint(row), Display));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(-10f, -10f), Display));
+            Assert.AreEqual(SettingsHit.Slider(row.Item), _layout.HitTest(row.Slider.center, Display, null));
+            Assert.AreEqual(SettingsHit.Decrease(row.Item), _layout.HitTest(row.Decrease.center, Display, null));
+            Assert.AreEqual(SettingsHit.Increase(row.Item), _layout.HitTest(row.Increase.center, Display, null));
+            Assert.AreEqual(SettingsHit.Reset, _layout.HitTest(_layout.Reset.center, Display, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(TestSettingsLayout.LabelPoint(row), Display, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(-10f, -10f), Display, null));
 
             SettingsToggleLayout toggle = _layout.PageOf(VRChat).Toggles[1];
-            Assert.AreEqual(SettingsHit.Toggle(toggle.Item), _layout.HitTest(toggle.Area.center, VRChat));
+            Assert.AreEqual(SettingsHit.Toggle(toggle.Item), _layout.HitTest(toggle.Area.center, VRChat, null));
         }
 
         [Test]
@@ -400,7 +446,7 @@ namespace VRKeyboard.App.Tests
             foreach (SettingsPageLayout page in _layout.Pages)
             {
                 foreach (SettingsCategory current in SettingsCatalog.Categories)
-                    Assert.AreEqual(SettingsHit.Tab(page.Category), _layout.HitTest(page.Tab.center, current), page.Category.Key + " / " + current.Key);
+                    Assert.AreEqual(SettingsHit.Tab(page.Category), _layout.HitTest(page.Tab.center, current, null), page.Category.Key + " / " + current.Key);
             }
         }
 
@@ -411,12 +457,12 @@ namespace VRKeyboard.App.Tests
             SettingsRowLayout down = _layout.PageOf(Display).Rows[0];
             SettingsToggleLayout focus = _layout.PageOf(VRChat).Toggles[0];
             Assert.IsTrue(down.Slider.Overlaps(focus.Area));
-            Assert.AreEqual(SettingsHit.Slider(down.Item), _layout.HitTest(down.Slider.center, Display));
-            Assert.AreEqual(SettingsHit.Toggle(focus.Item), _layout.HitTest(down.Slider.center, VRChat));
+            Assert.AreEqual(SettingsHit.Slider(down.Item), _layout.HitTest(down.Slider.center, Display, null));
+            Assert.AreEqual(SettingsHit.Toggle(focus.Item), _layout.HitTest(down.Slider.center, VRChat, null));
 
             // grip のページは 3 行のため、display の 5 行目の位置には対象がない。
             SettingsRowLayout width = _layout.PageOf(Display).Rows[4];
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(width.Increase.center, Grip));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(width.Increase.center, Grip, null));
         }
 
         [Test]
@@ -485,7 +531,58 @@ namespace VRKeyboard.App.Tests
         public void 操作の対象の大きさが正でないと例外()
         {
             var pages = new[] { TestSettingsLayout.Page(Display, 0) };
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, pages, new Rect(992f, 804f, 0f, 52f)));
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, pages, new Rect(992f, 804f, 0f, 52f),
+                Array.Empty<SettingsConsentLayout>()));
+        }
+
+        [Test]
+        public void 同意の画面を開いている間はその画面のボタンだけに当たる()
+        {
+            ToggleSettingItem item = SettingsCatalog.FindToggle("useGoogleConversion");
+            SettingsConsentLayout consent = _layout.ConsentOf(item);
+            Assert.AreEqual(SettingsHit.ConsentAccept, _layout.HitTest(consent.Accept.center, Privacy, item));
+            Assert.AreEqual(SettingsHit.ConsentCancel, _layout.HitTest(consent.Cancel.center, Privacy, item));
+
+            // ページの行・タブ・「既定に戻す」は、同意の画面の後ろにあっても当たらない。
+            SettingsToggleLayout row = _layout.PageOf(Privacy).Toggles[0];
+            Assert.IsTrue(row.Area.Overlaps(consent.Accept));
+            Assert.AreEqual(SettingsHit.Toggle(item), _layout.HitTest(consent.Accept.center, Privacy, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(row.Area.xMin + 10f, row.Area.center.y), Privacy, item));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.PageOf(Display).Tab.center, Privacy, item));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.Reset.center, Privacy, item));
+        }
+
+        [Test]
+        public void 同意の画面のボタンどうしが重なる_または画面の外にあると例外()
+        {
+            SettingsPageLayout page = TestSettingsLayout.Page(Privacy, 0);
+            ToggleSettingItem item = page.Toggles[0].Item;
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { page }, TestSettingsLayout.Reset,
+                new[] { new SettingsConsentLayout(item, new Rect(560f, 144f, 360f, 64f), new Rect(900f, 144f, 240f, 64f)) }));
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { page }, TestSettingsLayout.Reset,
+                new[] { new SettingsConsentLayout(item, TestSettingsLayout.ConsentAccept, new Rect(1100f, 144f, 240f, 64f)) }));
+        }
+
+        [Test]
+        public void 同意が必要な項目の同意の画面の過不足は例外()
+        {
+            SettingsPageLayout privacy = TestSettingsLayout.Page(Privacy, 0);
+            SettingsPageLayout grip = TestSettingsLayout.Page(Grip, 1);
+            SettingsConsentLayout consent = TestSettingsLayout.Consent(privacy.Toggles[0].Item);
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { privacy }, TestSettingsLayout.Reset,
+                Array.Empty<SettingsConsentLayout>()));
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { grip }, TestSettingsLayout.Reset,
+                new[] { consent }));
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { privacy }, TestSettingsLayout.Reset,
+                new[] { consent, consent }));
+        }
+
+        [Test]
+        public void 同意が必要でない項目の同意の画面は例外()
+        {
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Consent(SettingsCatalog.FindToggle("focusOnStartup")));
+            SettingsLayout layout = TestSettingsLayout.Create(TestSettingsLayout.Page(VRChat, 0));
+            Assert.Throws<ArgumentException>(() => layout.ConsentOf(SettingsCatalog.FindToggle("useGoogleConversion")));
         }
 
         [Test]
@@ -531,7 +628,7 @@ namespace VRKeyboard.App.Tests
             SettingsLayout layout = TestSettingsLayout.Create(TestSettingsLayout.Page(Display, 0));
             Assert.Throws<ArgumentException>(() => layout.RowOf(SettingsCatalog.FindNumber("triggerThreshold")));
             Assert.Throws<ArgumentException>(() => layout.PageOf(Grip));
-            Assert.Throws<ArgumentException>(() => layout.HitTest(Vector2.zero, Grip));
+            Assert.Throws<ArgumentException>(() => layout.HitTest(Vector2.zero, Grip, null));
         }
 
         [Test]
@@ -584,6 +681,10 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(new VRChatSettings(false, true), focus.Set(s, false).VRChat);
             Assert.AreEqual(new VRChatSettings(true, false), typing.Set(s, false).VRChat);
             Assert.IsFalse(typing.Get(typing.Set(s, false)));
+
+            ToggleSettingItem google = SettingsCatalog.FindToggle("useGoogleConversion");
+            Assert.AreEqual(new PrivacySettings(true), google.Set(s, true).Privacy);
+            Assert.AreEqual(s.VRChat, google.Set(s, true).VRChat);
         }
 
         [Test]
@@ -604,13 +705,15 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void カテゴリの並びと項目()
         {
-            CollectionAssert.AreEqual(new[] { "display", "grip", "vrchat" }, Keys(SettingsCatalog.Categories, c => c.Key));
+            CollectionAssert.AreEqual(new[] { "display", "grip", "vrchat", "privacy" }, Keys(SettingsCatalog.Categories, c => c.Key));
             CollectionAssert.AreEqual(new[] { "downMeters", "forwardMeters", "rightMeters", "tiltDegrees", "widthMeters" },
                 Keys(SettingsCatalog.FindCategory("display").Items, i => i.Key));
             CollectionAssert.AreEqual(new[] { "triggerThreshold", "stickThreshold", "repeatDelaySeconds" },
                 Keys(SettingsCatalog.FindCategory("grip").Items, i => i.Key));
             CollectionAssert.AreEqual(new[] { "focusOnStartup", "showTypingText" },
                 Keys(SettingsCatalog.FindCategory("vrchat").Items, i => i.Key));
+            CollectionAssert.AreEqual(new[] { "useGoogleConversion" },
+                Keys(SettingsCatalog.FindCategory("privacy").Items, i => i.Key));
         }
 
         [Test]
@@ -618,6 +721,16 @@ namespace VRKeyboard.App.Tests
         {
             foreach (SettingsCategory category in SettingsCatalog.Categories)
                 Assert.AreEqual(category.Key == "display", category.ShowsKeyboardPreview, category.Key);
+        }
+
+        [Test]
+        public void 同意が必要な項目はGoogleの変換だけ()
+        {
+            foreach (SettingItem item in SettingsCatalog.Items)
+            {
+                bool requiresConsent = item is ToggleSettingItem toggle && toggle.RequiresConsentToEnable;
+                Assert.AreEqual(item.Key == "useGoogleConversion", requiresConsent, item.Key);
+            }
         }
 
         [Test]
@@ -637,16 +750,21 @@ namespace VRKeyboard.App.Tests
                 .WithPlacement(KeyboardPlacement.Default.WithTilt(30f))
                 .WithStickThreshold(0.8f)
                 .WithRepeatDelaySeconds(0.7f)
-                .WithVRChat(new VRChatSettings(false, false));
+                .WithVRChat(new VRChatSettings(false, false))
+                .WithPrivacy(new PrivacySettings(true));
 
             UserSettings grip = SettingsCatalog.FindCategory("grip").ResetToDefault(changed);
             Assert.AreEqual(UserSettings.Default.StickThreshold, grip.StickThreshold);
             Assert.AreEqual(UserSettings.Default.RepeatDelaySeconds, grip.RepeatDelaySeconds);
             Assert.AreEqual(changed.Placement, grip.Placement);
             Assert.AreEqual(changed.VRChat, grip.VRChat);
+            Assert.AreEqual(changed.Privacy, grip.Privacy);
 
             UserSettings vrchat = SettingsCatalog.FindCategory("vrchat").ResetToDefault(changed);
             Assert.AreEqual(changed.WithVRChat(VRChatSettings.Default), vrchat);
+
+            UserSettings privacy = SettingsCatalog.FindCategory("privacy").ResetToDefault(changed);
+            Assert.AreEqual(changed.WithPrivacy(PrivacySettings.Default), privacy);
 
             UserSettings all = changed;
             foreach (SettingsCategory category in SettingsCatalog.Categories) all = category.ResetToDefault(all);
@@ -905,6 +1023,108 @@ namespace VRKeyboard.App.Tests
             _form.PointerLeave();
             Assert.AreEqual(SettingsHit.None, _form.Hover);
             Assert.AreEqual(SettingsHit.None, _form.Pressed);
+        }
+
+        [Test]
+        public void 同意が必要なスイッチをオフから押すと値を変えずに同意の画面を開く()
+        {
+            SelectCategory(_form, "privacy");
+            SettingsToggleLayout toggle = Toggle("useGoogleConversion");
+            int version = _form.Version;
+            Click(_form, toggle.Area.center);
+
+            Assert.AreSame(toggle.Item, _form.ConsentItem);
+            Assert.Greater(_form.Version, version);
+            Assert.AreEqual(SettingsHit.None, _form.Hover, "開いた直後は何も指していない");
+            Assert.IsFalse(_form.Settings.Privacy.UseGoogleConversion);
+            Assert.AreEqual(0, _changed.Count);
+            Assert.AreEqual(0, _committed.Count);
+        }
+
+        [Test]
+        public void 同意するとオンになって確定し同意の画面を閉じる()
+        {
+            SelectCategory(_form, "privacy");
+            ToggleSettingItem item = SettingsCatalog.FindToggle("useGoogleConversion");
+            Click(_form, Toggle(item.Key).Area.center);
+            SettingsConsentLayout consent = _layout.ConsentOf(item);
+
+            _form.PointerDown(consent.Accept.center);
+            Assert.AreEqual(SettingsHit.ConsentAccept, _form.Pressed);
+            Assert.IsFalse(_form.Settings.Privacy.UseGoogleConversion, "押しただけでは変わらない");
+            _form.PointerUp(consent.Accept.center);
+
+            Assert.IsNull(_form.ConsentItem);
+            Assert.IsTrue(_form.Settings.Privacy.UseGoogleConversion);
+            Assert.AreEqual(1, _committed.Count);
+            Assert.AreEqual(_form.Settings, _committed[0]);
+        }
+
+        [Test]
+        public void 同意を取り消すと何も変えずに同意の画面を閉じる()
+        {
+            SelectCategory(_form, "privacy");
+            ToggleSettingItem item = SettingsCatalog.FindToggle("useGoogleConversion");
+            Click(_form, Toggle(item.Key).Area.center);
+            Click(_form, _layout.ConsentOf(item).Cancel.center);
+
+            Assert.IsNull(_form.ConsentItem);
+            Assert.AreEqual(UserSettings.Default, _form.Settings);
+            Assert.AreEqual(0, _changed.Count);
+            Assert.AreEqual(0, _committed.Count);
+        }
+
+        [Test]
+        public void 同意の画面を開いている間はページとタブと既定に戻すを操作できない()
+        {
+            SelectCategory(_form, "privacy");
+            ToggleSettingItem item = SettingsCatalog.FindToggle("useGoogleConversion");
+            SettingsToggleLayout toggle = Toggle(item.Key);
+            Click(_form, toggle.Area.center);
+
+            Click(_form, new Vector2(toggle.Area.xMin + 10f, toggle.Area.center.y));
+            Click(_form, _layout.PageOf(SettingsCatalog.FindCategory("display")).Tab.center);
+            Click(_form, _layout.Reset.center);
+
+            Assert.AreSame(item, _form.ConsentItem);
+            Assert.AreEqual("privacy", _form.Category.Key);
+            Assert.AreEqual(UserSettings.Default, _form.Settings);
+            Assert.AreEqual(0, _committed.Count);
+        }
+
+        [Test]
+        public void ポインターが外れても同意の画面は閉じない()
+        {
+            SelectCategory(_form, "privacy");
+            ToggleSettingItem item = SettingsCatalog.FindToggle("useGoogleConversion");
+            Click(_form, Toggle(item.Key).Area.center);
+            _form.PointerDown(_layout.ConsentOf(item).Accept.center);
+            _form.PointerLeave();
+
+            Assert.AreSame(item, _form.ConsentItem);
+            Assert.AreEqual(SettingsHit.None, _form.Pressed);
+            Assert.IsFalse(_form.Settings.Privacy.UseGoogleConversion);
+        }
+
+        [Test]
+        public void 同意が必要なスイッチもオフにするときと既定に戻すときは確認しない()
+        {
+            var form = new SettingsForm(_layout, UserSettings.Default.WithPrivacy(new PrivacySettings(true)));
+            int committed = 0;
+            form.Committed += _ => committed++;
+            SelectCategory(form, "privacy");
+            SettingsToggleLayout toggle = Toggle("useGoogleConversion");
+
+            Click(form, toggle.Area.center);
+            Assert.IsNull(form.ConsentItem);
+            Assert.IsFalse(form.Settings.Privacy.UseGoogleConversion);
+            Assert.AreEqual(1, committed);
+
+            var enabled = new SettingsForm(_layout, UserSettings.Default.WithPrivacy(new PrivacySettings(true)));
+            SelectCategory(enabled, "privacy");
+            Click(enabled, _layout.Reset.center);
+            Assert.IsNull(enabled.ConsentItem);
+            Assert.AreEqual(UserSettings.Default, enabled.Settings);
         }
 
         [Test]

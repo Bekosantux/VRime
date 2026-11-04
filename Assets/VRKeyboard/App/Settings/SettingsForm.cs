@@ -8,6 +8,8 @@ namespace VRKeyboard.App.Settings
     /// スライダーはつまんでいる間、値を随時変える（<see cref="Changed"/>）。離したとき、変わっていれば確定する（<see cref="Committed"/>）。
     /// ボタン・スイッチ・タブは、押したのと同じものの上で離したときに働く。値が変わればその場で確定する。
     /// 表示するページはタブで選ぶ（<see cref="Category"/>）。「既定に戻す」は表示中のカテゴリの項目だけを戻す。
+    /// オンにする前に同意が必要なスイッチ（<see cref="ToggleSettingItem.RequiresConsentToEnable"/>）は、オフから押すと値を変えずに同意の画面を開く（<see cref="ConsentItem"/>）。
+    /// 同意すればオンにして確定し、取り消せば何も変えずに閉じる。開いている間は同意の画面のボタンだけを操作できる。オフにするときと「既定に戻す」では確認しない。
     /// 表示（<see cref="View.SettingsView"/>）は <see cref="Version"/> の変化を見て描き直す。
     /// </summary>
     public sealed class SettingsForm : ISettingsPointer
@@ -40,6 +42,9 @@ namespace VRKeyboard.App.Settings
         /// <summary>押したまま離していないボタン・スイッチ・タブ。</summary>
         public SettingsHit Pressed { get; private set; } = SettingsHit.None;
 
+        /// <summary>同意の画面を開いている項目。開いていなければ null。ポインターが画面から離れても閉じない。</summary>
+        public ToggleSettingItem ConsentItem { get; private set; }
+
         /// <summary>画面の下部に表示する通知。なければ null。</summary>
         public string Notice { get; private set; }
 
@@ -61,7 +66,7 @@ namespace VRKeyboard.App.Settings
 
         public void PointerMove(Vector2 position)
         {
-            SetHover(_layout.HitTest(position, Category));
+            SetHover(_layout.HitTest(position, Category, ConsentItem));
             if (DraggingItem != null) SetValueAt(DraggingItem, position.x);
         }
 
@@ -83,6 +88,8 @@ namespace VRKeyboard.App.Settings
                 case SettingsTarget.Increase:
                 case SettingsTarget.Toggle:
                 case SettingsTarget.Reset:
+                case SettingsTarget.ConsentAccept:
+                case SettingsTarget.ConsentCancel:
                     Pressed = Hover;
                     Version++;
                     break;
@@ -134,11 +141,25 @@ namespace VRKeyboard.App.Settings
                     Step(hit.NumberItem, 1);
                     break;
                 case SettingsTarget.Toggle:
-                    SetSettings(hit.ToggleItem.Toggle(Settings));
+                    ToggleSettingItem toggle = hit.ToggleItem;
+                    if (toggle.RequiresConsentToEnable && !toggle.Get(Settings))
+                    {
+                        SetConsentItem(toggle);
+                        return;
+                    }
+                    SetSettings(toggle.Toggle(Settings));
                     break;
                 case SettingsTarget.Reset:
                     SetSettings(Category.ResetToDefault(Settings));
                     break;
+                case SettingsTarget.ConsentAccept:
+                    ToggleSettingItem accepted = ConsentItem;
+                    SetConsentItem(null);
+                    SetSettings(accepted.Set(Settings, true));
+                    break;
+                case SettingsTarget.ConsentCancel:
+                    SetConsentItem(null);
+                    return;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(hit), hit.Target, null);
             }
@@ -161,6 +182,14 @@ namespace VRKeyboard.App.Settings
         {
             float fraction = _layout.RowOf(item).FractionAt(x);
             SetSettings(item.Set(Settings, item.Range.FromFraction(fraction)));
+        }
+
+        // 開閉で操作できる対象が入れ替わるため、指している対象は次にポインターが動くまで外す。
+        void SetConsentItem(ToggleSettingItem item)
+        {
+            ConsentItem = item;
+            Version++;
+            SetHover(SettingsHit.None);
         }
 
         void SetHover(SettingsHit hit)

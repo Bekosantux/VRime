@@ -27,6 +27,8 @@ namespace VRKeyboard.App.Settings
         const string VRChatKey = "vrchat";
         const string FocusOnStartupKey = "focusOnStartup";
         const string ShowTypingTextKey = "showTypingText";
+        const string PrivacyKey = "privacy";
+        const string UseGoogleConversionKey = "useGoogleConversion";
 
         public static string Serialize(UserSettings settings)
         {
@@ -53,6 +55,10 @@ namespace VRKeyboard.App.Settings
                 {
                     [FocusOnStartupKey] = settings.VRChat.FocusOnStartup,
                     [ShowTypingTextKey] = settings.VRChat.ShowTypingText,
+                },
+                [PrivacyKey] = new JObject
+                {
+                    [UseGoogleConversionKey] = settings.Privacy.UseGoogleConversion,
                 },
             };
             return root.ToString(Formatting.Indented);
@@ -83,9 +89,12 @@ namespace VRKeyboard.App.Settings
             JObject display = OptionalObject(root, DisplayKey);
             JObject grip = OptionalObject(root, GripKey);
             JObject vrchat = OptionalObject(root, VRChatKey);
+            JObject privacy = OptionalObject(root, PrivacyKey);
             var vrchatSettings = new VRChatSettings(
                 OptionalBool(vrchat, FocusOnStartupKey, defaults.VRChat.FocusOnStartup),
                 OptionalBool(vrchat, ShowTypingTextKey, defaults.VRChat.ShowTypingText));
+            var privacySettings = new PrivacySettings(
+                OptionalBool(privacy, UseGoogleConversionKey, defaults.Privacy.UseGoogleConversion));
 
             try
             {
@@ -100,7 +109,8 @@ namespace VRKeyboard.App.Settings
                     OptionalNumber(grip, TriggerKey, defaults.TriggerThreshold),
                     OptionalNumber(grip, StickKey, defaults.StickThreshold),
                     OptionalNumber(grip, RepeatDelayKey, defaults.RepeatDelaySeconds),
-                    vrchatSettings);
+                    vrchatSettings,
+                    privacySettings);
             }
             catch (ArgumentOutOfRangeException e)
             {
