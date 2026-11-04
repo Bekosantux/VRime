@@ -28,6 +28,7 @@ namespace VRKeyboard.App.SteamVR
         readonly KeyboardOverlay _overlay;
         readonly SettingsDashboardOverlay _settingsOverlay;
         bool _isOpen;
+        bool _placementPreview;
         bool _disposed;
         bool _quitRequested;
 
@@ -86,11 +87,10 @@ namespace VRKeyboard.App.SteamVR
             _overlay.Update();
             _settingsOverlay.Update();
             IsSettingsVisible = _settingsOverlay.IsVisible;
-            UpdateOverlayVisibility();
         }
 
         /// <summary>
-        /// 開いたらオーバーレイを表示して入力を占有し、閉じたら隠して入力の占有をやめる（設定画面の表示中は隠さない）。
+        /// 開いたらオーバーレイを表示して入力を占有し、閉じたら隠して入力の占有をやめる（位置の確認用に表示している間は隠さない）。
         /// ダッシュボードによる一時停止・再開もここを通る（手動の開閉と同じ経路にするため。SPEC 4.4）。
         /// </summary>
         public void OnOpenChanged(bool isOpen)
@@ -98,6 +98,13 @@ namespace VRKeyboard.App.SteamVR
             ThrowIfDisposed();
             _isOpen = isOpen;
             _controller.IsExclusive = isOpen;
+            UpdateOverlayVisibility();
+        }
+
+        public void SetPlacementPreviewVisible(bool visible)
+        {
+            ThrowIfDisposed();
+            _placementPreview = visible;
             UpdateOverlayVisibility();
         }
 
@@ -153,7 +160,7 @@ namespace VRKeyboard.App.SteamVR
 
         void UpdateOverlayVisibility()
         {
-            if (_isOpen || IsSettingsVisible) _overlay.Show();
+            if (_isOpen || _placementPreview) _overlay.Show();
             else _overlay.Hide();
         }
 

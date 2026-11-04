@@ -76,7 +76,8 @@ namespace VRKeyboard.App.Settings
     /// <summary>設定画面のタブ 1 つ分の項目のまとまり。「既定に戻す」はカテゴリごとに働く。</summary>
     public sealed class SettingsCategory
     {
-        public SettingsCategory(string key, IReadOnlyList<SettingItem> items)
+        /// <param name="showsKeyboardPreview">このカテゴリを表示している間、位置の確認用にキーボードのオーバーレイを表示するか。</param>
+        public SettingsCategory(string key, IReadOnlyList<SettingItem> items, bool showsKeyboardPreview = false)
         {
             if (string.IsNullOrEmpty(key)) throw new ArgumentException("キーが空です。", nameof(key));
             if (items == null) throw new ArgumentNullException(nameof(items));
@@ -89,10 +90,14 @@ namespace VRKeyboard.App.Settings
             }
             Key = key;
             Items = items;
+            ShowsKeyboardPreview = showsKeyboardPreview;
         }
 
         /// <summary>カテゴリを識別するキー。画面のページ（<see cref="View.SettingsPage"/>）と対応させる。</summary>
         public string Key { get; }
+
+        /// <summary>このカテゴリを表示している間、位置の確認用にキーボードのオーバーレイを表示するか。</summary>
+        public bool ShowsKeyboardPreview { get; }
 
         public IReadOnlyList<SettingItem> Items { get; }
 
@@ -131,7 +136,7 @@ namespace VRKeyboard.App.Settings
                     s => s.Placement.TiltDegrees, (s, v) => s.WithPlacement(s.Placement.WithTilt(v)), Degrees),
                 new NumberSettingItem("widthMeters", KeyboardPlacement.WidthRange,
                     s => s.Placement.WidthMeters, (s, v) => s.WithPlacement(s.Placement.WithWidth(v)), Centimeters),
-            }),
+            }, showsKeyboardPreview: true),
             new SettingsCategory("grip", new SettingItem[]
             {
                 new NumberSettingItem("triggerThreshold", UserSettings.TriggerThresholdRange,

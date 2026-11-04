@@ -614,6 +614,13 @@ namespace VRKeyboard.App.Tests
         }
 
         [Test]
+        public void 位置の確認用のキーボードは表示位置のカテゴリだけで表示する()
+        {
+            foreach (SettingsCategory category in SettingsCatalog.Categories)
+                Assert.AreEqual(category.Key == "display", category.ShowsKeyboardPreview, category.Key);
+        }
+
+        [Test]
         public void 項目のキーは重複せずどれか1つのカテゴリに属する()
         {
             var keys = new HashSet<string>();

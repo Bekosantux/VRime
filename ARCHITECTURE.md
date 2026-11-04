@@ -70,12 +70,12 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 | 場所 | クラス | 責務 |
 |---|---|---|
-| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「環境のイベント（`BeginFrame`）→ 前面のウィンドウの監視と文字数の上限 → ダッシュボードの状態を渡す → 入力を読む → `Tick` → 変換の中止判定 → 表示の更新 → `/chatbox/typing` と入力中の文字の表示（どちらも送信先が VRChat の間だけ）→ チャットボックスの送信」を行う。送信は失敗したときだけ通知を入力欄に出す。起動時は設定に従って `VRChatWindow.Focus` を呼び、終了時はチャットボックスの入力中の文字を消す。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない。編集用のフォントアセット・`KeyboardTheme`・2つの描画先とビューはシリアライズフィールドで受け取り、起動時に `ValidateScene()` でシーンの構成を検証する（誤りは場所を示す例外） |
+| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「環境のイベント（`BeginFrame`）→ 前面のウィンドウの監視と文字数の上限 → ダッシュボードの状態を渡す → 入力を読む → `Tick` → 変換の中止判定 → 位置の確認用の表示（`SetPlacementPreviewVisible`。設定タブの表示中で、選んでいるカテゴリが `ShowsKeyboardPreview` のとき）→ 表示の更新 → `/chatbox/typing` と入力中の文字の表示（どちらも送信先が VRChat の間だけ）→ チャットボックスの送信」を行う。送信は失敗したときだけ通知を入力欄に出す。起動時は設定に従って `VRChatWindow.Focus` を呼び、終了時はチャットボックスの入力中の文字を消す。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない。編集用のフォントアセット・`KeyboardTheme`・2つの描画先とビューはシリアライズフィールドで受け取り、起動時に `ValidateScene()` でシーンの構成を検証する（誤りは場所を示す例外） |
 | `Input/` | `IControllerSource` / `IHapticOutput` | 入力元（1フレーム分の `ControllerFrame` を返す）と振動の出力先の境界。OpenVR 実装はこの境界に差す |
 | | `DebugKeyboardControllerSource` / `DebugHapticOutput` | PC のキーボード（旧 Input Manager）で両手を模す開発用の入力元と、直近の振動を保持して表示に渡す出力先。**キー割り当ては `DebugKeyboardControllerSource.Read` が唯一の定義**（画面への表示は `KeyboardPreview`） |
-| `Platform/` | `IKeyboardPlatform` | 実行環境の境界。`Controller`・`Haptics`・`IsDashboardHoldingInput`・`IsSettingsVisible`・`QuitRequested`、毎フレームの `BeginFrame()`（環境のイベントの処理）、開閉の通知 `OnOpenChanged(bool)`、キーボードの位置の変更 `SetPlacement`、入力を読むのに本アプリのウィンドウが前面である必要があるか（`RequiresOwnWindowFocus`。true の環境では起動時に VRChat を前面にしない）を持つ。実装は `OpenVRPlatform` と `DebugKeyboardPlatform` |
-| | `DebugKeyboardPlatform` | `DebugKeyboardControllerSource` と `DebugHapticOutput` をまとめた開発用の環境。Tab キーで「ダッシュボードの設定タブを表示している状態」（`IsDashboardHoldingInput` と `IsSettingsVisible` が両方 true）を切り替える。終了通知・開閉の通知・位置の変更は何もしない。`KeyboardPreview` へ振動の表示用に `DebugHaptics` を渡す |
-| `SteamVR/` | `OpenVRPlatform` | OpenVR の環境。接続・入力・振動・オーバーレイ（キーボードと設定タブ）を作る。キーボードのオーバーレイは「開いている、または設定タブの表示中」に表示し、入力の占有（優先度）は開いている間だけにする。`IsDashboardHoldingInput` はダッシュボードの表示中に加え、閉じた後に `IsInputAvailable` が true に戻るまでの間も true にする（入力が戻る前に優先度を上げると占有が有効にならないため。SPEC 4.4）。作成の途中で失敗したら、それまでのものを破棄して例外にする。名前空間と場所を `OpenVR` にしないのは、`Valve.VR.OpenVR` 型を隠さないため |
+| `Platform/` | `IKeyboardPlatform` | 実行環境の境界。`Controller`・`Haptics`・`IsDashboardHoldingInput`・`IsSettingsVisible`・`QuitRequested`、毎フレームの `BeginFrame()`（環境のイベントの処理）、開閉の通知 `OnOpenChanged(bool)`、位置の確認用にキーボードを表示するか `SetPlacementPreviewVisible(bool)`、キーボードの位置の変更 `SetPlacement`、入力を読むのに本アプリのウィンドウが前面である必要があるか（`RequiresOwnWindowFocus`。true の環境では起動時に VRChat を前面にしない）を持つ。実装は `OpenVRPlatform` と `DebugKeyboardPlatform` |
+| | `DebugKeyboardPlatform` | `DebugKeyboardControllerSource` と `DebugHapticOutput` をまとめた開発用の環境。Tab キーで「ダッシュボードの設定タブを表示している状態」（`IsDashboardHoldingInput` と `IsSettingsVisible` が両方 true）を切り替える。終了通知・開閉の通知・位置の確認用の表示・位置の変更は何もしない。`KeyboardPreview` へ振動の表示用に `DebugHaptics` を渡す |
+| `SteamVR/` | `OpenVRPlatform` | OpenVR の環境。接続・入力・振動・オーバーレイ（キーボードと設定タブ）を作る。キーボードのオーバーレイは「開いている、または位置の確認用に表示する（`SetPlacementPreviewVisible`）」間に表示し、入力の占有（優先度）は開いている間だけにする。`IsDashboardHoldingInput` はダッシュボードの表示中に加え、閉じた後に `IsInputAvailable` が true に戻るまでの間も true にする（入力が戻る前に優先度を上げると占有が有効にならないため。SPEC 4.4）。作成の途中で失敗したら、それまでのものを破棄して例外にする。名前空間と場所を `OpenVR` にしないのは、`Valve.VR.OpenVR` 型を隠さないため |
 | | `OpenVRRuntime` | `VRApplication_Overlay` での初期化（SteamVR を起動しない）、アクションマニフェストの登録、毎フレームのイベント処理。`VREvent_Quit` は `AcknowledgeQuit_Exiting` を呼んで `QuitRequested` を出す。破棄で `VR_Shutdown`。プロセス内で同時に 1接続だけ許す |
 | | `OpenVRActions` | アクションセットと各アクション（スティック・トリガー・グリップ・振動）のハンドルの取得。無効なハンドルは例外 |
 | | `OpenVRControllerSource` | `IControllerSource` の OpenVR 実装。`UpdateActionState` でアクションセット 1つ（優先度は閉じている間 0、開いている間 `k_nActionSetOverlayGlobalPriorityMin`）を有効にして読む。`IsExclusive` を開いている間に下げることはしない。非アクティブ（`NoData`）は中立値、それ以外のエラーは例外 |
@@ -99,7 +99,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `KeyboardPreview` | エディターと開発ビルド専用。メインカメラを使わず OnGUI で、テクスチャ・振動・操作キーを表示する。設定画面の表示中は設定画面のテクスチャを表示し、開発用の環境ではマウスの操作を `ISettingsPointer` へ渡す |
 | `Settings/` | `UserSettings` / `KeyboardPlacement` / `VRChatSettings` / `SettingRange` | 設定画面で変える値（表示位置・2つのしきい値・長押しの時間・VRChat 関連の2つのオン・オフ）。不変で、範囲外は例外。`SettingRange` は範囲と刻みを持ち、刻みに丸める。しきい値と長押しの時間の既定値は Core の `KeyboardSettings` の既定値から取る。`ToKeyboardSettings` で Core の設定にする |
 | | `SettingsSerializer` / `SettingsStore` / `SettingsLoadResult` | 設定ファイルの JSON（形式は SPEC 8.1）への変換と読み書き。内容が正しくないファイルは別名に移し、既定値と通知を返す。読み書きの IO の失敗は例外のまま上げる。保存は一時ファイルに書いてから置き換える |
-| | `SettingsCatalog` / `SettingsCategory` / `SettingItem` | 設定画面のカテゴリ（タブ）と項目の定義。項目は数値（`NumberSettingItem`。範囲・表示の形式）とオン・オフ（`ToggleSettingItem`）。キーは設定ファイルの項目名と同じ。項目を足すときは、ここに加え、シーンの該当するページに同じキーの `SettingsRow` / `SettingsToggleRow` を置く。カテゴリを足すときは、`SettingsPage` とタブを置き、`SettingsView._pages` に同じ順で加える |
+| | `SettingsCatalog` / `SettingsCategory` / `SettingItem` | 設定画面のカテゴリ（タブ）と項目の定義。項目は数値（`NumberSettingItem`。範囲・表示の形式）とオン・オフ（`ToggleSettingItem`）。カテゴリは、表示中に位置の確認用のキーボードを出すか（`ShowsKeyboardPreview`）を持つ。キーは設定ファイルの項目名と同じ。項目を足すときは、ここに加え、シーンの該当するページに同じキーの `SettingsRow` / `SettingsToggleRow` を置く。カテゴリを足すときは、`SettingsPage` とタブを置き、`SettingsView._pages` に同じ順で加える |
 | | `SettingsLayout` / `SettingsPageLayout` / `SettingsRowLayout` / `SettingsToggleLayout` / `SettingsHit` | 設定画面の操作の対象の配置（テクスチャのピクセル、左上が原点）と当たり判定。シーンの矩形から作り（`SettingsView.CreateLayout`）、表示と操作（`SettingsForm`）が同じ配置を使う。当たり判定は、タブと「既定に戻す」に加え、選んでいるページの対象だけを使う。同時に表示される対象どうしの重なり・画面外・大きさが正でないもの・カテゴリの項目の行の過不足は例外 |
 | | `SettingsForm` / `ISettingsPointer` | 設定画面の状態（値・表示しているカテゴリ・指している対象・つまんでいるスライダー・押しているボタン・通知・版）とポインターの操作。ボタン・スイッチ・タブは押したときと離したときの対象が同じなら実行する。タブは表示を切り替えるだけで値を確定しない。値が変わるたびに `Changed`、スライダーを離す・ボタンを実行するなどで値が確定し、前回の確定から変わっていれば `Committed` を出す |
 | `Conversion/` | `ConversionRunner` | 変換の要求を `GoogleTransliterateClient` に渡し、結果を `CompleteConversion` / `FailConversion` で返す。通信は同時に 1件で、新しい要求・応答待ちの終了・破棄のときは前の通信を中止する |
@@ -121,7 +121,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 **描画の流れと構成**
 
-- 描画は `KeyboardApp.Update` が `KeyboardView.RefreshIfChanged()` で `ViewVersion` の変化を検出したときだけ `OverlayRenderTarget.Render()` を呼ぶ。キーボードは開いている間と設定画面の表示中だけ描き、表示し始めたフレームでは版が変わっていなくても描く。設定画面は `SettingsView.RefreshIfChanged()` が true のときに描く。
+- 描画は `KeyboardApp.Update` が `KeyboardView.RefreshIfChanged()` で `ViewVersion` の変化を検出したときだけ `OverlayRenderTarget.Render()` を呼ぶ。キーボードは開いている間と位置の確認用に表示している間（設定タブで「表示位置」のカテゴリを選んでいる間）だけ描き、表示し始めたフレームでは版が変わっていなくても描く。設定画面は `SettingsView.RefreshIfChanged()` が true のときに描く。
 - `Render()` は `Canvas.ForceUpdateCanvases()` でレイアウトと TMP のメッシュを確定してから、`RenderPipeline.SubmitRenderRequest`（URP の `SingleCameraRequest`）で無効なカメラを 1回描く。`Camera.Render()` と違い、出力先を要求に含められ、対応していないパイプラインでは例外にできる。
 - 描画先ごとのレイヤー `VRKeyboardOverlay`（キーボード）と `VRKeyboardSettings`（設定画面）を Tags and Layers に登録している。各カメラは自分のレイヤーだけを映す（同じ位置にある別の描画先の uGUI を映さないため）。TMP の `Mobile/Distance Field` シェーダーは Always Included Shaders に登録している（ビルドで除外されないため）。
 - TMP の `Ellipsis` は、レイアウトで幅が決まる文字では描かれなくなるため、候補欄は文字列を自前で切って省略記号を付ける。
@@ -138,7 +138,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 **入力元の選択と開閉の流れ**
 
 - 環境の選択は `KeyboardApp.CreatePlatform` だけで行う。ビルドは常に `OpenVRPlatform`。エディターは `_editorDevice`（`DebugKeyboard` が既定 / `OpenVR`）に従う。OpenVR の初期化に失敗したときは例外にし、`Awake` で `enabled = false` にして毎フレームの例外を防ぐ（別の環境へ切り替えない）。
-- 開閉は Core の `IKeyboardEffects.OnOpenChanged` → `KeyboardApp` → `IKeyboardPlatform.OnOpenChanged` と流れ、OpenVR では `OpenVRControllerSource.IsExclusive` とオーバーレイの `Show` / `Hide` が切り替わる（設定タブの表示中は閉じていてもオーバーレイを表示したままにする）。ダッシュボードの状態は、毎フレーム `IsDashboardHoldingInput` を `KeyboardSession.SetDashboardVisible` へ渡し、手動で閉じるのと同じ経路で閉じる（SPEC 4.4）。
+- 開閉は Core の `IKeyboardEffects.OnOpenChanged` → `KeyboardApp` → `IKeyboardPlatform.OnOpenChanged` と流れ、OpenVR では `OpenVRControllerSource.IsExclusive` とオーバーレイの `Show` / `Hide` が切り替わる（位置の確認用に表示している間は閉じていてもオーバーレイを表示したままにする）。ダッシュボードの状態は、毎フレーム `IsDashboardHoldingInput` を `KeyboardSession.SetDashboardVisible` へ渡し、手動で閉じるのと同じ経路で閉じる（SPEC 4.4）。
 - 毎フレームの順序は `BeginFrame`（イベント処理と設定タブの操作。終了を求められたら以降の API を呼ばない）→ `ForegroundWindowMonitor.Update` と `SetLengthLimit` → `SetDashboardVisible` → `Read` → `Tick` → 描画（`Rendered` でテクスチャをオーバーレイへ渡す）。
 - エディターで再生を繰り返しても接続できるよう、終了時はオーバーレイを破棄してから `VR_Shutdown` を呼ぶ。`OpenVR.Init` が管理側のインターフェースを作り直すため、次の再生で再初期化できる。ハンドルとマニフェストは接続ごとに取得・登録し直す。
 

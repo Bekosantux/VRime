@@ -242,9 +242,13 @@ namespace VRKeyboard.App
             _session.Tick(_platform.Controller.Read(), now);
             _runner.CancelUnlessWaiting();
 
-            // キーボードは、開いている間と設定画面の表示中（位置の確認用）だけ描く。
+            // 位置の確認用のキーボードは、設定画面で表示位置のカテゴリを選んでいる間だけ表示する。
+            bool placementPreview = _platform.IsSettingsVisible && _settingsForm.Category.ShowsKeyboardPreview;
+            _platform.SetPlacementPreviewVisible(placementPreview);
+
+            // キーボードは、開いている間と位置の確認用に表示している間だけ描く。
             // 隠れている間に表示の版が変わっていることがあるため、表示し始めたときは必ず描く。
-            bool keyboardShown = _session.IsOpen || _platform.IsSettingsVisible;
+            bool keyboardShown = _session.IsOpen || placementPreview;
             if (keyboardShown && (_keyboardView.RefreshIfChanged() || !_keyboardShown)) _keyboardTarget.Render();
             _keyboardShown = keyboardShown;
             if (_settingsView.RefreshIfChanged()) _settingsTarget.Render();

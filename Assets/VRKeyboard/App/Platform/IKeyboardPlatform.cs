@@ -26,10 +26,7 @@ namespace VRKeyboard.App.Platform
         /// </summary>
         bool IsDashboardHoldingInput { get; }
 
-        /// <summary>
-        /// 設定画面（ダッシュボードの設定タブ）が表示されているか。<see cref="BeginFrame"/> で更新される。
-        /// 表示中は、キーボードを閉じていてもオーバーレイを表示する（位置の確認用。入力は占有しない）。
-        /// </summary>
+        /// <summary>設定画面（ダッシュボードの設定タブ）が表示されているか。<see cref="BeginFrame"/> で更新される。</summary>
         bool IsSettingsVisible { get; }
 
         /// <summary>
@@ -43,6 +40,12 @@ namespace VRKeyboard.App.Platform
 
         /// <summary>キーボードの開閉が変わった。オーバーレイの表示切り替えと入力の優先度の切り替えを行う。</summary>
         void OnOpenChanged(bool isOpen);
+
+        /// <summary>
+        /// 位置の確認用にキーボードを表示するか。true の間は、キーボードを閉じていてもオーバーレイを表示する（入力は占有しない）。
+        /// 毎フレーム <see cref="BeginFrame"/> の後に呼ぶ。
+        /// </summary>
+        void SetPlacementPreviewVisible(bool visible);
 
         /// <summary>キーボードのオーバーレイの位置・傾き・大きさを変える。</summary>
         void SetPlacement(KeyboardPlacement placement);

@@ -46,6 +46,10 @@ namespace VRKeyboard.App.Platform
         {
         }
 
+        public void SetPlacementPreviewVisible(bool visible)
+        {
+        }
+
         public void SetPlacement(KeyboardPlacement placement)
         {
             if (placement == null) throw new ArgumentNullException(nameof(placement));
