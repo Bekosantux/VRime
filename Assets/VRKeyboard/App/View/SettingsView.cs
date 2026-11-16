@@ -19,6 +19,8 @@ namespace VRKeyboard.App.View
 
         [SerializeField] SettingsButton _reset;
 
+        [SerializeField] SettingsButton _quit;
+
         [Tooltip("同意の画面。オンにする前に同意が必要な項目ごとに 1 つずつ、カテゴリの項目の順に並べる。ページより後（下）に置く。")]
         [SerializeField] SettingsConsentDialog[] _consents = Array.Empty<SettingsConsentDialog>();
 
@@ -33,10 +35,12 @@ namespace VRKeyboard.App.View
         public void Validate()
         {
             SceneChecks.Require(_reset, this, nameof(_reset));
+            SceneChecks.Require(_quit, this, nameof(_quit));
             SceneChecks.Require(_notice, this, nameof(_notice));
             if (_pages == null || _pages.Length == 0) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_pages) + " が空です。");
             SceneChecks.RequireAll(_pages, _pages.Length, this, nameof(_pages));
             SceneChecks.RequireUnder(_reset, this, this, nameof(_reset));
+            SceneChecks.RequireUnder(_quit, this, this, nameof(_quit));
             SceneChecks.RequireUnder(_notice, this, this, nameof(_notice));
             for (int i = 0; i < _pages.Length; i++)
             {
@@ -44,6 +48,7 @@ namespace VRKeyboard.App.View
                 _pages[i].Validate();
             }
             _reset.Validate();
+            _quit.Validate();
             if (_consents == null) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_consents) + " が null です。");
             SceneChecks.RequireAll(_consents, _consents.Length, this, nameof(_consents));
             for (int i = 0; i < _consents.Length; i++)
@@ -90,7 +95,7 @@ namespace VRKeyboard.App.View
             if (consents.Count != _consents.Length)
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_consents) + " に、同意が必要な項目にない画面があります。");
 
-            return new SettingsLayout(Canvas.rect.size, pages, UiRects.RectIn(_reset.Rect, Canvas), consents);
+            return new SettingsLayout(Canvas.rect.size, pages, UiRects.RectIn(_reset.Rect, Canvas), UiRects.RectIn(_quit.Rect, Canvas), consents);
         }
 
         /// <param name="form">このビューの <see cref="CreateLayout"/> で作った配置を持つ設定画面。</param>
@@ -104,6 +109,7 @@ namespace VRKeyboard.App.View
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " のページの数が配置のページの数と一致しません。");
             for (int i = 0; i < pages.Count; i++) _pages[i].Initialize(pages[i], theme);
             _reset.Initialize(theme, SettingsHit.Reset);
+            _quit.Initialize(theme, SettingsHit.Quit);
             IReadOnlyList<SettingsConsentLayout> consents = form.Layout.Consents;
             if (consents.Count != _consents.Length)
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の同意の画面の数が配置の同意の画面の数と一致しません。");
@@ -120,6 +126,7 @@ namespace VRKeyboard.App.View
 
             foreach (SettingsPage page in _pages) page.Refresh(_form);
             _reset.Refresh(_form);
+            _quit.Refresh(_form);
             foreach (SettingsConsentDialog consent in _consents) consent.Refresh(_form);
             string notice = _form.Notice ?? string.Empty;
             if (_notice.text != notice) _notice.text = notice;

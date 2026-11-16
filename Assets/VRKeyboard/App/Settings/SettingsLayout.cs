@@ -7,7 +7,7 @@ namespace VRKeyboard.App.Settings
     /// <summary>
     /// 設定画面の操作の対象の配置と当たり判定。座標はテクスチャのピクセルで、左上を原点とし、下向きを正とする。
     /// 配置はシーンの uGUI から作る（<see cref="View.SettingsView.CreateLayout"/>）。表示とポインターの当たり判定（<see cref="SettingsForm"/>）が同じ配置を使う。
-    /// 画面はカテゴリのタブ・「既定に戻す」と、選んでいるカテゴリのページからなる。ページどうしは同じ場所に重ねて置き、選んでいるページだけを当たり判定に使う。
+    /// 画面はカテゴリのタブ・「既定に戻す」・「アプリを終了」と、選んでいるカテゴリのページからなる。ページどうしは同じ場所に重ねて置き、選んでいるページだけを当たり判定に使う。
     /// 同意の画面（<see cref="SettingsConsentLayout"/>）を開いている間は、その画面のボタンだけを当たり判定に使う。
     /// 操作の対象が画面の外にある・同時に表示されるものどうしが重なる配置は、どれを指しているか決まらないため例外にする。
     /// </summary>
@@ -16,8 +16,10 @@ namespace VRKeyboard.App.Settings
         /// <param name="size">画面（テクスチャ）の大きさ。</param>
         /// <param name="pages">カテゴリのページ。カテゴリの重複は許さない。先頭のページを最初に表示する。</param>
         /// <param name="reset">「既定に戻す」のボタン。</param>
+        /// <param name="quit">「アプリを終了」のボタン。</param>
         /// <param name="consents">同意の画面。オンにする前に同意が必要な項目（<see cref="ToggleSettingItem.RequiresConsentToEnable"/>）ごとに 1 つずつ。</param>
-        public SettingsLayout(Vector2 size, IReadOnlyList<SettingsPageLayout> pages, Rect reset, IReadOnlyList<SettingsConsentLayout> consents)
+        public SettingsLayout(Vector2 size, IReadOnlyList<SettingsPageLayout> pages, Rect reset, Rect quit,
+            IReadOnlyList<SettingsConsentLayout> consents)
         {
             if (!(size.x > 0f) || !(size.y > 0f)) throw new ArgumentOutOfRangeException(nameof(size), size, "画面の大きさが正ではありません。");
             if (pages == null) throw new ArgumentNullException(nameof(pages));
@@ -25,7 +27,7 @@ namespace VRKeyboard.App.Settings
             if (consents == null) throw new ArgumentNullException(nameof(consents));
 
             var screen = new Rect(Vector2.zero, size);
-            var shared = new List<(string name, Rect rect)> { ("既定に戻す", reset) };
+            var shared = new List<(string name, Rect rect)> { ("既定に戻す", reset), ("終了", quit) };
             var categories = new HashSet<SettingsCategory>();
             foreach (SettingsPageLayout page in pages)
             {
@@ -75,6 +77,7 @@ namespace VRKeyboard.App.Settings
             Size = size;
             Pages = pages;
             Reset = reset;
+            Quit = quit;
             Consents = consents;
         }
 
@@ -83,6 +86,9 @@ namespace VRKeyboard.App.Settings
 
         /// <summary>「既定に戻す」のボタン。</summary>
         public Rect Reset { get; }
+
+        /// <summary>「アプリを終了」のボタン。</summary>
+        public Rect Quit { get; }
 
         public IReadOnlyList<SettingsConsentLayout> Consents { get; }
 
@@ -122,6 +128,7 @@ namespace VRKeyboard.App.Settings
                 return SettingsHit.None;
             }
             if (Reset.Contains(point)) return SettingsHit.Reset;
+            if (Quit.Contains(point)) return SettingsHit.Quit;
             foreach (SettingsPageLayout page in Pages)
             {
                 if (page.Tab.Contains(point)) return SettingsHit.Tab(page.Category);
@@ -302,6 +309,7 @@ namespace VRKeyboard.App.Settings
         Increase,
         Toggle,
         Reset,
+        Quit,
         ConsentAccept,
         ConsentCancel,
     }
@@ -314,6 +322,7 @@ namespace VRKeyboard.App.Settings
     {
         public static readonly SettingsHit None = new SettingsHit(SettingsTarget.None, null, null);
         public static readonly SettingsHit Reset = new SettingsHit(SettingsTarget.Reset, null, null);
+        public static readonly SettingsHit Quit = new SettingsHit(SettingsTarget.Quit, null, null);
 
         /// <summary>開いている同意の画面の、同意するボタン。</summary>
         public static readonly SettingsHit ConsentAccept = new SettingsHit(SettingsTarget.ConsentAccept, null, null);

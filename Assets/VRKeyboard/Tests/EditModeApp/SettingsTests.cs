@@ -346,6 +346,7 @@ namespace VRKeyboard.App.Tests
     {
         public static readonly Vector2 Size = new Vector2(1280f, 872f);
         public static readonly Rect Reset = new Rect(992f, 804f, 240f, 52f);
+        public static readonly Rect Quit = new Rect(48f, 804f, 220f, 52f);
         public static readonly Rect ConsentAccept = new Rect(560f, 144f, 360f, 64f);
         public static readonly Rect ConsentCancel = new Rect(940f, 144f, 240f, 64f);
         public const float FirstRowTop = 144f;
@@ -369,7 +370,7 @@ namespace VRKeyboard.App.Tests
                     if (toggle.Item.RequiresConsentToEnable) consents.Add(Consent(toggle.Item));
                 }
             }
-            return new SettingsLayout(Size, pages, Reset, consents);
+            return new SettingsLayout(Size, pages, Reset, Quit, consents);
         }
 
         public static SettingsConsentLayout Consent(ToggleSettingItem item) => new SettingsConsentLayout(item, ConsentAccept, ConsentCancel);
@@ -433,6 +434,7 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(SettingsHit.Decrease(row.Item), _layout.HitTest(row.Decrease.center, Display, null));
             Assert.AreEqual(SettingsHit.Increase(row.Item), _layout.HitTest(row.Increase.center, Display, null));
             Assert.AreEqual(SettingsHit.Reset, _layout.HitTest(_layout.Reset.center, Display, null));
+            Assert.AreEqual(SettingsHit.Quit, _layout.HitTest(_layout.Quit.center, Display, null));
             Assert.AreEqual(SettingsHit.None, _layout.HitTest(TestSettingsLayout.LabelPoint(row), Display, null));
             Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(-10f, -10f), Display, null));
 
@@ -532,7 +534,19 @@ namespace VRKeyboard.App.Tests
         {
             var pages = new[] { TestSettingsLayout.Page(Display, 0) };
             Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, pages, new Rect(992f, 804f, 0f, 52f),
-                Array.Empty<SettingsConsentLayout>()));
+                TestSettingsLayout.Quit, Array.Empty<SettingsConsentLayout>()));
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, pages, TestSettingsLayout.Reset,
+                new Rect(48f, 804f, 220f, 0f), Array.Empty<SettingsConsentLayout>()));
+        }
+
+        [Test]
+        public void 終了がほかの操作の対象と重なると例外()
+        {
+            var pages = new[] { TestSettingsLayout.Page(Display, 0) };
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, pages, TestSettingsLayout.Reset,
+                new Rect(900f, 804f, 220f, 52f), Array.Empty<SettingsConsentLayout>()));
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, pages, TestSettingsLayout.Reset,
+                TestSettingsLayout.Tab(0), Array.Empty<SettingsConsentLayout>()));
         }
 
         [Test]
@@ -543,13 +557,14 @@ namespace VRKeyboard.App.Tests
             Assert.AreEqual(SettingsHit.ConsentAccept, _layout.HitTest(consent.Accept.center, Privacy, item));
             Assert.AreEqual(SettingsHit.ConsentCancel, _layout.HitTest(consent.Cancel.center, Privacy, item));
 
-            // ページの行・タブ・「既定に戻す」は、同意の画面の後ろにあっても当たらない。
+            // ページの行・タブ・「既定に戻す」・「アプリを終了」は、同意の画面の後ろにあっても当たらない。
             SettingsToggleLayout row = _layout.PageOf(Privacy).Toggles[0];
             Assert.IsTrue(row.Area.Overlaps(consent.Accept));
             Assert.AreEqual(SettingsHit.Toggle(item), _layout.HitTest(consent.Accept.center, Privacy, null));
             Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(row.Area.xMin + 10f, row.Area.center.y), Privacy, item));
             Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.PageOf(Display).Tab.center, Privacy, item));
             Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.Reset.center, Privacy, item));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.Quit.center, Privacy, item));
         }
 
         [Test]
@@ -557,9 +572,9 @@ namespace VRKeyboard.App.Tests
         {
             SettingsPageLayout page = TestSettingsLayout.Page(Privacy, 0);
             ToggleSettingItem item = page.Toggles[0].Item;
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { page }, TestSettingsLayout.Reset,
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { page }, TestSettingsLayout.Reset, TestSettingsLayout.Quit,
                 new[] { new SettingsConsentLayout(item, new Rect(560f, 144f, 360f, 64f), new Rect(900f, 144f, 240f, 64f)) }));
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { page }, TestSettingsLayout.Reset,
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { page }, TestSettingsLayout.Reset, TestSettingsLayout.Quit,
                 new[] { new SettingsConsentLayout(item, TestSettingsLayout.ConsentAccept, new Rect(1100f, 144f, 240f, 64f)) }));
         }
 
@@ -569,11 +584,11 @@ namespace VRKeyboard.App.Tests
             SettingsPageLayout privacy = TestSettingsLayout.Page(Privacy, 0);
             SettingsPageLayout grip = TestSettingsLayout.Page(Grip, 1);
             SettingsConsentLayout consent = TestSettingsLayout.Consent(privacy.Toggles[0].Item);
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { privacy }, TestSettingsLayout.Reset,
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { privacy }, TestSettingsLayout.Reset, TestSettingsLayout.Quit,
                 Array.Empty<SettingsConsentLayout>()));
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { grip }, TestSettingsLayout.Reset,
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { grip }, TestSettingsLayout.Reset, TestSettingsLayout.Quit,
                 new[] { consent }));
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { privacy }, TestSettingsLayout.Reset,
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { privacy }, TestSettingsLayout.Reset, TestSettingsLayout.Quit,
                 new[] { consent, consent }));
         }
 
@@ -979,6 +994,33 @@ namespace VRKeyboard.App.Tests
             Assert.IsNull(_form.DraggingItem);
             Assert.AreEqual(1, _committed.Count);
             Assert.AreEqual(KeyboardPlacement.WidthRange.Min, _committed[0].Placement.WidthMeters);
+        }
+
+        [Test]
+        public void 終了を押して離すと終了を求め_設定は確定しない()
+        {
+            int quit = 0;
+            _form.QuitRequested += () => quit++;
+            _form.PointerDown(_layout.Quit.center);
+            Assert.AreEqual(SettingsHit.Quit, _form.Pressed);
+            Assert.AreEqual(0, quit, "押しただけでは求めない");
+
+            _form.PointerUp(_layout.Quit.center);
+            Assert.AreEqual(1, quit);
+            Assert.AreEqual(0, _changed.Count);
+            Assert.AreEqual(0, _committed.Count);
+        }
+
+        [Test]
+        public void 終了を押した後に外で離すと終了を求めない()
+        {
+            int quit = 0;
+            _form.QuitRequested += () => quit++;
+            _form.PointerDown(_layout.Quit.center);
+            _form.PointerUp(_layout.Reset.center);
+            _form.PointerDown(_layout.Quit.center);
+            _form.PointerLeave();
+            Assert.AreEqual(0, quit);
         }
 
         [Test]

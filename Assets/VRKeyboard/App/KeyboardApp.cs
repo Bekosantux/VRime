@@ -183,6 +183,8 @@ namespace VRKeyboard.App
                 debugPlatform?.DebugHaptics, debugPlatform != null ? _settingsForm : null);
 #endif
 
+            _settingsForm.QuitRequested += OnQuitRequested;
+
             // 開発用のキーボードの入力は前面のウィンドウにしか届かないため、その環境では前面を移さない。
             if (loaded.Settings.VRChat.FocusOnStartup && !_platform.RequiresOwnWindowFocus) FocusVRChat();
         }
@@ -325,8 +327,10 @@ namespace VRKeyboard.App
             }
         }
 
+        // 環境（SteamVR の終了）と設定画面の「アプリを終了」の両方から呼ばれる。
         void OnQuitRequested()
         {
+            if (_quitting) return;
             _quitting = true;
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
