@@ -50,34 +50,11 @@ namespace VRKeyboard.App.View
         }
 
         // 幅は文字の長さに合わせる。上限を超えるときは、収まる長さまで切って省略記号を付ける。
-        // TextMeshPro の省略記号（Ellipsis）は、レイアウトで幅が決まる文字では文字が描かれなくなる（Unity 6.3 で確認）ため使わない。
         void Fit(string text)
         {
             float padding = _layout.padding.horizontal;
-            float limit = _maxWidth - padding;
-            _label.text = text;
-            if (_label.preferredWidth > limit)
-            {
-                int low = 0;
-                int high = text.Length - 1;
-                while (low < high)
-                {
-                    int mid = (low + high + 1) / 2;
-                    _label.text = Truncate(text, mid);
-                    if (_label.preferredWidth <= limit) low = mid;
-                    else high = mid - 1;
-                }
-                _label.text = Truncate(text, low);
-            }
-            _size.minWidth = _label.preferredWidth + padding;
+            _size.minWidth = TextFitting.Fit(_label, text, _maxWidth - padding) + padding;
             _size.preferredWidth = _size.minWidth;
-        }
-
-        static string Truncate(string text, int length)
-        {
-            // サロゲートペアを分断しない。
-            if (length > 0 && char.IsHighSurrogate(text[length - 1])) length--;
-            return text.Substring(0, length) + "…";
         }
     }
 }

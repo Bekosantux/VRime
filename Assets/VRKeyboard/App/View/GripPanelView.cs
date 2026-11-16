@@ -1,5 +1,4 @@
 using System;
-using TMPro;
 using UnityEngine;
 using VRKeyboard.Core.Grip;
 using VRKeyboard.Core.Input;
@@ -30,11 +29,11 @@ namespace VRKeyboard.App.View
         [Tooltip("右のパネルの 3×3 のセル。左上から行ごとの順。")]
         [SerializeField] GripPanelCell[] _rightCells = new GripPanelCell[CellCount];
 
-        [Tooltip("左のパネルの役割（「左手 子音」など）。")]
-        [SerializeField] TextMeshProUGUI _leftCaption;
+        [Tooltip("左のパネルの見出し（手の名前と役割）。")]
+        [SerializeField] GripPanelCaption _leftCaption;
 
-        [Tooltip("右のパネルの役割（「右手 母音」など）。")]
-        [SerializeField] TextMeshProUGUI _rightCaption;
+        [Tooltip("右のパネルの見出し（手の名前と役割）。")]
+        [SerializeField] GripPanelCaption _rightCaption;
 
         [Tooltip("かな・英字・数字の順。")]
         [SerializeField] GripPanelChip[] _pageChips = new GripPanelChip[PageCount];
@@ -46,8 +45,8 @@ namespace VRKeyboard.App.View
         Hand _consonantHand;
         GripPanelCell[] _consonantCells;
         GripPanelCell[] _vowelCells;
-        TextMeshProUGUI _consonantCaption;
-        TextMeshProUGUI _vowelCaption;
+        GripPanelCaption _consonantCaption;
+        GripPanelCaption _vowelCaption;
 
         public void Validate()
         {
@@ -61,6 +60,8 @@ namespace VRKeyboard.App.View
             SceneChecks.Require(_caseChip, this, nameof(_caseChip));
             foreach (GripPanelCell cell in _leftCells) cell.Validate();
             foreach (GripPanelCell cell in _rightCells) cell.Validate();
+            _leftCaption.Validate();
+            _rightCaption.Validate();
             foreach (GripPanelChip chip in _pageChips) chip.Validate();
             _widthChip.Validate();
             _caseChip.Validate();
@@ -79,6 +80,8 @@ namespace VRKeyboard.App.View
 
             foreach (GripPanelCell cell in _leftCells) cell.Initialize(theme);
             foreach (GripPanelCell cell in _rightCells) cell.Initialize(theme);
+            _leftCaption.Initialize(theme);
+            _rightCaption.Initialize(theme);
             foreach (GripPanelChip chip in _pageChips) chip.Initialize(theme);
             _widthChip.Initialize(theme);
             _caseChip.Initialize(theme);
@@ -125,10 +128,8 @@ namespace VRKeyboard.App.View
                 }
             }
 
-            string consonantRole = view.ConsonantFunctionPage ? "機能" : "子音";
-            string vowelRole = view.VowelFunctionPage ? "機能" : "母音";
-            SetCaption(_consonantCaption, _consonantHand, consonantRole);
-            SetCaption(_vowelCaption, _consonantHand.Opposite(), vowelRole);
+            _consonantCaption.Set(_consonantHand, view.ConsonantFunctionPage ? "機能" : "子音", view.ConsonantFunctionPage);
+            _vowelCaption.Set(_consonantHand.Opposite(), view.VowelFunctionPage ? "機能" : "母音", view.VowelFunctionPage);
 
             RefreshChips(input, view.Page);
         }
@@ -144,12 +145,6 @@ namespace VRKeyboard.App.View
             _widthChip.Set(input.IsFullWidth ? "全角" : "半角", widthApplies ? GripChipState.Active : GripChipState.Inactive);
             bool caseApplies = page == GripPage.Alpha;
             _caseChip.Set(input.IsUpperCase ? "ABC" : "abc", caseApplies ? GripChipState.Active : GripChipState.Inactive);
-        }
-
-        static void SetCaption(TextMeshProUGUI caption, Hand hand, string role)
-        {
-            string text = (hand == Hand.Left ? "左手 " : "右手 ") + role;
-            if (caption.text != text) caption.text = text;
         }
     }
 }

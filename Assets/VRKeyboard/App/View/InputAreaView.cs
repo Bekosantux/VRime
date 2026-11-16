@@ -9,6 +9,8 @@ namespace VRKeyboard.App.View
 {
     /// <summary>
     /// 入力欄（確定済みの文字列・未確定のかな・キャレット）と、その下の状態行（通知・送信先・文字数）。
+    /// 状態行は左から、通知の札（通知があるときだけ）・「送信先」のラベルと送信先の名前を詰めて並べ、文字数を右端に置く。
+    /// 通知と送信先の名前は、収まらなければ切り詰める。
     /// 文字数は、上限があれば「文字数 / 上限」、なければ「文字数 文字」と表示する。
     /// 未確定のかなは色と下線で確定済みと区別する。行数が入力欄を超えるときは、キャレットの行が見える位置までずらす。
     /// </summary>
@@ -23,7 +25,20 @@ namespace VRKeyboard.App.View
         [Tooltip("キャレット。_text の子。幅はシーンの値を使い、位置と高さは文字に合わせる。")]
         [SerializeField] RectTransform _caret;
 
+        [Tooltip("状態行。通知の札・送信先・文字数はこの直下に置き、位置と幅はこのビューが決める（高さはシーンの値を使う）。")]
+        [SerializeField] RectTransform _statusRow;
+
+        [Tooltip("通知の札（背景）。通知が空の間は隠す。")]
+        [SerializeField] RectTransform _noticeBadge;
+
+        [Tooltip("通知の文字。_noticeBadge の子で、左右に余白を空けて札いっぱいに広げる（その余白を札の幅に足す）。")]
         [SerializeField] TextMeshProUGUI _notice;
+
+        [Tooltip("通知の札の最大の幅。超える通知は切り詰める。")]
+        [SerializeField] float _noticeMaxWidth = 520f;
+
+        [Tooltip("「送信先」のラベル（文字はシーンで決める）。")]
+        [SerializeField] TextMeshProUGUI _targetLabel;
 
         [Tooltip("送信先の名前。")]
         [SerializeField] TextMeshProUGUI _target;
@@ -31,9 +46,16 @@ namespace VRKeyboard.App.View
         [Tooltip("文字数（上限があれば上限も）。")]
         [SerializeField] TextMeshProUGUI _length;
 
+        [Tooltip("通知の札と送信先の間、送信先と文字数の間。")]
+        [SerializeField] float _statusGap = 14f;
+
+        [Tooltip("「送信先」のラベルと名前の間。")]
+        [SerializeField] float _targetLabelGap = 10f;
+
         KeyboardTheme _theme;
         RectTransform _textRect;
         float _caretWidth;
+        float _noticePadding;
         string _compositionOpenTag;
         readonly StringBuilder _builder = new StringBuilder();
 
@@ -42,9 +64,23 @@ namespace VRKeyboard.App.View
             SceneChecks.Require(_viewport, this, nameof(_viewport));
             SceneChecks.Require(_text, this, nameof(_text));
             SceneChecks.Require(_caret, this, nameof(_caret));
+            SceneChecks.Require(_statusRow, this, nameof(_statusRow));
+            SceneChecks.Require(_noticeBadge, this, nameof(_noticeBadge));
             SceneChecks.Require(_notice, this, nameof(_notice));
+            SceneChecks.Require(_targetLabel, this, nameof(_targetLabel));
             SceneChecks.Require(_target, this, nameof(_target));
             SceneChecks.Require(_length, this, nameof(_length));
+            RequireParent(_noticeBadge, _statusRow);
+            RequireParent(_notice.rectTransform, _noticeBadge);
+            RequireParent(_targetLabel.rectTransform, _statusRow);
+            RequireParent(_target.rectTransform, _statusRow);
+            RequireParent(_length.rectTransform, _statusRow);
+            if (!(_noticeMaxWidth > 0f))
+                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_noticeMaxWidth) + " が正ではありません: " + _noticeMaxWidth);
+            if (_statusGap < 0f)
+                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_statusGap) + " が負です: " + _statusGap);
+            if (_targetLabelGap < 0f)
+                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_targetLabelGap) + " が負です: " + _targetLabelGap);
             if (_text.transform.parent != _viewport)
                 throw new InvalidOperationException(SceneChecks.PathOf(_text.transform) + " は " + SceneChecks.PathOf(_viewport) + " の直下に置く必要があります。");
             if (_caret.parent != _text.transform)
@@ -59,6 +95,12 @@ namespace VRKeyboard.App.View
             _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
             _textRect = _text.rectTransform;
             _caretWidth = _caret.sizeDelta.x;
+            RectTransform noticeRect = _notice.rectTransform;
+            if (noticeRect.anchorMin != Vector2.zero || noticeRect.anchorMax != Vector2.one)
+                throw new InvalidOperationException(SceneChecks.PathOf(noticeRect) + " は " + SceneChecks.PathOf(_noticeBadge) + " いっぱいに広げる（アンカーを 0〜1 にする）必要があります。");
+            _noticePadding = noticeRect.offsetMin.x - noticeRect.offsetMax.x;
+            if (!(_noticeMaxWidth > _noticePadding))
+                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_noticeMaxWidth) + " が通知の文字の左右の余白より狭いです。");
             _compositionOpenTag = "<color=#" + ColorUtility.ToHtmlStringRGBA(theme.Composition) + "><u>";
         }
 
@@ -67,11 +109,44 @@ namespace VRKeyboard.App.View
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (target == null) throw new ArgumentNullException(nameof(target));
             RefreshText(session);
-
-            if (_notice.text != session.Notice) _notice.text = session.Notice;
-            string targetText = "送信先: " + target.Name;
-            if (_target.text != targetText) _target.text = targetText;
             RefreshLength(session);
+            LayoutStatusRow(session.Notice, target.Name);
+        }
+
+        void LayoutStatusRow(string notice, string targetName)
+        {
+            float rowWidth = _statusRow.rect.width;
+            float rowHeight = _statusRow.rect.height;
+            float x = 0f;
+
+            bool hasNotice = notice.Length != 0;
+            if (_noticeBadge.gameObject.activeSelf != hasNotice) _noticeBadge.gameObject.SetActive(hasNotice);
+            if (hasNotice)
+            {
+                float badgeWidth = TextFitting.Fit(_notice, notice, _noticeMaxWidth - _noticePadding) + _noticePadding;
+                float badgeHeight = _noticeBadge.rect.height;
+                UiRects.Place(_noticeBadge, x, (rowHeight - badgeHeight) / 2f, badgeWidth, badgeHeight);
+                x += badgeWidth + _statusGap;
+            }
+
+            float lengthWidth = _length.preferredWidth;
+            UiRects.Place(_length.rectTransform, rowWidth - lengthWidth, 0f, lengthWidth, rowHeight);
+
+            float labelWidth = _targetLabel.preferredWidth;
+            UiRects.Place(_targetLabel.rectTransform, x, 0f, labelWidth, rowHeight);
+            x += labelWidth + _targetLabelGap;
+
+            // 通知が長いと名前の場所が残らないことがある。そのときは名前を出さない。
+            float available = rowWidth - lengthWidth - _statusGap - x;
+            float targetWidth = available > 0f ? TextFitting.Fit(_target, targetName, available) : 0f;
+            if (!(available > 0f)) _target.text = string.Empty;
+            UiRects.Place(_target.rectTransform, x, 0f, targetWidth, rowHeight);
+        }
+
+        static void RequireParent(RectTransform child, RectTransform parent)
+        {
+            if (child.parent != parent)
+                throw new InvalidOperationException(SceneChecks.PathOf(child) + " は " + SceneChecks.PathOf(parent) + " の直下に置く必要があります。");
         }
 
         void RefreshLength(KeyboardSession session)

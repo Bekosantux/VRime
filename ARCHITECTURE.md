@@ -87,9 +87,10 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `OverlayPlacement` | `KeyboardPlacement`（SPEC 4.1）を 3×4 の行列にする。基準は盤面の中心（テクスチャの中心ではない）で、そのずれは `KeyboardView.BoardCenterOffset`（シーンの盤面の位置から求める）を受け取る |
 | | `OpenVRErrors` | `EVRInputError` / `EVROverlayError` の検査。失敗は操作名とエラー名を含む例外にする |
 | `View/` | `KeyboardView` | キーボードの表示の根（キャンバスに置く）。`RefreshIfChanged()` で `ViewVersion` か `ForegroundWindowMonitor.Version` が変わったときだけ各部を更新する。`BoardCenterOffset` は盤面（`_board`）の中心のテクスチャの中心からのずれ |
-| | `GripPanelView` / `GripPanelCell` / `GripPanelChip` | グリップのパネル（左右 3×3 のセル・役割の見出し・ページ・全半角・大小の札）。子音を担当する手に応じて、左右のどちらを子音側にするかを決める |
-| | `InputAreaView` | 入力欄（確定・未確定・キャレット）と状態行（通知・送信先・文字数）。キャレットは文字の配置から位置と高さを決め、行が溢れたら文字をずらす |
-| | `CandidateAreaView` / `CandidateColumn` / `CandidateLabel` | 候補欄（応答待ち・文節と候補・失敗の帯）。文節の列と候補の行はシーンの雛形を複製し、雛形は起動時に非表示にする |
+| | `GripPanelView` / `GripPanelCell` / `GripPanelChip` / `GripPanelCaption` | グリップのパネル（左右 3×3 のセル・見出し・ページ・全半角・大小の札）。子音を担当する手に応じて、左右のどちらを子音側にするかを決める。見出し（`GripPanelCaption`）は手の名前と役割を別の文字に持ち、機能ページの間は役割の色を変える。2つの文字の並びと寄せはシーンの `HorizontalLayoutGroup` で決める |
+| | `InputAreaView` | 入力欄（確定・未確定・キャレット）と状態行（通知・送信先・文字数）。キャレットは文字の配置から位置と高さを決め、行が溢れたら文字をずらす。状態行は表示を更新するたびにコードで並べる（通知の札は文字に合わせた幅で、通知が空なら隠す。続けて「送信先」のラベルと名前、右端に文字数）。通知と名前は残りの幅に収まるよう `TextFitting` で切る |
+| | `CandidateAreaView` / `CandidateColumn` / `CandidateLabel` | 候補欄（応答待ち・文節と候補・失敗の帯）。文節の列と候補の行はシーンの雛形を複製し、雛形は起動時に非表示にする。文節の並び（`_row`）は左下を基準にし、下端を入力欄の直上にそろえる（候補の数で上端が動く）。シーンでの位置がずらしていないときの位置で、左の余白と同じ幅を右にも空ける。失敗の帯は配置を確定させた後、文節の並びの上に置く。列のカードの地と影は `LayoutElement.ignoreLayout` の子として列の先頭に置く（子は親より後に描かれるため、影を列自身の `Image` にはできない）。見出しと候補の間の区切りは候補を表示している列だけに出す |
+| | `TextFitting` | 1行の文字を幅に収め、収まらなければ切って省略記号を付ける（候補欄・失敗の帯・通知・送信先の名前で使う） |
 | | `SettingsView` / `SettingsPage` / `SettingsTab` | 設定画面（キャンバスに置く）。`SettingsView` はページを `SettingsCatalog.Categories` と同じ順に持ち、`CreateLayout` でシーンの矩形から `SettingsLayout` を作る。`SettingsPage` は `_key` でカテゴリと対応し、行を子に持つ。選んでいるページだけを `SetActive(true)` にし、ページどうしは同じ場所に重ねる。タブはページを隠しても見えるよう、ページの外（キャンバスの直下）に置く。`SettingsForm.Version` が変わったときだけ更新する。操作は持たない |
 | | `SettingsConsentDialog` | 同意が必要な項目の同意の画面（注意事項の文章・同意と取り消しの `SettingsButton`・背景）。`_key` で項目と対応し、`SettingsForm.ConsentItem` がその項目の間だけ表示する。ページの上に描くため、キャンバスの直下でページより後に置く |
 | | `SettingsRow` / `SettingsToggleRow` / `SettingsButton` | 数値の項目の行（［−］・スライダー・［＋］・値）と、オン・オフの項目の行（スイッチ・値。行の矩形全体が当たり判定）。`_key` で `SettingsCatalog` の項目と対応させる |
@@ -125,7 +126,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 - 描画は `KeyboardApp.Update` が `KeyboardView.RefreshIfChanged()` で `ViewVersion` の変化を検出したときだけ `OverlayRenderTarget.Render()` を呼ぶ。キーボードは開いている間と位置の確認用に表示している間（設定タブで「表示位置」のカテゴリを選んでいる間）だけ描き、表示し始めたフレームでは版が変わっていなくても描く。設定画面は `SettingsView.RefreshIfChanged()` が true のときに描く。
 - `Render()` は `Canvas.ForceUpdateCanvases()` でレイアウトと TMP のメッシュを確定してから、`RenderPipeline.SubmitRenderRequest`（URP の `SingleCameraRequest`）で無効なカメラを 1回描く。`Camera.Render()` と違い、出力先を要求に含められ、対応していないパイプラインでは例外にできる。
 - 描画先ごとのレイヤー `VRKeyboardOverlay`（キーボード）と `VRKeyboardSettings`（設定画面）を Tags and Layers に登録している。各カメラは自分のレイヤーだけを映す（同じ位置にある別の描画先の uGUI を映さないため）。TMP の `Mobile/Distance Field` シェーダーは Always Included Shaders に登録している（ビルドで除外されないため）。
-- TMP の `Ellipsis` は、レイアウトで幅が決まる文字では描かれなくなるため、候補欄は文字列を自前で切って省略記号を付ける。
+- TMP の `Ellipsis` は、レイアウトで幅が決まる文字では描かれなくなるため、幅に収める文字は `TextFitting` で切って省略記号を付ける。
 - シーン `Assets/VRKeyboard/Scenes/Main.unity` を Build Settings の先頭に登録している。
 
 **シーンの uGUI**
@@ -133,6 +134,8 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 - `Main.unity` は `KeyboardApp` と、2つの描画先 `KeyboardOverlay`（キャンバス 1024×1024）・`SettingsOverlay`（1280×872）で構成する。キャンバスの大きさがテクスチャのピクセル数になり、拡大率は 1 のままにする。2つの描画先は互いに離して置く（エディターで重ならないようにするため。描画はレイヤーで分かれる）。
 - 描画先の下のオブジェクトはすべて描画先のレイヤーに置く。部品を足すときもレイヤーを合わせる（違えば起動時の検証で例外）。
 - 配置・大きさ・固定の色・項目名などのラベルはシーンで調整する。状態で変わる色と大きさは `KeyboardTheme`、文字の内容は各ビューが書き換える。シーンの文字には仮の文字を入れてある。
+- キーボードの角丸と影は `Assets/VRKeyboard/UI/Sprites/` の 9 スライスのスプライト（自作）を `Image`（Sliced）に使う。スプライトは白（影も白）で作り、色は `Image.color` で付ける（状態で変わる色は `KeyboardTheme` から入る）。Pixels Per Unit 100・Full Rect で、キャンバスの `referencePixelsPerUnit` も 100 のため、スプライトの 1px がテクスチャの 1px になる。`ui_round_32`（盤面）・`ui_ring_32`（盤面の縁）・`ui_round_20`（入力欄・候補のカード）・`ui_round_16`（セル・札の地）・`ui_round_12`（札・見出し・候補・帯・点灯の帯）・`ui_shadow_20`（浮いた部品の影。矩形は部品より各辺 24 大きく、下へ 6 ずらす）。境界より低い矩形（点灯の帯の高さ 6）では Unity が境界を縮めるため、両端が半円になる。
+- プロジェクトの色空間は Linear のため、半透明の色は線形空間で混ざる。不透明度の低い明るい色は、ガンマ空間で混ぜる場合（デザインの CSS）よりかなり明るくなる（白 6% の縁で約 2 倍）。下地が決まっている部品（盤面の縁・通知の札・候補の区切り）は、混ぜた後の色を不透明で指定する。
 - 文字のフォントは2つの編集用のフォントアセットのどちらかにする。リッチテキストは入力欄の文字だけが使う。
 - `KeyboardApp.ValidateScene()` は EditMode テスト（`MainSceneTests`）でも実行する。シーンを変えたらテストで確かめる。
 
