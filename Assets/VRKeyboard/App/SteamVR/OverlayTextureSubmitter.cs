@@ -8,7 +8,7 @@ namespace VRKeyboard.App.SteamVR
 {
     /// <summary>
     /// オーバーレイのテクスチャを、Unity のレンダースレッドで SteamVR に渡す。
-    /// <c>SetOverlayTexture</c> は、呼び出したスレッドの上で、テクスチャの Direct3D11 デバイスのイミディエイトコンテキストを使ってコピーを行う。
+    /// <c>SetOverlayTexture</c> は、呼び出したスレッドの上で、テクスチャの Direct3D11 デバイスのイミディエイトコンテキストを使ってコピーする。
     /// イミディエイトコンテキストは複数のスレッドから同時に使えず、Unity はこれをレンダースレッドで使っている。
     /// そのため、メインスレッドから呼ぶとコンテキストを同時に使うことになり、GPU ドライバー内でクラッシュする。
     /// 渡す処理は <see cref="GL.IssuePluginEvent(IntPtr, int)"/> でレンダースレッドへ依頼する。

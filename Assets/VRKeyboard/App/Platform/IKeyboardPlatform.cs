@@ -7,7 +7,7 @@ namespace VRKeyboard.App.Platform
     /// <summary>
     /// 実行環境（OpenVR 実機、PC のキーボードによる開発用）への接続。
     /// 入力元・振動の出力先に加えて、環境からのイベント・ダッシュボードと設定画面の状態・開閉に伴う表示と入力の切り替えをまとめる。
-    /// <see cref="KeyboardApp"/> は環境の違いを知らず、この境界だけを通す。
+    /// <see cref="KeyboardApp"/> は環境の違いによる分岐を持たず、この境界だけを通す。
     /// </summary>
     public interface IKeyboardPlatform : IDisposable
     {
@@ -35,10 +35,10 @@ namespace VRKeyboard.App.Platform
         /// </summary>
         bool RequiresOwnWindowFocus { get; }
 
-        /// <summary>毎フレームの最初に呼ぶ。環境のイベントの処理と、状態の読み取りを行う。</summary>
+        /// <summary>毎フレームの最初に呼ぶ。環境のイベントを処理し、状態を読み取る。</summary>
         void BeginFrame();
 
-        /// <summary>キーボードの開閉が変わった。オーバーレイの表示切り替えと入力の優先度の切り替えを行う。</summary>
+        /// <summary>キーボードの開閉が変わった。オーバーレイの表示と入力の優先度を切り替える。</summary>
         void OnOpenChanged(bool isOpen);
 
         /// <summary>

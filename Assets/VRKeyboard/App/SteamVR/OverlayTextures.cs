@@ -17,7 +17,7 @@ namespace VRKeyboard.App.SteamVR
             return nativeTexture;
         }
 
-        /// <summary>RenderTexture の内容を正しく表示するためのオーバーレイの設定を行う。</summary>
+        /// <summary>RenderTexture の内容を正しく表示するよう、オーバーレイを設定する。</summary>
         public static void Configure(ulong handle)
         {
             CVROverlay overlay = OpenVR.Overlay;

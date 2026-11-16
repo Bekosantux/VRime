@@ -1,7 +1,7 @@
 namespace VRKeyboard.Core.Input
 {
     /// <summary>
-    /// 片手のコントローラーの生の状態。値は SteamVR のアクション（SPEC 5.6）ごとに持ち、物理的なボタンは知らない。
+    /// 片手のコントローラーの生の状態。値は SteamVR のアクション（SPEC 5.6）ごとに持ち、物理的なボタンの情報は持たない。
     /// トリガーを押したかの判定と、押した瞬間（エッジ）の検出は Core 側で行う。
     /// </summary>
     public readonly struct HandState

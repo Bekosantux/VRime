@@ -44,9 +44,9 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | 種別 | クラス | 責務 |
 |---|---|---|
 | 状態機械 | `KeyboardSession` | 全体の状態機械。開閉・ダッシュボードによる一時停止・モード（入力 / 応答待ち / 変換中）を持ち、操作を `GripInputMethod` と `ConversionController` に振り分ける。しきい値・連続入力の時間・変換を使えるかの変更は `ApplySettings` で次のフレームから反映する（子音の手・同時押しの判定時間の変更は `NotSupportedException`）。文字数の上限は送信先に合わせて App が `SetLengthLimit` で毎フレーム渡し、上限を超えている間は確定キーで送信を要求しない。パネルの切り替えの押下エッジは常に追跡し、開いた直後・変換の開始・取り消しの直後に押していたパネルの切り替えは離すまで無視する。両手の展開・収納を押している間はトリガーを受け付けない。変換結果は `CompleteConversion` / `FailConversion` で受け取り、リクエスト ID が古いものは捨てる |
-| | `IKeyboardEffects` | Core から App への通知（開閉・振動・変換の要求・送信の要求）。Core は結果をここへ出すだけで、通信や描画は知らない。送信の要求（`OnSendRequested`）だけは成否を `bool` で同期的に返し、`true` のときだけ Core が入力バッファを空にする（失敗時は内容を残して `Invalid` の振動を出す） |
+| | `IKeyboardEffects` | Core から App への通知（開閉・振動・変換の要求・送信の要求）。Core は結果をここへ出すだけで、通信や描画の処理は持たない。送信の要求（`OnSendRequested`）だけは成否を `bool` で同期的に返し、`true` のときだけ Core が入力バッファを空にする（失敗時は内容を残して `Invalid` の振動を出す） |
 | | `KeyboardSettings` | 設定値（子音の手・スティックとトリガーのしきい値・連続入力の開始までの時間と間隔・同時押しの窓・変換を使えるか）。変換を使えない間、`GripInputMethod` は「変換」を無効のセルにし、押されても要求を出さずに `Invalid` の振動を返す。しきい値は 1 つで、倒した・押したと中央に戻った・離したの両方の判定に使う。不正な値は例外 |
-| 入力 | `ControllerFrame` / `HandState` / `StickValue` | 1フレーム分の両手の状態。SteamVR のアクション（SPEC 5.6）ごとに、キーの選択（スティック）・キーの入力（トリガーの引き量 0〜1）・展開・収納・パネルの切り替えを持つ。物理的なボタンは知らない（既定のバインドではグリップが展開・収納とパネルの切り替えの両方を押す） |
+| 入力 | `ControllerFrame` / `HandState` / `StickValue` | 1フレーム分の両手の状態。SteamVR のアクション（SPEC 5.6）ごとに、キーの選択（スティック）・キーの入力（トリガーの引き量 0〜1）・展開・収納・パネルの切り替えを持つ。物理的なボタンの情報は持たない（既定のバインドではグリップが展開・収納とパネルの切り替えの両方を押す） |
 | | `EdgeTracker` / `FrameEdges` | 前フレームとの差から、トリガーとパネルの切り替えの押下エッジを出す。トリガーは引き量がしきい値以上なら押したとみなす |
 | | `KeyRepeater` | 長押しによる連続入力の時刻管理（どの手のトリガーか・次に繰り返す時刻）。1回の `Poll` で繰り返すのは1回までで、遅れた分は捨てる |
 | 開閉 | `DoubleChordDetector` | 両手の展開・収納の2回続けての同時押しを検出する（時刻は引数で受け取り、時計に依存しない） |
@@ -135,14 +135,14 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 - 描画先の下のオブジェクトはすべて描画先のレイヤーに置く。部品を足すときもレイヤーを合わせる（違えば起動時の検証で例外）。
 - 配置・大きさ・固定の色・項目名などのラベルはシーンで調整する。状態で変わる色と大きさは `KeyboardTheme`、文字の内容は各ビューが書き換える。シーンの文字には仮の文字を入れてある。
 - キーボードの角丸と影は `Assets/VRKeyboard/UI/Sprites/` の 9 スライスのスプライト（自作）を `Image`（Sliced）に使う。スプライトは白（影も白）で作り、色は `Image.color` で付ける（状態で変わる色は `KeyboardTheme` から入る）。Pixels Per Unit 100・Full Rect で、キャンバスの `referencePixelsPerUnit` も 100 のため、スプライトの 1px がテクスチャの 1px になる。`ui_round_32`（盤面）・`ui_ring_32`（盤面の縁）・`ui_round_20`（入力欄・候補のカード）・`ui_round_16`（セル・札の地）・`ui_round_12`（札・見出し・候補・帯・点灯の帯）・`ui_shadow_20`（浮いた部品の影。矩形は部品より各辺 24 大きく、下へ 6 ずらす）。境界より低い矩形（点灯の帯の高さ 6）では Unity が境界を縮めるため、両端が半円になる。
-- プロジェクトの色空間は Linear のため、半透明の色は線形空間で混ざる。不透明度の低い明るい色は、ガンマ空間で混ぜる場合（デザインの CSS）よりかなり明るくなる（白 6% の縁で約 2 倍）。下地が決まっている部品（盤面の縁・通知の札・候補の区切り）は、混ぜた後の色を不透明で指定する。
+- プロジェクトの色空間は Linear のため、半透明の色は線形空間で混ざる。不透明度の低い明るい色はガンマ空間で混ぜる場合（デザインの CSS）より大きく明るくなる（白 6% の縁で約 2 倍）。下地が決まっている部品（盤面の縁・通知の札・候補の区切り）は、混ぜた後の色を不透明で指定する。
 - 文字のフォントは2つの編集用のフォントアセットのどちらかにする。リッチテキストは入力欄の文字だけが使う。
 - `KeyboardApp.ValidateScene()` は EditMode テスト（`MainSceneTests`）でも実行する。シーンを変えたらテストで確かめる。
 
 **入力元の選択と開閉の流れ**
 
 - 環境の選択は `KeyboardApp.CreatePlatform` だけで行う。ビルドは常に `OpenVRPlatform`。エディターは `_editorDevice`（`DebugKeyboard` が既定 / `OpenVR`）に従う。OpenVR の初期化に失敗したときは例外にし、`Awake` で `enabled = false` にして毎フレームの例外を防ぐ（別の環境へ切り替えない）。
-- 開閉は Core の `IKeyboardEffects.OnOpenChanged` → `KeyboardApp` → `IKeyboardPlatform.OnOpenChanged` と流れ、OpenVR では `OpenVRControllerSource.IsExclusive` とオーバーレイの `Show` / `Hide` が切り替わる（位置の確認用に表示している間は閉じていてもオーバーレイを表示したままにする）。ダッシュボードの状態は、毎フレーム `IsDashboardHoldingInput` を `KeyboardSession.SetDashboardVisible` へ渡し、手動で閉じるのと同じ経路で閉じる（SPEC 4.4）。
+- 開閉は Core の `IKeyboardEffects.OnOpenChanged` → `KeyboardApp` → `IKeyboardPlatform.OnOpenChanged` と流れ、OpenVR では `OpenVRControllerSource.IsExclusive` とオーバーレイの `Show` / `Hide` が切り替わる（位置の確認用に表示している間は閉じていてもオーバーレイを表示したままにする）。ダッシュボードの状態は毎フレーム `IsDashboardHoldingInput` を `KeyboardSession.SetDashboardVisible` へ渡し、手動で閉じるのと同じ経路で閉じる（SPEC 4.4）。
 - 毎フレームの順序は `BeginFrame`（イベント処理と設定タブの操作。終了を求められたら以降の API を呼ばない）→ `ForegroundWindowMonitor.Update` と `SetLengthLimit` → `SetDashboardVisible` → `Read` → `Tick` → 描画（`Rendered` でテクスチャをオーバーレイへ渡す）。
 - エディターで再生を繰り返しても接続できるよう、終了時はオーバーレイを破棄してから `VR_Shutdown` を呼ぶ。`OpenVR.Init` が管理側のインターフェースを作り直すため、次の再生で再初期化できる。ハンドルとマニフェストは接続ごとに取得・登録し直す。
 

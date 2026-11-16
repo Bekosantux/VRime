@@ -15,9 +15,9 @@ namespace VRKeyboard.App.Output
 
     /// <summary>
     /// プロセスのトークンの昇格状態（TokenElevation）を調べる。
-    /// 昇格した（管理者権限の）プロセスへの SendInput は UIPI により黙って捨てられ、戻り値でも失敗を検出できない。
+    /// 昇格した（管理者権限の）プロセスへの SendInput は UIPI により気づかないうちに捨てられ、戻り値でも失敗を検出できない。
     /// そのため送信前に対象の状態を調べる。昇格したプロセスのトークンは、昇格していない呼び出し側からは
-    /// OpenProcessToken がアクセス拒否になることがあり、その場合も「送れない」側に倒す。
+    /// OpenProcessToken がアクセス拒否になることがあり、その場合も「送れない」と判定する。
     /// </summary>
     internal static class ProcessElevation
     {
