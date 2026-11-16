@@ -33,6 +33,7 @@ namespace VRKeyboard.App.Native
         public static readonly IntPtr HWND_MESSAGE = new IntPtr(-3);
 
         public const uint GW_OWNER = 4;
+        public const int SW_HIDE = 0;
         public const int SW_RESTORE = 9;
 
         public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
@@ -146,6 +147,9 @@ namespace VRKeyboard.App.Native
 
         [DllImport("user32.dll")]
         public static extern IntPtr GetWindow(IntPtr hWnd, uint command);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern int GetClassName(IntPtr hWnd, StringBuilder className, int maxCount);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]

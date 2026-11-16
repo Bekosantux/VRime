@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using TMPro;
 using UnityEngine;
 using VRKeyboard.App.Conversion;
+using VRKeyboard.App.Native;
 using VRKeyboard.App.Output;
 using VRKeyboard.App.Platform;
 using VRKeyboard.App.Settings;
@@ -31,6 +32,7 @@ namespace VRKeyboard.App
     /// 設定画面で変えた値は、キーボードの動作と表示位置へ随時反映し、確定したときに保存する。
     /// 前面のウィンドウ（<see cref="ForegroundWindowMonitor"/>）を毎フレーム調べ、送信先の表示・文字数の上限・チャットボックスへの入力中の表示を合わせる。
     /// キーボードと設定画面の uGUI はシーンに置き、起動時に検証してから組み立てる（<see cref="ValidateScene"/>）。
+    /// ビルドでは、組み立てが終わった後に Unity のウィンドウを隠す。終了は SteamVR の終了か設定画面の「アプリを終了」で行う。
     /// </summary>
     public sealed class KeyboardApp : MonoBehaviour, IKeyboardEffects
     {
@@ -187,6 +189,12 @@ namespace VRKeyboard.App
 
             // 開発用のキーボードの入力は前面のウィンドウにしか届かないため、その環境では前面を移さない。
             if (loaded.Settings.VRChat.FocusOnStartup && !_platform.RequiresOwnWindowFocus) FocusVRChat();
+
+#if !UNITY_EDITOR
+            // 初期化に失敗したときはウィンドウを残し、異常に気付けるようにするため、最後に隠す（SPEC 3.1）。
+            // VRChat を前面にするより後に行う。前面のウィンドウを持つ間に切り替えれば、Windows に拒まれないため。
+            PlayerWindow.Hide();
+#endif
         }
 
         static void FocusVRChat()

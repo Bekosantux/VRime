@@ -70,7 +70,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 | 場所 | クラス | 責務 |
 |---|---|---|
-| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「環境のイベント（`BeginFrame`）→ 前面のウィンドウの監視と文字数の上限 → ダッシュボードの状態を渡す → 入力を読む → `Tick` → 変換の中止判定 → 位置の確認用の表示（`SetPlacementPreviewVisible`。設定タブの表示中で、選んでいるカテゴリが `ShowsKeyboardPreview` のとき）→ 表示の更新 → `/chatbox/typing` と入力中の文字の表示（どちらも送信先が VRChat の間だけ）→ チャットボックスの送信」を行う。送信は失敗したときだけ通知を入力欄に出す。起動時は設定に従って `VRChatWindow.Focus` を呼ぶ。終了は `IKeyboardPlatform.QuitRequested` と `SettingsForm.QuitRequested` の両方で受け、終了時はチャットボックスの入力中の文字を消す。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない。編集用のフォントアセット・`KeyboardTheme`・2つの描画先とビューはシリアライズフィールドで受け取り、起動時に `ValidateScene()` でシーンの構成を検証する（誤りは場所を示す例外） |
+| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「環境のイベント（`BeginFrame`）→ 前面のウィンドウの監視と文字数の上限 → ダッシュボードの状態を渡す → 入力を読む → `Tick` → 変換の中止判定 → 位置の確認用の表示（`SetPlacementPreviewVisible`。設定タブの表示中で、選んでいるカテゴリが `ShowsKeyboardPreview` のとき）→ 表示の更新 → `/chatbox/typing` と入力中の文字の表示（どちらも送信先が VRChat の間だけ）→ チャットボックスの送信」を行う。送信は失敗したときだけ通知を入力欄に出す。起動時は設定に従って `VRChatWindow.Focus` を呼び、ビルドでは組み立てを終えた後に `PlayerWindow.Hide` でウィンドウを隠す（失敗したときにウィンドウが残るよう、最後に行う。前面を持っているうちに VRChat へ切り替えるため、`Focus` より後に行う）。終了は `IKeyboardPlatform.QuitRequested` と `SettingsForm.QuitRequested` の両方で受け、終了時はチャットボックスの入力中の文字を消す。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない。編集用のフォントアセット・`KeyboardTheme`・2つの描画先とビューはシリアライズフィールドで受け取り、起動時に `ValidateScene()` でシーンの構成を検証する（誤りは場所を示す例外） |
 | `Input/` | `IControllerSource` / `IHapticOutput` | 入力元（1フレーム分の `ControllerFrame` を返す）と振動の出力先の境界。OpenVR 実装はこの境界に差す |
 | | `DebugKeyboardControllerSource` / `DebugHapticOutput` | PC のキーボード（旧 Input Manager）で両手を模す開発用の入力元と、直近の振動を保持して表示に渡す出力先。**キー割り当ては `DebugKeyboardControllerSource.Read` が唯一の定義**（画面への表示は `KeyboardPreview`）。グリップのキーは既定のバインドと同じく、展開・収納とパネルの切り替えの両方を押す |
 | `Platform/` | `IKeyboardPlatform` | 実行環境の境界。`Controller`・`Haptics`・`IsDashboardHoldingInput`・`IsSettingsVisible`・`QuitRequested`、毎フレームの `BeginFrame()`（環境のイベントの処理）、開閉の通知 `OnOpenChanged(bool)`、位置の確認用にキーボードを表示するか `SetPlacementPreviewVisible(bool)`、キーボードの位置の変更 `SetPlacement`、入力を読むのに本アプリのウィンドウが前面である必要があるか（`RequiresOwnWindowFocus`。true の環境では起動時に VRChat を前面にしない）を持つ。実装は `OpenVRPlatform` と `DebugKeyboardPlatform` |
@@ -119,6 +119,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `VRChatWindow` | 所有者のない表示中のトップレベルウィンドウを列挙し、プロセス名が VRChat のもの（判定は `OutputTarget.IsVRChatProcess`）を前面にする。Windows が前面の切り替えを拒んだときは、Alt キーを押している間に切り替えを試す（Alt の押下中は切り替えが許されるため） |
 | | `AppSettings` | App 層の設定値（通知音・Enter・OSC の宛先）。不正な値は例外。設定画面と設定ファイルにはまだ含めていない |
 | `Native/` | `Win32` | Win32 API の宣言（`INPUT` は x64 の 40 バイト前提） |
+| | `PlayerWindow` | Unity のプレイヤーのウィンドウ（自プロセスのクラス名 `UnityWndClass` のトップレベルウィンドウ）を `SW_HIDE` で隠す。ちょうど 1 つ見つからない、または隠した後も表示されていれば例外。エディターでは呼ばない |
 
 - 出力の `TextOutputRouter` は送信先・チャットボックス・デスクトップ送信を、`ForegroundWindowMonitor` はウィンドウの取得元を差し替えられるため、振り分けと監視の規則は Win32 なしでテストできる。クリップボードの復元の規則も `ClipboardRestoreSchedule` に分けてテストする（実際のクリップボードはテストで触らない）。
 
