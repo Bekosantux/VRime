@@ -14,7 +14,7 @@ namespace VRKeyboard.App.SteamVR
         /// <summary>オーバーレイのキー。接続ごとに一意。同じ接続の中で重複すると作成が失敗する。</summary>
         public const string OverlayKey = "vrkeyboard.keyboard";
 
-        public const string FriendlyName = "VR Keyboard";
+        public const string FriendlyName = AppInfo.DisplayName;
 
         readonly OverlayPlacement _placement;
         OverlayTextureSubmitter _submitter;

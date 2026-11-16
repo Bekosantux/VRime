@@ -2,9 +2,18 @@ using UnityEngine;
 
 namespace VRKeyboard.App.View
 {
-    /// <summary>uGUI の配置の補助。座標は基準の左上を原点とし、下向きを正とする（テクスチャのピクセルと同じ向き）。</summary>
+    /// <summary>uGUI と OnGUI の配置の補助。座標は基準の左上を原点とし、下向きを正とする（テクスチャのピクセルと同じ向き）。</summary>
     public static class UiRects
     {
+        /// <summary>縦横比 width : height を保って area に収まる最大の、中央に寄せた矩形。</summary>
+        public static Rect FitInto(Rect area, float width, float height)
+        {
+            float scale = Mathf.Min(area.width / width, area.height / height);
+            float w = width * scale;
+            float h = height * scale;
+            return new Rect(area.x + (area.width - w) / 2f, area.y + (area.height - h) / 2f, w, h);
+        }
+
         /// <summary>rect を親の左上を基準に置く（アンカーとピボットを左上にする）。</summary>
         public static void Place(RectTransform rect, float x, float y, float width, float height)
         {

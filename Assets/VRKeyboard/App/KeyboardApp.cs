@@ -32,7 +32,9 @@ namespace VRKeyboard.App
     /// 設定画面で変えた値は、キーボードの動作と表示位置へ随時反映し、確定したときに保存する。
     /// 前面のウィンドウ（<see cref="ForegroundWindowMonitor"/>）を毎フレーム調べ、送信先の表示・文字数の上限・チャットボックスへの入力中の表示を合わせる。
     /// キーボードと設定画面の uGUI はシーンに置き、起動時に検証してから組み立てる（<see cref="ValidateScene"/>）。
-    /// ビルドでは、組み立てが終わった後に Unity のウィンドウを隠す。終了は SteamVR の終了か設定画面の「アプリを終了」で行う。
+    /// ビルドでは、組み立てが終わった後にタスクトレイにアイコンを置き、Unity のウィンドウを隠す。
+    /// 隠したウィンドウは、トレイの「設定を開く」でデスクトップの設定ウィンドウとして表示する（<see cref="DesktopSettingsWindow"/>）。
+    /// 終了は SteamVR の終了・設定画面の「アプリを終了」・トレイの「終了」で行う。
     /// </summary>
     public sealed class KeyboardApp : MonoBehaviour, IKeyboardEffects
     {
@@ -70,6 +72,9 @@ namespace VRKeyboard.App
         const string KeyboardLayer = "VRKeyboardOverlay";
         const string SettingsLayer = "VRKeyboardSettings";
 
+        /// <summary>タスクトレイのアイコンの <c>StreamingAssets</c> 内の場所。</summary>
+        const string TrayIconRelativePath = "Windows/tray_icon.ico";
+
         KeyboardSession _session;
         IKeyboardPlatform _platform;
         KeyboardFonts _fonts;
@@ -84,7 +89,13 @@ namespace VRKeyboard.App
         TextOutputRouter _router;
         bool _quitting;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // ビルドでだけ作る。エディターでは null のため、未代入の警告（CS0649）になるので抑止する。
+#pragma warning disable CS0649
+        TrayIcon _tray;
+        DesktopSettingsWindow _desktopSettings;
+#pragma warning restore CS0649
+
+#if UNITY_EDITOR
         KeyboardPreview _preview;
 #endif
 
@@ -143,6 +154,8 @@ namespace VRKeyboard.App
             // 非表示のウィンドウでも入力を取りこぼさないよう、VSync を切って一定のフレームレートで回す（SPEC 3.3）。
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = TargetFrameRate;
+            // OnGUI では GUILayout を使わない。使わなければ、レイアウトのためのイベントを省ける。
+            useGUILayout = false;
 
             _settingsStore = new SettingsStore(SettingsStore.DefaultPath);
             SettingsLoadResult loaded = _settingsStore.Load();
@@ -179,7 +192,7 @@ namespace VRKeyboard.App
             // 環境の作成は、描画先が揃ったあとに行う。OpenVR の初期化に失敗した場合は例外にする（別の環境へは切り替えない）。
             _platform = CreatePlatform();
             _platform.QuitRequested += OnQuitRequested;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR
             var debugPlatform = _platform as DebugKeyboardPlatform;
             _preview = new KeyboardPreview(_session, _platform, _keyboardTarget.Texture, _settingsTarget.Texture,
                 debugPlatform?.DebugHaptics, debugPlatform != null ? _settingsForm : null);
@@ -187,11 +200,23 @@ namespace VRKeyboard.App
 
             _settingsForm.QuitRequested += OnQuitRequested;
 
+#if !UNITY_EDITOR
+            // ウィンドウを隠した後も設定を開けて終了できるよう、隠す（Start）前にトレイのアイコンを置く（SPEC 9）。
+            _desktopSettings = new DesktopSettingsWindow(_settingsTarget.Texture, _settingsForm, AppInfo.DisplayName + " の設定");
+            _tray = new TrayIcon(Path.Combine(Application.streamingAssetsPath, TrayIconRelativePath), AppInfo.DisplayName);
+            Application.wantsToQuit += OnWantsToQuit;
+#endif
+        }
+
+        // Unity は最初のシーンの Awake の後、Start の前にプレイヤーのウィンドウを表示する。Awake で隠しても表示し直されるため、
+        // VRChat を前面にする処理とウィンドウを隠す処理は Start で行う（SPEC 3.1）。
+        // Awake が例外で終わったときは enabled が false になり Start は呼ばれないため、ウィンドウが残り、異常に気付ける。
+        void Start()
+        {
             // 開発用のキーボードの入力は前面のウィンドウにしか届かないため、その環境では前面を移さない。
-            if (loaded.Settings.VRChat.FocusOnStartup && !_platform.RequiresOwnWindowFocus) FocusVRChat();
+            if (_settingsForm.Settings.VRChat.FocusOnStartup && !_platform.RequiresOwnWindowFocus) FocusVRChat();
 
 #if !UNITY_EDITOR
-            // 初期化に失敗したときはウィンドウを残し、異常に気付けるようにするため、最後に隠す（SPEC 3.1）。
             // VRChat を前面にするより後に行う。前面のウィンドウを持つ間に切り替えれば、Windows に拒まれないため。
             PlayerWindow.Hide();
 #endif
@@ -241,6 +266,8 @@ namespace VRKeyboard.App
             _platform.BeginFrame();
             // 終了を求められたあとは、環境の API を呼ばない。
             if (_quitting) return;
+            TakeTrayCommands();
+            if (_quitting) return;
 
             // 送信先は、このフレームの入力を処理する前に決める。送信と文字数の上限が同じ送信先に従うようにするため。
             _monitor.Update();
@@ -252,8 +279,9 @@ namespace VRKeyboard.App
             _session.Tick(_platform.Controller.Read(), now);
             _runner.CancelUnlessWaiting();
 
-            // 位置の確認用のキーボードは、設定画面で表示位置のカテゴリを選んでいる間だけ表示する。
-            bool placementPreview = _platform.IsSettingsVisible && _settingsForm.Category.ShowsKeyboardPreview;
+            // 位置の確認用のキーボードは、設定画面（ダッシュボードのタブかデスクトップの設定ウィンドウ）で表示位置のカテゴリを選んでいる間だけ表示する。
+            bool settingsVisible = _platform.IsSettingsVisible || (_desktopSettings != null && _desktopSettings.IsVisible);
+            bool placementPreview = settingsVisible && _settingsForm.Category.ShowsKeyboardPreview;
             _platform.SetPlacementPreviewVisible(placementPreview);
 
             // キーボードは、開いている間と位置の確認用に表示している間だけ描く。
@@ -265,6 +293,25 @@ namespace VRKeyboard.App
 
             UpdateChatbox(now);
             UpdateDesktop();
+        }
+
+        void TakeTrayCommands()
+        {
+            if (_tray == null) return;
+            while (_tray.TryTakeCommand(out TrayCommand command))
+            {
+                switch (command)
+                {
+                    case TrayCommand.OpenSettings:
+                        _desktopSettings.Show();
+                        break;
+                    case TrayCommand.Quit:
+                        OnQuitRequested();
+                        return;
+                    default:
+                        throw new InvalidOperationException("未知のトレイの操作: " + command);
+                }
+            }
         }
 
         void UpdateChatbox(double now)
@@ -283,12 +330,14 @@ namespace VRKeyboard.App
                 Debug.LogWarning("クリップボードを開けなかったため、送信前の内容を戻せませんでした。");
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         void OnGUI()
         {
+#if UNITY_EDITOR
             _preview?.Draw();
-        }
+#else
+            _desktopSettings?.Draw();
 #endif
+        }
 
         void OnDestroy()
         {
@@ -304,6 +353,9 @@ namespace VRKeyboard.App
             if (_keyboardTarget is not null) _keyboardTarget.Release();
             if (_settingsTarget is not null) _settingsTarget.Release();
             _fonts?.Dispose();
+            if (_tray != null) Application.wantsToQuit -= OnWantsToQuit;
+            // 失敗すると例外になるため、他の後始末を終えた後に行う。
+            _tray?.Dispose();
         }
 
         // 終了の前に、チャットボックスに入力途中の文字を残さない。送れなくても終了は続ける。
@@ -335,7 +387,16 @@ namespace VRKeyboard.App
             }
         }
 
-        // 環境（SteamVR の終了）と設定画面の「アプリを終了」の両方から呼ばれる。
+        // 設定ウィンドウを表示している間は、ウィンドウを閉じる操作（×ボタン・Alt+F4）で終了せず、設定ウィンドウを隠す。
+        // アプリ自身が求めた終了と、設定ウィンドウを隠している間の終了の要求は妨げない。
+        bool OnWantsToQuit()
+        {
+            if (_quitting || !_desktopSettings.IsVisible) return true;
+            _desktopSettings.Hide();
+            return false;
+        }
+
+        // 環境（SteamVR の終了）・設定画面の「アプリを終了」・トレイの「終了」から呼ばれる。
         void OnQuitRequested()
         {
             if (_quitting) return;

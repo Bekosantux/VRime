@@ -19,7 +19,7 @@ namespace VRKeyboard.App.SteamVR
         public const string OverlayKey = "vrkeyboard.settings";
 
         /// <summary>ダッシュボードのタブに表示する名前。</summary>
-        public const string FriendlyName = "VR Keyboard";
+        public const string FriendlyName = AppInfo.DisplayName;
 
         /// <summary>タブのアイコンの <c>StreamingAssets</c> 内の場所。</summary>
         public const string ThumbnailRelativePath = "SteamVR/dashboard_icon.png";

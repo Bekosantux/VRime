@@ -7,8 +7,10 @@ using System.Text;
 namespace VRKeyboard.App.Native
 {
     /// <summary>
-    /// Unity のプレイヤーのウィンドウ。本アプリの表示はすべて SteamVR のオーバーレイで行うため、ビルドでは起動後に隠す（SPEC 3.1）。
+    /// Unity のプレイヤーのウィンドウ。本アプリの表示は SteamVR のオーバーレイで行うため、ビルドでは起動後に隠す（SPEC 3.1）。
+    /// デスクトップの設定ウィンドウ（SPEC 8.1）を開く間だけ表示する。
     /// ビルドのプレイヤーでだけ使う。エディターで呼ぶと、エディター自身のウィンドウが対象になりうる。
+    /// 自プロセスに該当するウィンドウがちょうど 1 つでない場合は、どの操作も例外。
     /// </summary>
     public static class PlayerWindow
     {
@@ -18,10 +20,7 @@ namespace VRKeyboard.App.Native
         // ウィンドウのクラス名の最大の長さ（終端を含む）。
         const int MaxClassNameLength = 256;
 
-        /// <summary>
-        /// ウィンドウを隠す。タスクバーと Alt+Tab の一覧からも消える。
-        /// 自プロセスに該当するウィンドウがちょうど 1 つでない、または隠した後も表示されている場合は例外。
-        /// </summary>
+        /// <summary>ウィンドウを隠す。タスクバーと Alt+Tab の一覧からも消える。隠した後も表示されていれば例外。</summary>
         public static void Hide()
         {
             IntPtr window = Find();
@@ -29,6 +28,27 @@ namespace VRKeyboard.App.Native
             Win32.ShowWindow(window, Win32.SW_HIDE);
             if (Win32.IsWindowVisible(window))
                 throw new InvalidOperationException("Unity のプレイヤーのウィンドウを隠せませんでした。");
+        }
+
+        /// <summary>
+        /// ウィンドウを表示し（最小化されていれば元に戻し）、前面にする。表示できなければ例外。
+        /// 前面にできたかを返す。Windows は、直前にユーザーが操作したプロセス以外による前面の切り替えを拒むことがある。
+        /// </summary>
+        public static bool ShowAndActivate()
+        {
+            IntPtr window = Find();
+            Win32.ShowWindow(window, Win32.IsIconic(window) ? Win32.SW_RESTORE : Win32.SW_SHOW);
+            if (!Win32.IsWindowVisible(window))
+                throw new InvalidOperationException("Unity のプレイヤーのウィンドウを表示できませんでした。");
+            return Win32.SetForegroundWindow(window);
+        }
+
+        /// <summary>ウィンドウのタイトルを変える。</summary>
+        public static void SetTitle(string title)
+        {
+            if (string.IsNullOrEmpty(title)) throw new ArgumentException("タイトルが空です。", nameof(title));
+            if (!Win32.SetWindowText(Find(), title))
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Unity のプレイヤーのウィンドウのタイトルを変えられませんでした。");
         }
 
         static IntPtr Find()
