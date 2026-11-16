@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using VRKeyboard.App.Native;
 
 namespace VRKeyboard.App.Output
 {

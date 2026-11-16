@@ -2,9 +2,9 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace VRKeyboard.App.Output
+namespace VRKeyboard.App.Native
 {
-    /// <summary>出力で使う Win32 API の宣言。</summary>
+    /// <summary>Win32 API の宣言。</summary>
     internal static class Win32
     {
         public const uint INPUT_KEYBOARD = 1;
