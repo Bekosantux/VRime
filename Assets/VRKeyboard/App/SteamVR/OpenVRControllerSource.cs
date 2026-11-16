@@ -7,7 +7,7 @@ using VRKeyboard.Core.Input;
 namespace VRKeyboard.App.SteamVR
 {
     /// <summary>
-    /// SteamVR Input（アクションマニフェスト）から両手のスティック・トリガー・グリップを読む入力元。
+    /// SteamVR Input（アクションマニフェスト）から両手の展開・収納・パネルの切り替え・キーの選択・キーの入力のアクションを読む入力元。
     /// アクションセットは 1つだけで、優先度を <see cref="IsExclusive"/> で切り替える。
     /// </summary>
     public sealed class OpenVRControllerSource : IControllerSource
@@ -49,8 +49,16 @@ namespace VRKeyboard.App.SteamVR
         {
             OpenVRErrors.Check(OpenVR.Input.UpdateActionState(_activeSets, ActionSetSize), "UpdateActionState");
             return new ControllerFrame(
-                new HandState(Stick(_actions.LeftStick, "leftstick"), Trigger(_actions.LeftTrigger, "lefttrigger"), Digital(_actions.LeftGrip, "leftgrip")),
-                new HandState(Stick(_actions.RightStick, "rightstick"), Trigger(_actions.RightTrigger, "righttrigger"), Digital(_actions.RightGrip, "rightgrip")));
+                new HandState(
+                    Stick(_actions.LeftSelect, "select_left"),
+                    Trigger(_actions.LeftPress, "press_left"),
+                    Digital(_actions.LeftOpenClose, "openclose_left"),
+                    Digital(_actions.LeftPanel, "panel_left")),
+                new HandState(
+                    Stick(_actions.RightSelect, "select_right"),
+                    Trigger(_actions.RightPress, "press_right"),
+                    Digital(_actions.RightOpenClose, "openclose_right"),
+                    Digital(_actions.RightPanel, "panel_right")));
         }
 
         // bActive が false のアクション（バインドなし・他のアプリが占有している間）は、0 / 押されていない として扱う。

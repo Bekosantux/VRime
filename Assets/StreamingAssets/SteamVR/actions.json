@@ -11,39 +11,67 @@
     {
       "controller_type": "vive_controller",
       "binding_url": "bindings_vive_controller.json"
+    },
+    {
+      "controller_type": "pico_controller",
+      "binding_url": "bindings_pico_controller.json"
+    },
+    {
+      "controller_type": "vive_focus3_controller",
+      "binding_url": "bindings_vive_focus3_controller.json"
+    },
+    {
+      "controller_type": "frame_controller",
+      "binding_url": "bindings_frame_controller.json"
     }
   ],
   "actions": [
     {
-      "name": "/actions/keyboard/in/rightstick",
-      "type": "vector2"
+      "name": "/actions/keyboard/in/openclose_left",
+      "type": "boolean",
+      "requirement": "mandatory"
     },
     {
-      "name": "/actions/keyboard/in/leftstick",
-      "type": "vector2"
+      "name": "/actions/keyboard/in/openclose_right",
+      "type": "boolean",
+      "requirement": "mandatory"
     },
     {
-      "name": "/actions/keyboard/in/righttrigger",
-      "type": "vector1"
+      "name": "/actions/keyboard/in/panel_left",
+      "type": "boolean",
+      "requirement": "mandatory"
     },
     {
-      "name": "/actions/keyboard/in/lefttrigger",
-      "type": "vector1"
+      "name": "/actions/keyboard/in/panel_right",
+      "type": "boolean",
+      "requirement": "mandatory"
     },
     {
-      "name": "/actions/keyboard/in/rightgrip",
-      "type": "boolean"
+      "name": "/actions/keyboard/in/select_left",
+      "type": "vector2",
+      "requirement": "mandatory"
     },
     {
-      "name": "/actions/keyboard/in/leftgrip",
-      "type": "boolean"
+      "name": "/actions/keyboard/in/select_right",
+      "type": "vector2",
+      "requirement": "mandatory"
     },
     {
-      "name": "/actions/keyboard/out/hapticright",
+      "name": "/actions/keyboard/in/press_left",
+      "type": "vector1",
+      "requirement": "mandatory"
+    },
+    {
+      "name": "/actions/keyboard/in/press_right",
+      "type": "vector1",
+      "requirement": "mandatory"
+    },
+    {
+      "name": "/actions/keyboard/out/haptic_left",
       "type": "vibration"
     },
     {
-      "name": "/actions/keyboard/out/hapticleft",
+      "name": "/actions/keyboard/out/haptic_right",
       "type": "vibration"
     }
   ],
@@ -57,14 +85,30 @@
     {
       "language_tag": "en_US",
       "/actions/keyboard": "VR Keyboard",
-      "/actions/keyboard/in/rightstick": "Right Stick",
-      "/actions/keyboard/in/leftstick": "Left Stick",
-      "/actions/keyboard/in/righttrigger": "Right Trigger",
-      "/actions/keyboard/in/lefttrigger": "Left Trigger",
-      "/actions/keyboard/in/rightgrip": "Right Grip",
-      "/actions/keyboard/in/leftgrip": "Left Grip",
-      "/actions/keyboard/out/hapticright": "Haptic Right",
-      "/actions/keyboard/out/hapticleft": "Haptic Left"
+      "/actions/keyboard/in/openclose_left": "Open / Close (Left)",
+      "/actions/keyboard/in/openclose_right": "Open / Close (Right)",
+      "/actions/keyboard/in/panel_left": "Switch Panel (Left)",
+      "/actions/keyboard/in/panel_right": "Switch Panel (Right)",
+      "/actions/keyboard/in/select_left": "Select Key (Left)",
+      "/actions/keyboard/in/select_right": "Select Key (Right)",
+      "/actions/keyboard/in/press_left": "Enter Key (Left)",
+      "/actions/keyboard/in/press_right": "Enter Key (Right)",
+      "/actions/keyboard/out/haptic_left": "Haptic (Left)",
+      "/actions/keyboard/out/haptic_right": "Haptic (Right)"
+    },
+    {
+      "language_tag": "ja_JP",
+      "/actions/keyboard": "VR日本語キーボード",
+      "/actions/keyboard/in/openclose_left": "展開・収納（左）",
+      "/actions/keyboard/in/openclose_right": "展開・収納（右）",
+      "/actions/keyboard/in/panel_left": "パネルの切り替え（左）",
+      "/actions/keyboard/in/panel_right": "パネルの切り替え（右）",
+      "/actions/keyboard/in/select_left": "キーの選択（左）",
+      "/actions/keyboard/in/select_right": "キーの選択（右）",
+      "/actions/keyboard/in/press_left": "キーの入力（左）",
+      "/actions/keyboard/in/press_right": "キーの入力（右）",
+      "/actions/keyboard/out/haptic_left": "振動（左）",
+      "/actions/keyboard/out/haptic_right": "振動（右）"
     }
   ]
 }

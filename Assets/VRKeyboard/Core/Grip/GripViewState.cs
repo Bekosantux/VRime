@@ -61,10 +61,10 @@ namespace VRKeyboard.Core.Grip
 
         public GripPage Page { get; }
 
-        /// <summary>子音側のグリップを押していて、子音パネルが機能ページを表示している。</summary>
+        /// <summary>子音側のパネルの切り替えのボタンを押していて、子音パネルが機能ページを表示している。</summary>
         public bool ConsonantFunctionPage { get; }
 
-        /// <summary>母音側のグリップを押していて、母音パネルが機能ページ（3×3）を表示している。</summary>
+        /// <summary>母音側のパネルの切り替えのボタンを押していて、母音パネルが機能ページ（3×3）を表示している。</summary>
         public bool VowelFunctionPage { get; }
 
         /// <summary>子音パネルの9マス（行優先）。</summary>

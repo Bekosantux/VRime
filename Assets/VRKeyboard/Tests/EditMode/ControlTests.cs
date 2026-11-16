@@ -200,7 +200,7 @@ namespace VRKeyboard.Core.Tests
 
         static ControllerFrame LeftTrigger(float pull)
         {
-            return new ControllerFrame(new HandState(StickValue.Zero, pull, false), new HandState(StickValue.Zero, 0f, false));
+            return new ControllerFrame(new HandState(StickValue.Zero, pull, false, false), new HandState(StickValue.Zero, 0f, false, false));
         }
 
         [Test]

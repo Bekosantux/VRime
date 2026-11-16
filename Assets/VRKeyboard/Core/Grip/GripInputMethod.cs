@@ -129,8 +129,8 @@ namespace VRKeyboard.Core.Grip
             StickValue vowelStick = frame.Get(_settings.VowelHand).Stick;
             StickDirection direction = StickClassifier.ClassifyDirection(vowelStick, threshold);
             int vowelCell = StickClassifier.ClassifyCell(vowelStick, threshold);
-            bool consonantFunction = frame.Get(_settings.ConsonantHand).Grip;
-            bool vowelFunction = frame.Get(_settings.VowelHand).Grip;
+            bool consonantFunction = frame.Get(_settings.ConsonantHand).Panel;
+            bool vowelFunction = frame.Get(_settings.VowelHand).Panel;
 
             if (cell != _cell || direction != _direction || vowelCell != _vowelCell
                 || consonantFunction != _consonantFunction || vowelFunction != _vowelFunction)
@@ -147,7 +147,7 @@ namespace VRKeyboard.Core.Grip
 
         /// <summary>
         /// 1フレーム分を処理する。振動は haptics に追加する。
-        /// edges は、両手のグリップを押している間のトリガーの抑止などを済ませたもの。
+        /// edges は、両手の展開・収納のボタンを押している間のトリガーの抑止などを済ませたもの。
         /// </summary>
         public GripRequest Update(ControllerFrame frame, FrameEdges edges, double timeSeconds, List<HapticEvent> haptics)
         {
@@ -162,8 +162,8 @@ namespace VRKeyboard.Core.Grip
             int cell = StickClassifier.ClassifyCell(consonant.Stick, threshold);
             StickDirection direction = StickClassifier.ClassifyDirection(vowel.Stick, threshold);
             int vowelCell = StickClassifier.ClassifyCell(vowel.Stick, threshold);
-            bool consonantFunction = consonant.Grip;
-            bool vowelFunction = vowel.Grip;
+            bool consonantFunction = consonant.Panel;
+            bool vowelFunction = vowel.Panel;
 
             bool changed = consonantFunction != _consonantFunction || vowelFunction != _vowelFunction;
             if (cell != _cell)
@@ -186,7 +186,7 @@ namespace VRKeyboard.Core.Grip
             _vowelFunction = vowelFunction;
             if (changed) Version++;
 
-            // 選択が変わる（グリップの押し離しを含む）・トリガーを離す・新たにトリガーを引くと、連続入力をやめる。
+            // 選択が変わる（機能ページの開閉を含む）・トリガーを離す・新たにトリガーを引くと、連続入力をやめる。
             if (changed || edges.AnyTrigger
                 || (_repeater.IsActive && frame.Get(_repeater.Hand).TriggerPull < _settings.TriggerThreshold))
             {
@@ -198,8 +198,8 @@ namespace VRKeyboard.Core.Grip
                 return default;
             }
 
-            // 両手のグリップを押している間は、開閉の操作と区別するためトリガーを受け付けない。
-            if (!edges.AnyTrigger || (consonant.Grip && vowel.Grip)) return default;
+            // 両手の機能ページを開いている間は、どちらのパネルのセルを実行するか定まらないためトリガーを受け付けない。
+            if (!edges.AnyTrigger || (consonantFunction && vowelFunction)) return default;
 
             // 機能ページでは、左右どちらのトリガーでもセルを実行する。
             if (consonantFunction || vowelFunction)

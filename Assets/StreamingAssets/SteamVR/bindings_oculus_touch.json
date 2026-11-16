@@ -1,53 +1,17 @@
 {
   "action_manifest_version": 0,
   "controller_type": "oculus_touch",
-  "name": "VR Keyboard spike (oculus_touch)",
-  "description": "Spike2 default bindings",
+  "name": "VR日本語キーボードの既定（Meta Quest）",
+  "description": "グリップ: 展開・収納（両手で2回続けて同時押し）とパネルの切り替え / スティック: キーの選択 / トリガー: キーの入力",
   "bindings": {
     "/actions/keyboard": {
       "sources": [
         {
-          "path": "/user/hand/right/input/joystick",
-          "mode": "joystick",
-          "inputs": {
-            "position": {
-              "output": "/actions/keyboard/in/rightstick"
-            }
-          }
-        },
-        {
-          "path": "/user/hand/left/input/joystick",
-          "mode": "joystick",
-          "inputs": {
-            "position": {
-              "output": "/actions/keyboard/in/leftstick"
-            }
-          }
-        },
-        {
-          "path": "/user/hand/right/input/trigger",
-          "mode": "trigger",
-          "inputs": {
-            "pull": {
-              "output": "/actions/keyboard/in/righttrigger"
-            }
-          }
-        },
-        {
-          "path": "/user/hand/left/input/trigger",
-          "mode": "trigger",
-          "inputs": {
-            "pull": {
-              "output": "/actions/keyboard/in/lefttrigger"
-            }
-          }
-        },
-        {
-          "path": "/user/hand/right/input/grip",
+          "path": "/user/hand/left/input/grip",
           "mode": "button",
           "inputs": {
             "click": {
-              "output": "/actions/keyboard/in/rightgrip"
+              "output": "/actions/keyboard/in/openclose_left"
             }
           }
         },
@@ -56,19 +20,73 @@
           "mode": "button",
           "inputs": {
             "click": {
-              "output": "/actions/keyboard/in/leftgrip"
+              "output": "/actions/keyboard/in/panel_left"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/joystick",
+          "mode": "joystick",
+          "inputs": {
+            "position": {
+              "output": "/actions/keyboard/in/select_left"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/trigger",
+          "mode": "trigger",
+          "inputs": {
+            "pull": {
+              "output": "/actions/keyboard/in/press_left"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/grip",
+          "mode": "button",
+          "inputs": {
+            "click": {
+              "output": "/actions/keyboard/in/openclose_right"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/grip",
+          "mode": "button",
+          "inputs": {
+            "click": {
+              "output": "/actions/keyboard/in/panel_right"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/joystick",
+          "mode": "joystick",
+          "inputs": {
+            "position": {
+              "output": "/actions/keyboard/in/select_right"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/right/input/trigger",
+          "mode": "trigger",
+          "inputs": {
+            "pull": {
+              "output": "/actions/keyboard/in/press_right"
             }
           }
         }
       ],
       "haptics": [
         {
-          "path": "/user/hand/right/output/haptic",
-          "output": "/actions/keyboard/out/hapticright"
+          "path": "/user/hand/left/output/haptic",
+          "output": "/actions/keyboard/out/haptic_left"
         },
         {
-          "path": "/user/hand/left/output/haptic",
-          "output": "/actions/keyboard/out/hapticleft"
+          "path": "/user/hand/right/output/haptic",
+          "output": "/actions/keyboard/out/haptic_right"
         }
       ]
     }

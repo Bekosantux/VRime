@@ -9,8 +9,8 @@ namespace VRKeyboard.Core.Input
     {
         bool _leftTrigger;
         bool _rightTrigger;
-        bool _leftGrip;
-        bool _rightGrip;
+        bool _leftPanel;
+        bool _rightPanel;
 
         /// <param name="triggerThreshold">引き量がこの値以上で押したとみなす。</param>
         public FrameEdges Update(ControllerFrame frame, float triggerThreshold)
@@ -20,12 +20,12 @@ namespace VRKeyboard.Core.Input
             var edges = new FrameEdges(
                 leftTrigger && !_leftTrigger,
                 rightTrigger && !_rightTrigger,
-                frame.Left.Grip && !_leftGrip,
-                frame.Right.Grip && !_rightGrip);
+                frame.Left.Panel && !_leftPanel,
+                frame.Right.Panel && !_rightPanel);
             _leftTrigger = leftTrigger;
             _rightTrigger = rightTrigger;
-            _leftGrip = frame.Left.Grip;
-            _rightGrip = frame.Right.Grip;
+            _leftPanel = frame.Left.Panel;
+            _rightPanel = frame.Right.Panel;
             return edges;
         }
     }

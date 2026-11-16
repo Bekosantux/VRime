@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using Valve.VR;
 
 namespace VRKeyboard.App.SteamVR
 {
     /// <summary>
     /// アクションマニフェスト（<c>actions.json</c>）のアクションセットとアクションのハンドル。
+    /// アクションは物理的なボタンではなく役割ごとに定義し、ボタンとの対応は SteamVR のバインドに任せる（SPEC 5.6）。
     /// ハンドルは接続（<see cref="OpenVRRuntime"/>）ごとに取り直す。
     /// </summary>
     public sealed class OpenVRActions
@@ -12,13 +14,36 @@ namespace VRKeyboard.App.SteamVR
         /// <summary>アクションセットは 1つだけ使う（SPEC 4.3）。</summary>
         public const string ActionSetName = "/actions/keyboard";
 
+        public const string LeftOpenCloseName = ActionSetName + "/in/openclose_left";
+        public const string RightOpenCloseName = ActionSetName + "/in/openclose_right";
+        public const string LeftPanelName = ActionSetName + "/in/panel_left";
+        public const string RightPanelName = ActionSetName + "/in/panel_right";
+        public const string LeftSelectName = ActionSetName + "/in/select_left";
+        public const string RightSelectName = ActionSetName + "/in/select_right";
+        public const string LeftPressName = ActionSetName + "/in/press_left";
+        public const string RightPressName = ActionSetName + "/in/press_right";
+        public const string LeftHapticName = ActionSetName + "/out/haptic_left";
+        public const string RightHapticName = ActionSetName + "/out/haptic_right";
+
+        /// <summary>このアプリが読むアクションのすべて。マニフェストの <c>actions</c> と過不足なく一致させる。</summary>
+        public static IReadOnlyList<string> Names { get; } = new[]
+        {
+            LeftOpenCloseName, RightOpenCloseName,
+            LeftPanelName, RightPanelName,
+            LeftSelectName, RightSelectName,
+            LeftPressName, RightPressName,
+            LeftHapticName, RightHapticName,
+        };
+
         public ulong ActionSet { get; }
-        public ulong LeftStick { get; }
-        public ulong RightStick { get; }
-        public ulong LeftTrigger { get; }
-        public ulong RightTrigger { get; }
-        public ulong LeftGrip { get; }
-        public ulong RightGrip { get; }
+        public ulong LeftOpenClose { get; }
+        public ulong RightOpenClose { get; }
+        public ulong LeftPanel { get; }
+        public ulong RightPanel { get; }
+        public ulong LeftSelect { get; }
+        public ulong RightSelect { get; }
+        public ulong LeftPress { get; }
+        public ulong RightPress { get; }
         public ulong LeftHaptic { get; }
         public ulong RightHaptic { get; }
 
@@ -28,14 +53,16 @@ namespace VRKeyboard.App.SteamVR
             ulong set = 0;
             OpenVRErrors.Check(OpenVR.Input.GetActionSetHandle(ActionSetName, ref set), "GetActionSetHandle(" + ActionSetName + ")");
             ActionSet = RequireValid(set, ActionSetName);
-            LeftStick = Get("/actions/keyboard/in/leftstick");
-            RightStick = Get("/actions/keyboard/in/rightstick");
-            LeftTrigger = Get("/actions/keyboard/in/lefttrigger");
-            RightTrigger = Get("/actions/keyboard/in/righttrigger");
-            LeftGrip = Get("/actions/keyboard/in/leftgrip");
-            RightGrip = Get("/actions/keyboard/in/rightgrip");
-            LeftHaptic = Get("/actions/keyboard/out/hapticleft");
-            RightHaptic = Get("/actions/keyboard/out/hapticright");
+            LeftOpenClose = Get(LeftOpenCloseName);
+            RightOpenClose = Get(RightOpenCloseName);
+            LeftPanel = Get(LeftPanelName);
+            RightPanel = Get(RightPanelName);
+            LeftSelect = Get(LeftSelectName);
+            RightSelect = Get(RightSelectName);
+            LeftPress = Get(LeftPressName);
+            RightPress = Get(RightPressName);
+            LeftHaptic = Get(LeftHapticName);
+            RightHaptic = Get(RightHapticName);
         }
 
         static ulong Get(string name)

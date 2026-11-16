@@ -18,8 +18,8 @@ namespace VRKeyboard.Core.Conversion
 
     /// <summary>
     /// 変換中の操作（SPEC 6.3）。左右どちらかのスティックの左右で文節、上下で候補を動かし
-    /// （中央から倒した瞬間に1つだけ）、トリガーで確定、グリップで取り消す。
-    /// 応答待ちの間は候補がないため、トリガーを無視し、グリップでの取り消しだけを受け付ける。
+    /// （中央から倒した瞬間に1つだけ）、トリガーで確定、パネルの切り替えのボタンで取り消す。
+    /// 応答待ちの間は候補がないため、トリガーを無視し、パネルの切り替えのボタンでの取り消しだけを受け付ける。
     /// </summary>
     public sealed class ConversionController
     {
@@ -54,7 +54,7 @@ namespace VRKeyboard.Core.Conversion
             StickDirection left = _leftStick.Update(frame.Left.Stick, _settings.StickThreshold);
             StickDirection right = _rightStick.Update(frame.Right.Stick, _settings.StickThreshold);
 
-            if (edges.AnyGrip) return ConversionOutcome.Cancel;
+            if (edges.AnyPanel) return ConversionOutcome.Cancel;
             if (session == null) return ConversionOutcome.None;
             if (edges.AnyTrigger) return ConversionOutcome.Commit;
 

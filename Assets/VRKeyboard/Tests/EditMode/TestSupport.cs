@@ -67,7 +67,11 @@ namespace VRKeyboard.Core.Tests
         }
     }
 
-    /// <summary>KeyboardSession にコントローラーの操作を与えるテスト用の操作盤。1回の Tick は 16ms 進む。</summary>
+    /// <summary>
+    /// KeyboardSession にコントローラーの操作を与えるテスト用の操作盤。1回の Tick は 16ms 進む。
+    /// 「グリップ」は既定のバインドと同じく、展開・収納とパネルの切り替えの両方を押す。
+    /// 別のボタンに割り当てた場合は <see cref="SetOpenClose"/> と <see cref="SetPanel"/> で個別に押す。
+    /// </summary>
     public sealed class Rig
     {
         public readonly FakeEffects Effects = new FakeEffects();
@@ -77,7 +81,8 @@ namespace VRKeyboard.Core.Tests
 
         StickValue _leftStick, _rightStick;
         float _leftTrigger, _rightTrigger;
-        bool _leftGrip, _rightGrip;
+        bool _leftOpenClose, _rightOpenClose;
+        bool _leftPanel, _rightPanel;
 
         public Rig(KeyboardSettings settings = null, bool open = true)
         {
@@ -93,8 +98,8 @@ namespace VRKeyboard.Core.Tests
         {
             Time += dt;
             Session.Tick(new ControllerFrame(
-                new HandState(_leftStick, _leftTrigger, _leftGrip),
-                new HandState(_rightStick, _rightTrigger, _rightGrip)), Time);
+                new HandState(_leftStick, _leftTrigger, _leftOpenClose, _leftPanel),
+                new HandState(_rightStick, _rightTrigger, _rightOpenClose, _rightPanel)), Time);
         }
 
         public void TickMany(int count)
@@ -104,13 +109,26 @@ namespace VRKeyboard.Core.Tests
 
         public void Grips(bool left, bool right)
         {
-            _leftGrip = left;
-            _rightGrip = right;
+            SetGrip(Hand.Left, left);
+            SetGrip(Hand.Right, right);
         }
 
         public void SetGrip(Hand hand, bool held)
         {
-            if (hand == Hand.Left) _leftGrip = held; else _rightGrip = held;
+            SetOpenClose(hand, held);
+            SetPanel(hand, held);
+        }
+
+        /// <summary>展開・収納のボタンだけを押す（パネルの切り替えを別のボタンに割り当てた場合）。</summary>
+        public void SetOpenClose(Hand hand, bool held)
+        {
+            if (hand == Hand.Left) _leftOpenClose = held; else _rightOpenClose = held;
+        }
+
+        /// <summary>パネルの切り替えのボタンだけを押す（展開・収納を別のボタンに割り当てた場合）。</summary>
+        public void SetPanel(Hand hand, bool held)
+        {
+            if (hand == Hand.Left) _leftPanel = held; else _rightPanel = held;
         }
 
         /// <summary>トリガーを引き切る（1）か、離す（0）。</summary>

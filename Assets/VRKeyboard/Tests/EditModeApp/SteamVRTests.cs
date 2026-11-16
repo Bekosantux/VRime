@@ -1,5 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using UnityEngine;
 using VRKeyboard.App.Settings;
 using VRKeyboard.App.SteamVR;
 using VRKeyboard.Core;
@@ -117,7 +122,7 @@ namespace VRKeyboard.App.Tests
         [Test]
         public void すべての種類に異なるパターンがある()
         {
-            var seen = new System.Collections.Generic.HashSet<(float, float, float)>();
+            var seen = new HashSet<(float, float, float)>();
             foreach (HapticKind kind in Enum.GetValues(typeof(HapticKind)))
             {
                 OpenVRHapticOutput.Pattern pattern = OpenVRHapticOutput.GetPattern(kind);
@@ -146,6 +151,82 @@ namespace VRKeyboard.App.Tests
         public void 未知の種類は例外()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => OpenVRHapticOutput.GetPattern((HapticKind)99));
+        }
+    }
+
+    /// <summary>アクションマニフェストと同梱の既定のバインド（SPEC 5.6）。</summary>
+    public sealed class ActionManifestTests
+    {
+        static readonly string ManifestPath = Path.Combine(Application.streamingAssetsPath, OpenVRPlatform.ActionManifestRelativePath);
+
+        static JObject Load(string path)
+        {
+            Assert.IsTrue(File.Exists(path), "ファイルがない: " + path);
+            return JObject.Parse(File.ReadAllText(path));
+        }
+
+        static JObject Manifest => Load(ManifestPath);
+
+        static IEnumerable<string> ActionNames(JObject manifest)
+        {
+            return manifest["actions"].Select(action => (string)action["name"]);
+        }
+
+        [Test]
+        public void アクションはアプリが読むものと過不足なく一致する()
+        {
+            JObject manifest = Manifest;
+            CollectionAssert.AreEquivalent(OpenVRActions.Names, ActionNames(manifest));
+            CollectionAssert.AreEqual(
+                new[] { OpenVRActions.ActionSetName },
+                manifest["action_sets"].Select(set => (string)set["name"]));
+        }
+
+        [Test]
+        public void 入力のアクションはすべて必須()
+        {
+            foreach (JToken action in Manifest["actions"].Where(action => (string)action["type"] != "vibration"))
+                Assert.AreEqual("mandatory", (string)action["requirement"], (string)action["name"]);
+        }
+
+        [Test]
+        public void 表示名はすべての言語ですべてのアクションにある()
+        {
+            JObject manifest = Manifest;
+            string[] keys = ActionNames(manifest).Prepend(OpenVRActions.ActionSetName).ToArray();
+            CollectionAssert.AreEquivalent(new[] { "en_US", "ja_JP" }, manifest["localization"].Select(l => (string)l["language_tag"]));
+            foreach (JToken localization in manifest["localization"])
+            {
+                foreach (string key in keys)
+                    Assert.IsFalse(string.IsNullOrEmpty((string)localization[key]), localization["language_tag"] + " に " + key + " の表示名がない");
+            }
+        }
+
+        [Test]
+        public void 既定のバインドはすべてのアクションを割り当て_宣言にない出力を持たない()
+        {
+            JObject manifest = Manifest;
+            string[] declared = ActionNames(manifest).ToArray();
+            string directory = Path.GetDirectoryName(ManifestPath);
+            JToken[] defaults = manifest["default_bindings"].ToArray();
+            Assert.IsNotEmpty(defaults);
+
+            foreach (JToken entry in defaults)
+            {
+                string controllerType = (string)entry["controller_type"];
+                JObject binding = Load(Path.Combine(directory, (string)entry["binding_url"]));
+                Assert.AreEqual(controllerType, (string)binding["controller_type"]);
+
+                JToken set = binding["bindings"][OpenVRActions.ActionSetName];
+                Assert.IsNotNull(set, controllerType + " にアクションセットの割り当てがない");
+                var outputs = new List<string>();
+                outputs.AddRange(set["sources"].SelectMany(source => ((JObject)source["inputs"]).Properties())
+                    .Select(input => (string)input.Value["output"]));
+                outputs.AddRange(set["haptics"].Select(haptic => (string)haptic["output"]));
+
+                CollectionAssert.IsSubsetOf(outputs, declared, controllerType + " に宣言にない出力がある");
+                CollectionAssert.IsSubsetOf(declared, outputs, controllerType + " に割り当てのないアクションがある");
+            }
         }
     }
 }

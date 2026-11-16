@@ -3,7 +3,7 @@ using System;
 namespace VRKeyboard.Core.Control
 {
     /// <summary>
-    /// 両手グリップの「2回続けての同時押し」を検出する（SPEC 4.2）。
+    /// 両手の展開・収納のボタンの「2回続けての同時押し」を検出する（SPEC 4.2）。
     /// 同時押し = 後から押した側の押下時に、もう一方が押されたままで、押下時刻の差が chordWindow 以内。
     /// </summary>
     public sealed class DoubleChordDetector
@@ -27,21 +27,21 @@ namespace VRKeyboard.Core.Control
         }
 
         /// <summary>毎フレーム呼ぶ。2回目の同時押しが成立したフレームで true を返す。</summary>
-        public bool Update(bool leftGrip, bool rightGrip, double timeSeconds)
+        public bool Update(bool left, bool right, double timeSeconds)
         {
             bool chord = false;
-            if (rightGrip && !_rightHeld)
+            if (right && !_rightHeld)
             {
                 _rightDownAt = timeSeconds;
-                if (leftGrip && timeSeconds - _leftDownAt <= _chordWindow) chord = true;
+                if (left && timeSeconds - _leftDownAt <= _chordWindow) chord = true;
             }
-            if (leftGrip && !_leftHeld)
+            if (left && !_leftHeld)
             {
                 _leftDownAt = timeSeconds;
-                if (rightGrip && timeSeconds - _rightDownAt <= _chordWindow) chord = true;
+                if (right && timeSeconds - _rightDownAt <= _chordWindow) chord = true;
             }
-            _leftHeld = leftGrip;
-            _rightHeld = rightGrip;
+            _leftHeld = left;
+            _rightHeld = right;
 
             if (!chord) return false;
 

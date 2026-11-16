@@ -2,24 +2,24 @@ using System;
 
 namespace VRKeyboard.Core.Input
 {
-    /// <summary>そのフレームでトリガー・グリップが押された瞬間（前フレームは離れていた）。</summary>
+    /// <summary>そのフレームでトリガー・パネルの切り替えのボタンが押された瞬間（前フレームは離れていた）。</summary>
     public readonly struct FrameEdges
     {
-        public FrameEdges(bool leftTrigger, bool rightTrigger, bool leftGrip, bool rightGrip)
+        public FrameEdges(bool leftTrigger, bool rightTrigger, bool leftPanel, bool rightPanel)
         {
             LeftTrigger = leftTrigger;
             RightTrigger = rightTrigger;
-            LeftGrip = leftGrip;
-            RightGrip = rightGrip;
+            LeftPanel = leftPanel;
+            RightPanel = rightPanel;
         }
 
         public bool LeftTrigger { get; }
         public bool RightTrigger { get; }
-        public bool LeftGrip { get; }
-        public bool RightGrip { get; }
+        public bool LeftPanel { get; }
+        public bool RightPanel { get; }
 
         public bool AnyTrigger => LeftTrigger || RightTrigger;
-        public bool AnyGrip => LeftGrip || RightGrip;
+        public bool AnyPanel => LeftPanel || RightPanel;
 
         public bool TriggerPressed(Hand hand)
         {
@@ -31,19 +31,9 @@ namespace VRKeyboard.Core.Input
             }
         }
 
-        public bool GripPressed(Hand hand)
-        {
-            switch (hand)
-            {
-                case Hand.Left: return LeftGrip;
-                case Hand.Right: return RightGrip;
-                default: throw new ArgumentOutOfRangeException(nameof(hand), hand, null);
-            }
-        }
-
         public FrameEdges WithoutTriggers()
         {
-            return new FrameEdges(false, false, LeftGrip, RightGrip);
+            return new FrameEdges(false, false, LeftPanel, RightPanel);
         }
     }
 }

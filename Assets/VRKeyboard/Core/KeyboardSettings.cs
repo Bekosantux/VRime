@@ -50,7 +50,7 @@ namespace VRKeyboard.Core
         /// <summary>トリガーの引き量がこの値以上で押したとみなし、未満なら離したとみなす。</summary>
         public float TriggerThreshold { get; }
 
-        /// <summary>左右のグリップの押下時刻の差がこの秒数以内なら同時押しとみなす。</summary>
+        /// <summary>左右の展開・収納のボタンの押下時刻の差がこの秒数以内なら同時押しとみなす。</summary>
         public double ChordWindowSeconds { get; }
 
         /// <summary>同時押しをこの秒数以内に2回行うと開閉する。</summary>

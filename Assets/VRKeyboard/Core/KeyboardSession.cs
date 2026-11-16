@@ -41,9 +41,9 @@ namespace VRKeyboard.Core
         bool _resumeAfterDashboard;
         KeyboardMode _mode = KeyboardMode.Input;
 
-        // 開いたとき・変換を押したとき・取り消したときに押されていたグリップは、離すまで押されていないものとして扱う。
-        bool _ignoreLeftGrip;
-        bool _ignoreRightGrip;
+        // 開いたとき・変換を押したとき・取り消したときに押されていたパネルの切り替えのボタンは、離すまで押されていないものとして扱う。
+        bool _ignoreLeftPanel;
+        bool _ignoreRightPanel;
         ControllerFrame _lastFrame;
 
         int _nextRequestId;
@@ -120,7 +120,7 @@ namespace VRKeyboard.Core
         public void Tick(ControllerFrame frame, double timeSeconds)
         {
             _lastFrame = frame;
-            bool toggle = _chord.Update(frame.Left.Grip, frame.Right.Grip, timeSeconds);
+            bool toggle = _chord.Update(frame.Left.OpenClose, frame.Right.OpenClose, timeSeconds);
 
             // 押下エッジは、操作を受け付けない間も追跡する。再開した直後に古い押下状態から誤ったエッジが出るのを防ぐ。
             if (_dashboardVisible)
@@ -145,10 +145,10 @@ namespace VRKeyboard.Core
                 return;
             }
 
-            ControllerFrame effective = ApplyGripIgnore(frame);
+            ControllerFrame effective = ApplyPanelIgnore(frame);
             FrameEdges edges = UpdateEdges(effective);
-            // 両手のグリップを押している間は、無視中のグリップも含めてトリガーを受け付けない。
-            if (frame.Left.Grip && frame.Right.Grip) edges = edges.WithoutTriggers();
+            // 両手の展開・収納のボタンを押している間は、開閉の操作と区別するためトリガーを受け付けない。
+            if (frame.Left.OpenClose && frame.Right.OpenClose) edges = edges.WithoutTriggers();
 
             _haptics.Clear();
             switch (_mode)
@@ -272,9 +272,9 @@ namespace VRKeyboard.Core
             ClearNotice();
             _isOpen = true;
             _mode = KeyboardMode.Input;
-            _ignoreLeftGrip = _lastFrame.Left.Grip;
-            _ignoreRightGrip = _lastFrame.Right.Grip;
-            _grip.Reset(ApplyGripIgnore(_lastFrame));
+            _ignoreLeftPanel = _lastFrame.Left.Panel;
+            _ignoreRightPanel = _lastFrame.Right.Panel;
+            _grip.Reset(ApplyPanelIgnore(_lastFrame));
             _viewVersion++;
             _effects.OnOpenChanged(true);
         }
@@ -346,7 +346,7 @@ namespace VRKeyboard.Core
             _mode = KeyboardMode.WaitingConversion;
             _conversion = null;
             _conversionFailureReason = null;
-            IgnoreHeldGrips(effective);
+            IgnoreHeldPanels(effective);
             _conversionController.Begin(effective);
             _haptics.Add(new HapticEvent(hand, HapticKind.Input));
             _viewVersion++;
@@ -367,7 +367,7 @@ namespace VRKeyboard.Core
                     if (_buffer.CommitConverted(_conversion.Result) == EditResult.Done)
                     {
                         EndConversion();
-                        _grip.Reset(ApplyGripIgnore(raw));
+                        _grip.Reset(ApplyPanelIgnore(raw));
                         _haptics.Add(new HapticEvent(hand, HapticKind.Input));
                     }
                     else
@@ -380,11 +380,11 @@ namespace VRKeyboard.Core
 
                 case ConversionOutcome.Cancel:
                 {
-                    Hand hand = edges.LeftGrip ? Hand.Left : Hand.Right;
-                    // 取り消した直後に、握ったままのグリップで機能ページが開かないようにする。
-                    IgnoreHeldGrips(effective);
+                    Hand hand = edges.LeftPanel ? Hand.Left : Hand.Right;
+                    // 取り消した直後に、押したままのパネルの切り替えのボタンで機能ページが開かないようにする。
+                    IgnoreHeldPanels(effective);
                     EndConversion();
-                    _grip.Reset(ApplyGripIgnore(raw));
+                    _grip.Reset(ApplyPanelIgnore(raw));
                     _haptics.Add(new HapticEvent(hand, HapticKind.Move));
                     break;
                 }
@@ -403,10 +403,10 @@ namespace VRKeyboard.Core
             _viewVersion++;
         }
 
-        void IgnoreHeldGrips(ControllerFrame effective)
+        void IgnoreHeldPanels(ControllerFrame effective)
         {
-            if (effective.Left.Grip) _ignoreLeftGrip = true;
-            if (effective.Right.Grip) _ignoreRightGrip = true;
+            if (effective.Left.Panel) _ignoreLeftPanel = true;
+            if (effective.Right.Panel) _ignoreRightPanel = true;
         }
 
         FrameEdges UpdateEdges(ControllerFrame frame)
@@ -414,13 +414,13 @@ namespace VRKeyboard.Core
             return _edges.Update(frame, _settings.TriggerThreshold);
         }
 
-        ControllerFrame ApplyGripIgnore(ControllerFrame frame)
+        ControllerFrame ApplyPanelIgnore(ControllerFrame frame)
         {
-            if (!frame.Left.Grip) _ignoreLeftGrip = false;
-            if (!frame.Right.Grip) _ignoreRightGrip = false;
+            if (!frame.Left.Panel) _ignoreLeftPanel = false;
+            if (!frame.Right.Panel) _ignoreRightPanel = false;
             return new ControllerFrame(
-                _ignoreLeftGrip ? frame.Left.WithGrip(false) : frame.Left,
-                _ignoreRightGrip ? frame.Right.WithGrip(false) : frame.Right);
+                _ignoreLeftPanel ? frame.Left.WithPanel(false) : frame.Left,
+                _ignoreRightPanel ? frame.Right.WithPanel(false) : frame.Right);
         }
     }
 }

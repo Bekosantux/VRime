@@ -1122,4 +1122,125 @@ namespace VRKeyboard.Core.Tests
             Assert.Throws<ArgumentNullException>(() => rig.Session.ApplySettings(null));
         }
     }
+
+    /// <summary>展開・収納とパネルの切り替えを別のボタンに割り当てたとき（SPEC 5.6）。</summary>
+    public class SeparatedBindingTests
+    {
+        const int Convert = 7;
+        const int Space = 8;
+
+        static void OpenCloseTwice(Rig rig)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                rig.SetOpenClose(Hand.Left, true); rig.SetOpenClose(Hand.Right, true); rig.Tick();
+                rig.SetOpenClose(Hand.Left, false); rig.SetOpenClose(Hand.Right, false); rig.Tick();
+            }
+        }
+
+        static void PanelsTwice(Rig rig)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                rig.SetPanel(Hand.Left, true); rig.SetPanel(Hand.Right, true); rig.Tick();
+                rig.SetPanel(Hand.Left, false); rig.SetPanel(Hand.Right, false); rig.Tick();
+            }
+        }
+
+        [Test]
+        public void 展開_収納のボタンで開閉し_機能ページは開かない()
+        {
+            var rig = new Rig(open: false);
+            rig.SetOpenClose(Hand.Left, true); rig.SetOpenClose(Hand.Right, true); rig.Tick();
+            rig.SetOpenClose(Hand.Left, false); rig.SetOpenClose(Hand.Right, false); rig.Tick();
+            rig.SetOpenClose(Hand.Left, true); rig.SetOpenClose(Hand.Right, true); rig.Tick();
+            Assert.IsTrue(rig.Session.IsOpen);
+            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage);
+            Assert.IsFalse(rig.Session.GripView.VowelFunctionPage);
+
+            rig.SetOpenClose(Hand.Left, false); rig.SetOpenClose(Hand.Right, false); rig.Tick();
+            rig.TickMany(50);
+            OpenCloseTwice(rig);
+            Assert.IsFalse(rig.Session.IsOpen);
+        }
+
+        [Test]
+        public void パネルの切り替えのボタンを両手で2回続けて押しても開閉しない()
+        {
+            var closed = new Rig(open: false);
+            PanelsTwice(closed);
+            Assert.IsFalse(closed.Session.IsOpen);
+
+            var open = new Rig();
+            open.TickMany(50);
+            PanelsTwice(open);
+            Assert.IsTrue(open.Session.IsOpen);
+        }
+
+        [Test]
+        public void 両手の展開_収納のボタンを押している間はトリガーを受け付けない()
+        {
+            var rig = new Rig();
+            rig.TickMany(50);
+            rig.SetStick(rig.Consonant, Sticks.Cell(0));
+            rig.SetOpenClose(Hand.Left, true); rig.SetOpenClose(Hand.Right, true); rig.Tick();
+            rig.Pull(rig.Vowel);
+            rig.Pull(rig.Consonant);
+            Assert.AreEqual("", rig.Session.Composition);
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+
+            // 片手だけなら受け付ける。
+            rig.SetOpenClose(rig.Consonant, false); rig.Tick();
+            rig.Pull(rig.Vowel);
+            Assert.AreEqual("あ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void 両手のパネルの切り替えのボタンを押している間はトリガーを受け付けない()
+        {
+            var rig = new Rig();
+            rig.TickMany(50);
+            rig.SetPanel(Hand.Left, true); rig.SetPanel(Hand.Right, true); rig.Tick();
+            Assert.IsTrue(rig.Session.GripView.ConsonantFunctionPage);
+            Assert.IsTrue(rig.Session.GripView.VowelFunctionPage);
+            rig.Pull(rig.Vowel);
+            rig.Pull(rig.Consonant);
+            Assert.AreEqual("", rig.Session.Composition);
+            Assert.AreEqual("", rig.Session.Committed);
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+        }
+
+        [Test]
+        public void 開いたときに押していたパネルの切り替えのボタンは離すまで無視する()
+        {
+            var rig = new Rig(open: false);
+            rig.SetPanel(rig.Consonant, true); rig.Tick();
+            OpenCloseTwice(rig);
+            Assert.IsTrue(rig.Session.IsOpen);
+            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage, "開く前から押しているボタンでは機能ページにならない");
+
+            rig.SetPanel(rig.Consonant, false); rig.Tick();
+            rig.ConsonantFunction(Space);
+            Assert.AreEqual("　", rig.Session.Committed);
+        }
+
+        [Test]
+        public void 変換は展開_収納のボタンでは取り消さず_パネルの切り替えのボタンで取り消す()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.VowelFunction(Convert);
+            Assert.AreEqual(KeyboardMode.WaitingConversion, rig.Session.Mode);
+
+            rig.SetOpenClose(rig.Consonant, true); rig.Tick();
+            Assert.AreEqual(KeyboardMode.WaitingConversion, rig.Session.Mode);
+            rig.SetOpenClose(rig.Consonant, false); rig.Tick();
+
+            rig.SetPanel(rig.Consonant, true); rig.Tick();
+            Assert.AreEqual(KeyboardMode.Input, rig.Session.Mode);
+            Assert.AreEqual("あ", rig.Session.Composition);
+        }
+    }
 }
