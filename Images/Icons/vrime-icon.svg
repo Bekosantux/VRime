@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <clipPath id="flesh"><circle cx="32" cy="32" r="25"/></clipPath>
+  <circle cx="32" cy="32" r="30" fill="#4E9F1E"/>
+  <circle cx="32" cy="32" r="25" fill="#B9E043"/>
+  <path clip-path="url(#flesh)" d="M15 8 L32 54 L49 8" fill="none" stroke="#F5FAE0" stroke-width="6.5" stroke-linejoin="round"/>
+</svg>

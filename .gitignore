@@ -109,8 +109,13 @@ InitTestScene*.unity*
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
 # IDE / ツールのローカル設定
-.idea/
-.ai/
+.yomiyasu/
 
-# 試作（技術検証）のフォルダ。必要なコードは Assets に移植済み
+# 試作のフォルダ
 /scratch-*/
+
+# UnityMCP のスクリプト検証に使う Roslyn
+# 他のプラグインを置くときは最後の .meta 除外を外す
+/[Aa]ssets/[Pp]lugins/Roslyn/
+/[Aa]ssets/[Pp]lugins/Roslyn.meta
+/[Aa]ssets/[Pp]lugins.meta

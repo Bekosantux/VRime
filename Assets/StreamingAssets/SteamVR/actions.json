@@ -84,7 +84,7 @@
   "localization": [
     {
       "language_tag": "en_US",
-      "/actions/keyboard": "VR Keyboard",
+      "/actions/keyboard": "VRime",
       "/actions/keyboard/in/openclose_left": "Open / Close (Left)",
       "/actions/keyboard/in/openclose_right": "Open / Close (Right)",
       "/actions/keyboard/in/panel_left": "Switch Panel (Left)",
@@ -98,7 +98,7 @@
     },
     {
       "language_tag": "ja_JP",
-      "/actions/keyboard": "VR日本語キーボード",
+      "/actions/keyboard": "VRime",
       "/actions/keyboard/in/openclose_left": "展開・収納（左）",
       "/actions/keyboard/in/openclose_right": "展開・収納（右）",
       "/actions/keyboard/in/panel_left": "パネルの切り替え（左）",
