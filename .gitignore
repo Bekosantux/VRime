@@ -114,3 +114,9 @@ InitTestScene*.unity*
 
 # 試作（技術検証）のフォルダ。必要なコードは Assets に移植済み
 /scratch-*/
+
+# UnityMCP のスクリプト検証に使う Roslyn。UnityMCP を使う開発者が各自で入れる
+# Assets/Plugins に置くのは Roslyn だけのため、フォルダの .meta も対象にする（他のプラグインを置くときは最後の行を外す）
+/[Aa]ssets/[Pp]lugins/Roslyn/
+/[Aa]ssets/[Pp]lugins/Roslyn.meta
+/[Aa]ssets/[Pp]lugins.meta
