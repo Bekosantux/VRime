@@ -13,8 +13,10 @@ namespace VRime.App.View
     {
         [SerializeField] Image _background;
 
-        KeyboardTheme _theme;
         SettingsHit _hit;
+        Color _normal;
+        Color _hover;
+        Color _pressed;
 
         public RectTransform Rect => (RectTransform)transform;
 
@@ -26,18 +28,30 @@ namespace VRime.App.View
         public void Initialize(KeyboardTheme theme, SettingsHit hit)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            if (theme == null) throw new ArgumentNullException(nameof(theme));
             if (hit.Target != SettingsTarget.Decrease && hit.Target != SettingsTarget.Increase && hit.Target != SettingsTarget.Reset
                 && hit.Target != SettingsTarget.Quit && hit.Target != SettingsTarget.ConsentAccept && hit.Target != SettingsTarget.ConsentCancel)
                 throw new ArgumentException("ボタンの操作ではありません: " + hit.Target, nameof(hit));
             _hit = hit;
+            if (hit.Target == SettingsTarget.Quit)
+            {
+                _normal = theme.SettingsQuit;
+                _hover = theme.SettingsQuitHover;
+                _pressed = theme.SettingsQuitPressed;
+            }
+            else
+            {
+                _normal = theme.SettingsButton;
+                _hover = theme.SettingsButtonHover;
+                _pressed = theme.SettingsButtonPressed;
+            }
         }
 
         public void Refresh(SettingsForm form)
         {
-            if (form.Pressed == _hit) _background.color = _theme.SettingsButtonPressed;
-            else if (form.Hover == _hit) _background.color = _theme.SettingsButtonHover;
-            else _background.color = _theme.SettingsButton;
+            if (form.Pressed == _hit) _background.color = _pressed;
+            else if (form.Hover == _hit) _background.color = _hover;
+            else _background.color = _normal;
         }
     }
 }

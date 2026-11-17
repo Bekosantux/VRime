@@ -76,6 +76,12 @@ namespace VRime.App.View
         [SerializeField] Color _settingsButton = new Color(0.20f, 0.23f, 0.29f, 1f);
         [SerializeField] Color _settingsButtonHover = new Color(0.27f, 0.31f, 0.39f, 1f);
         [SerializeField] Color _settingsButtonPressed = new Color(0.14f, 0.50f, 0.95f, 1f);
+
+        [Tooltip("「アプリを終了」のボタン。ほかのボタンと見分けられる色にする。")]
+        [SerializeField] Color _settingsQuit = new Color(0.290f, 0.200f, 0.200f, 1f);
+
+        [SerializeField] Color _settingsQuitHover = new Color(0.38f, 0.25f, 0.25f, 1f);
+        [SerializeField] Color _settingsQuitPressed = new Color(0.86f, 0.27f, 0.27f, 1f);
         [SerializeField] Color _settingsThumb = new Color(0.96f, 0.97f, 0.98f, 1f);
 
         [Tooltip("つまんでいる・指しているスライダーのつまみ。")]
@@ -123,6 +129,9 @@ namespace VRime.App.View
         public Color SettingsButton => _settingsButton;
         public Color SettingsButtonHover => _settingsButtonHover;
         public Color SettingsButtonPressed => _settingsButtonPressed;
+        public Color SettingsQuit => _settingsQuit;
+        public Color SettingsQuitHover => _settingsQuitHover;
+        public Color SettingsQuitPressed => _settingsQuitPressed;
         public Color SettingsThumb => _settingsThumb;
         public Color SettingsThumbActive => _settingsThumbActive;
         public Color SettingsTab => _settingsTab;

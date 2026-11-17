@@ -96,7 +96,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `TextFitting` | 1行の文字を幅に収め、収まらなければ切って省略記号を付ける（候補欄・失敗の帯・通知・送信先の名前で使う） |
 | | `SettingsView` / `SettingsPage` / `SettingsTab` | 設定画面（キャンバスに置く）。`SettingsView` はページを `SettingsCatalog.Categories` と同じ順に持ち、`CreateLayout` でシーンの矩形から `SettingsLayout` を作る。`SettingsPage` は `_key` でカテゴリと対応し、行を子に持つ。選んでいるページだけを `SetActive(true)` にし、ページどうしは同じ場所に重ねる。タブはページを隠しても見えるよう、ページの外（キャンバスの直下）に置く。`SettingsForm.Version` が変わったときだけ更新する。操作は持たない |
 | | `SettingsConsentDialog` | 同意が必要な項目の同意の画面（注意事項の文章・同意と取り消しの `SettingsButton`・背景）。`_key` で項目と対応し、`SettingsForm.ConsentItem` がその項目の間だけ表示する。ページの上に描くため、キャンバスの直下でページより後に置く |
-| | `SettingsRow` / `SettingsToggleRow` / `SettingsButton` | 数値の項目の行（［−］・スライダー・［＋］・値）と、オン・オフの項目の行（スイッチ・値。行の矩形全体が当たり判定）。「既定に戻す」（`SettingsView._reset`）と「アプリを終了」（`SettingsView._quit`）は `SettingsButton` で、キャンバスの直下に置く。`_key` で `SettingsCatalog` の項目と対応させる |
+| | `SettingsRow` / `SettingsToggleRow` / `SettingsButton` | 数値の項目の行（［−］・スライダー・［＋］・値）と、オン・オフの項目の行（スイッチ・値。行の矩形全体が当たり判定）。「既定に戻す」（`SettingsView._reset`）と「アプリを終了」（`SettingsView._quit`）は `SettingsButton` で、キャンバスの直下に置く。「アプリを終了」は `KeyboardTheme` の終了用の色（`SettingsQuit*`）を使う。`_key` で `SettingsCatalog` の項目と対応させる |
 | | `OverlayRenderTarget` | 描画先の根（MonoBehaviour）。子に無効な正投影のカメラと World Space のキャンバスを持つ。`Initialize` でキャンバスと同じピクセル数の透明な RenderTexture を作り、カメラをキャンバスの正面に合わせる。`Render()` を呼んだときだけ 1回描き、`Rendered` イベントで通知する。テクスチャの破棄（`Release`）はオーバーレイの破棄の後に `KeyboardApp` が呼ぶ |
 | | `KeyboardFonts` | 編集用のフォントアセットの元のフォントから、実行用の Dynamic SDF フォントアセット（atlas 2048・multi atlas）を作り、描画先の下のすべての文字のフォントを差し替える（保存しない）。最初の描画より前に差し替えるため、編集用のアセットは書き換わらない |
 | | `KeyboardTheme` | 状態によって切り替わる色と文字の大きさ（ScriptableObject。`Assets/VRime/UI/KeyboardTheme.asset`）。状態によらない見た目はシーンに置く |

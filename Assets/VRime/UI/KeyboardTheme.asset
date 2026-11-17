@@ -38,6 +38,9 @@ MonoBehaviour:
   _settingsButton: {r: 0.2, g: 0.23, b: 0.29, a: 1}
   _settingsButtonHover: {r: 0.27, g: 0.31, b: 0.39, a: 1}
   _settingsButtonPressed: {r: 0.14, g: 0.5, b: 0.95, a: 1}
+  _settingsQuit: {r: 0.29, g: 0.2, b: 0.2, a: 1}
+  _settingsQuitHover: {r: 0.38, g: 0.25, b: 0.25, a: 1}
+  _settingsQuitPressed: {r: 0.86, g: 0.27, b: 0.27, a: 1}
   _settingsThumb: {r: 0.96, g: 0.97, b: 0.98, a: 1}
   _settingsThumbActive: {r: 0.45, g: 0.78, b: 1, a: 1}
   _settingsTab: {r: 0.14, g: 0.16, b: 0.2, a: 1}
