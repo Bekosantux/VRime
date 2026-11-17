@@ -26,7 +26,7 @@ namespace VRime.App.View
 
         ToggleSettingItem _item;
         SettingsHit _hit;
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
 
         public string Key => _key;
 
@@ -49,11 +49,11 @@ namespace VRime.App.View
             return new SettingsToggleLayout(item, UiRects.RectIn(Area, canvas));
         }
 
-        public void Initialize(ToggleSettingItem item, KeyboardTheme theme)
+        public void Initialize(ToggleSettingItem item, ActiveTheme theme)
         {
             Validate();
             CheckItem(item);
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             _item = item;
             _hit = SettingsHit.Toggle(item);
         }
@@ -61,7 +61,7 @@ namespace VRime.App.View
         public void Refresh(SettingsForm form)
         {
             bool on = _item.Get(form.Settings);
-            _switch.color = on ? _theme.SettingsSwitchOn : _theme.SettingsSwitchOff;
+            _switch.color = on ? _theme.Current.SettingsSwitchOn : _theme.Current.SettingsSwitchOff;
 
             float x = on ? 1f : 0f;
             RectTransform knob = _knob.rectTransform;
@@ -69,7 +69,7 @@ namespace VRime.App.View
             knob.anchorMax = new Vector2(x, knob.anchorMax.y);
             knob.pivot = new Vector2(x, knob.pivot.y);
             bool active = form.Pressed == _hit || form.Hover == _hit;
-            _knob.color = active ? _theme.SettingsThumbActive : _theme.SettingsThumb;
+            _knob.color = active ? _theme.Current.SettingsThumbActive : _theme.Current.SettingsThumb;
 
             string text = on ? "オン" : "オフ";
             if (_value.text != text) _value.text = text;

@@ -5,7 +5,7 @@ using System.Globalization;
 namespace VRime.App.Settings
 {
     /// <summary>
-    /// 設定画面の項目。画面の行（<see cref="View.SettingsRow"/> / <see cref="View.SettingsToggleRow"/>）とは <see cref="Key"/> で対応させる。
+    /// 設定画面の項目。画面の行（<see cref="View.SettingsRow"/> / <see cref="View.SettingsToggleRow"/> / <see cref="View.SettingsDropdownRow"/>）とは <see cref="Key"/> で対応させる。
     /// 項目名などの見た目はシーンに置く。
     /// </summary>
     public abstract class SettingItem
@@ -79,6 +79,83 @@ namespace VRime.App.Settings
         public override UserSettings ResetToDefault(UserSettings settings) => _set(settings, _get(UserSettings.Default));
     }
 
+    /// <summary>
+    /// 選択肢から 1 つを選ぶ項目。ドロップダウンの一覧から選ぶ。
+    /// 選択肢の表示名は、値の表示（<see cref="NumberSettingItem.Format"/>）と同じく画面に出す文言で、一覧はこの順に並べる。
+    /// </summary>
+    public sealed class ChoiceSettingItem : SettingItem
+    {
+        readonly Func<UserSettings, int> _getIndex;
+        readonly Func<UserSettings, int, UserSettings> _setIndex;
+
+        ChoiceSettingItem(string key, IReadOnlyList<string> labels, Func<UserSettings, int> getIndex,
+            Func<UserSettings, int, UserSettings> setIndex) : base(key)
+        {
+            Labels = labels;
+            _getIndex = getIndex;
+            _setIndex = setIndex;
+        }
+
+        /// <param name="choices">選択肢の値と表示名。2 つ以上で、値と表示名はどちらも重複しない。</param>
+        /// <param name="get">設定の値。choices にない値を返すと、読み出しが例外になる。</param>
+        public static ChoiceSettingItem Create<T>(string key, IReadOnlyList<(T value, string label)> choices,
+            Func<UserSettings, T> get, Func<UserSettings, T, UserSettings> set)
+        {
+            if (choices == null) throw new ArgumentNullException(nameof(choices));
+            if (get == null) throw new ArgumentNullException(nameof(get));
+            if (set == null) throw new ArgumentNullException(nameof(set));
+            if (choices.Count < 2) throw new ArgumentException("選択肢が 2 つ未満です: " + key, nameof(choices));
+
+            var values = new T[choices.Count];
+            var labels = new string[choices.Count];
+            EqualityComparer<T> comparer = EqualityComparer<T>.Default;
+            for (int i = 0; i < choices.Count; i++)
+            {
+                (T value, string label) = choices[i];
+                if (string.IsNullOrEmpty(label)) throw new ArgumentException("表示名が空の選択肢があります: " + key, nameof(choices));
+                for (int j = 0; j < i; j++)
+                {
+                    if (comparer.Equals(values[j], value)) throw new ArgumentException("選択肢の値が重複しています: " + key + " = " + value, nameof(choices));
+                    if (labels[j] == label) throw new ArgumentException("選択肢の表示名が重複しています: " + key + " = " + label, nameof(choices));
+                }
+                values[i] = value;
+                labels[i] = label;
+            }
+
+            int IndexOf(T value)
+            {
+                for (int i = 0; i < values.Length; i++)
+                {
+                    if (comparer.Equals(values[i], value)) return i;
+                }
+                throw new InvalidOperationException(key + " の値が選択肢にありません: " + value);
+            }
+
+            return new ChoiceSettingItem(key, Array.AsReadOnly(labels), s => IndexOf(get(s)), (s, i) => set(s, values[i]));
+        }
+
+        /// <summary>選択肢の表示名。一覧の順。</summary>
+        public IReadOnlyList<string> Labels { get; }
+
+        /// <summary>settings の値が何番目の選択肢か。</summary>
+        public int GetIndex(UserSettings settings)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            return _getIndex(settings);
+        }
+
+        /// <summary>index 番目の選択肢の値にする。</summary>
+        public UserSettings SetIndex(UserSettings settings, int index)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            if (index < 0 || index >= Labels.Count)
+                throw new ArgumentOutOfRangeException(nameof(index), index, Key + " の選択肢は " + Labels.Count + " 個です。");
+            return _setIndex(settings, index);
+        }
+
+        public override UserSettings ResetToDefault(UserSettings settings) => SetIndex(settings, GetIndex(UserSettings.Default));
+    }
+
     /// <summary>設定画面のタブ 1 つ分の項目のまとまり。「既定に戻す」はカテゴリごとに働く。</summary>
     public sealed class SettingsCategory
     {
@@ -132,6 +209,8 @@ namespace VRime.App.Settings
         {
             new SettingsCategory("display", new SettingItem[]
             {
+                ChoiceSettingItem.Create("theme", new[] { (ColorTheme.Dark, "ダーク"), (ColorTheme.Lime, "ライム") },
+                    s => s.Theme, (s, v) => s.WithTheme(v)),
                 new NumberSettingItem("downMeters", KeyboardPlacement.DownRange,
                     s => s.Placement.DownMeters, (s, v) => s.WithPlacement(s.Placement.WithDown(v)), Centimeters),
                 new NumberSettingItem("forwardMeters", KeyboardPlacement.ForwardRange,
@@ -185,6 +264,9 @@ namespace VRime.App.Settings
 
         public static ToggleSettingItem FindToggle(string key) => Find(key) as ToggleSettingItem
             ?? throw new ArgumentException("オン・オフの項目ではありません: " + key, nameof(key));
+
+        public static ChoiceSettingItem FindChoice(string key) => Find(key) as ChoiceSettingItem
+            ?? throw new ArgumentException("選択肢の項目ではありません: " + key, nameof(key));
 
         /// <summary>キーに対応するカテゴリ。ない場合は例外。</summary>
         public static SettingsCategory FindCategory(string key)

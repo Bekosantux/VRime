@@ -367,6 +367,7 @@ namespace VRime.App.Tests
     /// シーンの設定画面と同じ大きさ（1280×872）の配置。左にカテゴリのタブを縦に並べ、右に選んでいるカテゴリのページを置く。
     /// ページはどれも同じ位置から行を並べるため、別のページの行どうしは重なる。
     /// 同意の画面はどれも同じ位置に置き、ボタンはページの行と重なる。
+    /// 選択肢の一覧はボタンの下に開き、後ろの行と重なる。
     /// </summary>
     internal static class TestSettingsLayout
     {
@@ -377,6 +378,7 @@ namespace VRime.App.Tests
         public static readonly Rect ConsentCancel = new Rect(940f, 144f, 240f, 64f);
         public const float FirstRowTop = 144f;
         const float RowHeight = 72f;
+        const float OptionHeight = 56f;
 
         public static SettingsLayout Create()
         {
@@ -406,6 +408,7 @@ namespace VRime.App.Tests
         {
             var rows = new List<SettingsRowLayout>();
             var toggles = new List<SettingsToggleLayout>();
+            var dropdowns = new List<SettingsDropdownLayout>();
             for (int i = 0; i < category.Items.Count; i++)
             {
                 float top = FirstRowTop + RowHeight * i;
@@ -417,11 +420,14 @@ namespace VRime.App.Tests
                     case ToggleSettingItem toggle:
                         toggles.Add(Toggle(toggle, top));
                         break;
+                    case ChoiceSettingItem choice:
+                        dropdowns.Add(Dropdown(choice, top));
+                        break;
                     default:
                         throw new InvalidOperationException("未知の種類の項目です: " + category.Items[i].Key);
                 }
             }
-            return new SettingsPageLayout(category, Tab(tabIndex), rows, toggles);
+            return new SettingsPageLayout(category, Tab(tabIndex), rows, toggles, dropdowns);
         }
 
         public static Rect Tab(int index) => new Rect(48f, FirstRowTop + 80f * index, 220f, 64f);
@@ -438,6 +444,14 @@ namespace VRime.App.Tests
 
         public static SettingsToggleLayout Toggle(ToggleSettingItem item, float top) =>
             new SettingsToggleLayout(item, new Rect(300f, top, 900f, RowHeight));
+
+        /// <summary>ボタンの下に、選択肢を縦に並べた一覧を開く行。</summary>
+        public static SettingsDropdownLayout Dropdown(ChoiceSettingItem item, float top)
+        {
+            var options = new List<Rect>();
+            for (int i = 0; i < item.Labels.Count; i++) options.Add(new Rect(600f, top + RowHeight + 4f + OptionHeight * i, 500f, OptionHeight));
+            return new SettingsDropdownLayout(item, new Rect(600f, top + 4f, 500f, 64f), options);
+        }
 
         /// <summary>数値の行の左（項目名の位置）。操作の対象がない。</summary>
         public static Vector2 LabelPoint(SettingsRowLayout row) => new Vector2(420f, row.Slider.center.y);
@@ -456,16 +470,16 @@ namespace VRime.App.Tests
         public void 当たり判定()
         {
             SettingsRowLayout row = _layout.PageOf(Display).Rows[2];
-            Assert.AreEqual(SettingsHit.Slider(row.Item), _layout.HitTest(row.Slider.center, Display, null));
-            Assert.AreEqual(SettingsHit.Decrease(row.Item), _layout.HitTest(row.Decrease.center, Display, null));
-            Assert.AreEqual(SettingsHit.Increase(row.Item), _layout.HitTest(row.Increase.center, Display, null));
-            Assert.AreEqual(SettingsHit.Reset, _layout.HitTest(_layout.Reset.center, Display, null));
-            Assert.AreEqual(SettingsHit.Quit, _layout.HitTest(_layout.Quit.center, Display, null));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(TestSettingsLayout.LabelPoint(row), Display, null));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(-10f, -10f), Display, null));
+            Assert.AreEqual(SettingsHit.Slider(row.Item), _layout.HitTest(row.Slider.center, Display, null, null));
+            Assert.AreEqual(SettingsHit.Decrease(row.Item), _layout.HitTest(row.Decrease.center, Display, null, null));
+            Assert.AreEqual(SettingsHit.Increase(row.Item), _layout.HitTest(row.Increase.center, Display, null, null));
+            Assert.AreEqual(SettingsHit.Reset, _layout.HitTest(_layout.Reset.center, Display, null, null));
+            Assert.AreEqual(SettingsHit.Quit, _layout.HitTest(_layout.Quit.center, Display, null, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(TestSettingsLayout.LabelPoint(row), Display, null, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(-10f, -10f), Display, null, null));
 
             SettingsToggleLayout toggle = _layout.PageOf(VRChat).Toggles[1];
-            Assert.AreEqual(SettingsHit.Toggle(toggle.Item), _layout.HitTest(toggle.Area.center, VRChat, null));
+            Assert.AreEqual(SettingsHit.Toggle(toggle.Item), _layout.HitTest(toggle.Area.center, VRChat, null, null));
         }
 
         [Test]
@@ -474,7 +488,7 @@ namespace VRime.App.Tests
             foreach (SettingsPageLayout page in _layout.Pages)
             {
                 foreach (SettingsCategory current in SettingsCatalog.Categories)
-                    Assert.AreEqual(SettingsHit.Tab(page.Category), _layout.HitTest(page.Tab.center, current, null), page.Category.Key + " / " + current.Key);
+                    Assert.AreEqual(SettingsHit.Tab(page.Category), _layout.HitTest(page.Tab.center, current, null, null), page.Category.Key + " / " + current.Key);
             }
         }
 
@@ -483,14 +497,14 @@ namespace VRime.App.Tests
         {
             // 別のページの対象どうしは同じ位置に重ねて置いてよい。
             SettingsRowLayout down = _layout.PageOf(Display).Rows[0];
-            SettingsToggleLayout focus = _layout.PageOf(VRChat).Toggles[0];
-            Assert.IsTrue(down.Slider.Overlaps(focus.Area));
-            Assert.AreEqual(SettingsHit.Slider(down.Item), _layout.HitTest(down.Slider.center, Display, null));
-            Assert.AreEqual(SettingsHit.Toggle(focus.Item), _layout.HitTest(down.Slider.center, VRChat, null));
+            SettingsToggleLayout typing = _layout.PageOf(VRChat).Toggles[1];
+            Assert.IsTrue(down.Slider.Overlaps(typing.Area));
+            Assert.AreEqual(SettingsHit.Slider(down.Item), _layout.HitTest(down.Slider.center, Display, null, null));
+            Assert.AreEqual(SettingsHit.Toggle(typing.Item), _layout.HitTest(down.Slider.center, VRChat, null, null));
 
-            // grip のページは 3 行のため、display の 5 行目の位置には対象がない。
+            // grip のページは 3 行のため、display の最後の行の位置には対象がない。
             SettingsRowLayout width = _layout.PageOf(Display).Rows[4];
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(width.Increase.center, Grip, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(width.Increase.center, Grip, null, null));
         }
 
         [Test]
@@ -520,7 +534,7 @@ namespace VRime.App.Tests
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("triggerThreshold"), 144f),
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("stickThreshold"), 184f),
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("repeatDelaySeconds"), 400f),
-            }, Array.Empty<SettingsToggleLayout>());
+            }, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>());
             Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(page));
         }
 
@@ -531,7 +545,7 @@ namespace VRime.App.Tests
             {
                 new SettingsToggleLayout(SettingsCatalog.FindToggle("focusOnStartup"), new Rect(200f, 144f, 900f, 72f)),
                 TestSettingsLayout.Toggle(SettingsCatalog.FindToggle("showTypingText"), 216f),
-            });
+            }, Array.Empty<SettingsDropdownLayout>());
             Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(page));
         }
 
@@ -539,7 +553,8 @@ namespace VRime.App.Tests
         public void タブどうしが重なると例外()
         {
             SettingsPageLayout display = TestSettingsLayout.Page(Display, 0);
-            var grip = new SettingsPageLayout(Grip, new Rect(48f, 180f, 220f, 64f), TestSettingsLayout.Page(Grip, 1).Rows, Array.Empty<SettingsToggleLayout>());
+            var grip = new SettingsPageLayout(Grip, new Rect(48f, 180f, 220f, 64f), TestSettingsLayout.Page(Grip, 1).Rows,
+                Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>());
             Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(display, grip));
         }
 
@@ -551,7 +566,7 @@ namespace VRime.App.Tests
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("triggerThreshold"), 144f),
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("stickThreshold"), 216f),
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("repeatDelaySeconds"), 820f),
-            }, Array.Empty<SettingsToggleLayout>());
+            }, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>());
             Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(page));
         }
 
@@ -580,17 +595,78 @@ namespace VRime.App.Tests
         {
             ToggleSettingItem item = SettingsCatalog.FindToggle("useGoogleConversion");
             SettingsConsentLayout consent = _layout.ConsentOf(item);
-            Assert.AreEqual(SettingsHit.ConsentAccept, _layout.HitTest(consent.Accept.center, Privacy, item));
-            Assert.AreEqual(SettingsHit.ConsentCancel, _layout.HitTest(consent.Cancel.center, Privacy, item));
+            Assert.AreEqual(SettingsHit.ConsentAccept, _layout.HitTest(consent.Accept.center, Privacy, item, null));
+            Assert.AreEqual(SettingsHit.ConsentCancel, _layout.HitTest(consent.Cancel.center, Privacy, item, null));
 
             // ページの行・タブ・「既定に戻す」・「アプリを終了」は、同意の画面の後ろにあっても当たらない。
             SettingsToggleLayout row = _layout.PageOf(Privacy).Toggles[0];
             Assert.IsTrue(row.Area.Overlaps(consent.Accept));
-            Assert.AreEqual(SettingsHit.Toggle(item), _layout.HitTest(consent.Accept.center, Privacy, null));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(row.Area.xMin + 10f, row.Area.center.y), Privacy, item));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.PageOf(Display).Tab.center, Privacy, item));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.Reset.center, Privacy, item));
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.Quit.center, Privacy, item));
+            Assert.AreEqual(SettingsHit.Toggle(item), _layout.HitTest(consent.Accept.center, Privacy, null, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(new Vector2(row.Area.xMin + 10f, row.Area.center.y), Privacy, item, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.PageOf(Display).Tab.center, Privacy, item, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.Reset.center, Privacy, item, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(_layout.Quit.center, Privacy, item, null));
+        }
+
+        [Test]
+        public void ドロップダウンを開いている間は選択肢だけに当たり_ほかの場所は閉じる対象になる()
+        {
+            ChoiceSettingItem theme = SettingsCatalog.FindChoice("theme");
+            SettingsDropdownLayout dropdown = _layout.PageOf(Display).DropdownOf(theme);
+            Assert.AreEqual(SettingsHit.Dropdown(theme), _layout.HitTest(dropdown.Button.center, Display, null, null));
+
+            Assert.AreEqual(SettingsHit.Option(theme, 0), _layout.HitTest(dropdown.Options[0].center, Display, null, theme));
+            Assert.AreEqual(SettingsHit.Option(theme, 1), _layout.HitTest(dropdown.Options[1].center, Display, null, theme));
+
+            // 一覧の後ろの行・ボタン自身・タブ・「既定に戻す」は、開いている間は閉じる対象になる。
+            SettingsRowLayout down = _layout.PageOf(Display).Rows[0];
+            Assert.IsTrue(down.Slider.Overlaps(dropdown.Options[0]));
+            Assert.AreEqual(SettingsHit.DropdownDismiss, _layout.HitTest(new Vector2(down.Slider.center.x, dropdown.Options[1].yMax + 4f), Display, null, theme));
+            Assert.AreEqual(SettingsHit.DropdownDismiss, _layout.HitTest(dropdown.Button.center, Display, null, theme));
+            Assert.AreEqual(SettingsHit.DropdownDismiss, _layout.HitTest(_layout.PageOf(Grip).Tab.center, Display, null, theme));
+            Assert.AreEqual(SettingsHit.DropdownDismiss, _layout.HitTest(_layout.Reset.center, Display, null, theme));
+        }
+
+        [Test]
+        public void 同意の画面と選択肢の一覧を同時に開く_または表示していないページの一覧を開くと例外()
+        {
+            ChoiceSettingItem theme = SettingsCatalog.FindChoice("theme");
+            ToggleSettingItem google = SettingsCatalog.FindToggle("useGoogleConversion");
+            Assert.Throws<ArgumentException>(() => _layout.HitTest(Vector2.zero, Privacy, google, theme));
+            Assert.Throws<ArgumentException>(() => _layout.HitTest(Vector2.zero, Grip, null, theme));
+        }
+
+        [Test]
+        public void 選択肢の数が項目と違う_選択肢どうしが重なる_または画面の外にあると例外()
+        {
+            ChoiceSettingItem theme = SettingsCatalog.FindChoice("theme");
+            var button = new Rect(600f, 148f, 500f, 64f);
+            Assert.Throws<ArgumentException>(() => new SettingsDropdownLayout(theme, button, new[] { new Rect(600f, 220f, 500f, 56f) }));
+
+            SettingsPageLayout DisplayWith(params Rect[] options)
+            {
+                var rows = new List<SettingsRowLayout>();
+                NumberSettingItem[] numbers = { SettingsCatalog.FindNumber("downMeters"), SettingsCatalog.FindNumber("forwardMeters"),
+                    SettingsCatalog.FindNumber("rightMeters"), SettingsCatalog.FindNumber("tiltDegrees"), SettingsCatalog.FindNumber("widthMeters") };
+                for (int i = 0; i < numbers.Length; i++) rows.Add(TestSettingsLayout.Row(numbers[i], 216f + 72f * i));
+                return new SettingsPageLayout(Display, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(),
+                    new[] { new SettingsDropdownLayout(theme, button, options) });
+            }
+
+            Assert.DoesNotThrow(() => TestSettingsLayout.Create(DisplayWith(new Rect(600f, 220f, 500f, 56f), new Rect(600f, 276f, 500f, 56f))));
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(DisplayWith(new Rect(600f, 220f, 500f, 56f), new Rect(600f, 250f, 500f, 56f))));
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(DisplayWith(new Rect(600f, 220f, 500f, 56f), new Rect(900f, 276f, 500f, 56f))));
+        }
+
+        [Test]
+        public void ドロップダウンのボタンがページの対象と重なると例外()
+        {
+            ChoiceSettingItem theme = SettingsCatalog.FindChoice("theme");
+            SettingsPageLayout page = TestSettingsLayout.Page(Display, 0);
+            SettingsRowLayout down = page.Rows[0];
+            var overlapping = new SettingsDropdownLayout(theme, down.Slider, page.Dropdowns[0].Options);
+            var display = new SettingsPageLayout(Display, page.Tab, page.Rows, page.Toggles, new[] { overlapping });
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(display));
         }
 
         [Test]
@@ -638,21 +714,21 @@ namespace VRime.App.Tests
         {
             NumberSettingItem trigger = SettingsCatalog.FindNumber("triggerThreshold");
             var rows = new List<SettingsRowLayout>(TestSettingsLayout.Page(Grip, 0).Rows) { TestSettingsLayout.Row(trigger, 400f) };
-            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>()));
+            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>()));
         }
 
         [Test]
         public void ページにカテゴリの項目の行が欠けていると例外()
         {
             var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.FindNumber("triggerThreshold"), 144f) };
-            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>()));
+            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>()));
         }
 
         [Test]
         public void ほかのカテゴリの項目の行は例外()
         {
             var rows = new List<SettingsRowLayout>(TestSettingsLayout.Page(Grip, 0).Rows) { TestSettingsLayout.Row(SettingsCatalog.FindNumber("downMeters"), 400f) };
-            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>()));
+            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>()));
         }
 
         [Test]
@@ -669,7 +745,7 @@ namespace VRime.App.Tests
             SettingsLayout layout = TestSettingsLayout.Create(TestSettingsLayout.Page(Display, 0));
             Assert.Throws<ArgumentException>(() => layout.RowOf(SettingsCatalog.FindNumber("triggerThreshold")));
             Assert.Throws<ArgumentException>(() => layout.PageOf(Grip));
-            Assert.Throws<ArgumentException>(() => layout.HitTest(Vector2.zero, Grip, null));
+            Assert.Throws<ArgumentException>(() => layout.HitTest(Vector2.zero, Grip, null, null));
         }
 
         [Test]
@@ -680,6 +756,18 @@ namespace VRime.App.Tests
             Assert.Throws<InvalidOperationException>(() => _ = toggle.NumberItem);
             Assert.Throws<InvalidOperationException>(() => _ = slider.ToggleItem);
             Assert.Throws<InvalidOperationException>(() => _ = SettingsHit.Reset.NumberItem);
+            Assert.Throws<InvalidOperationException>(() => _ = slider.ChoiceItem);
+            Assert.Throws<InvalidOperationException>(() => _ = SettingsHit.Dropdown(SettingsCatalog.FindChoice("theme")).OptionIndex);
+        }
+
+        [Test]
+        public void 選択肢は位置で区別し_範囲外の位置は例外()
+        {
+            ChoiceSettingItem theme = SettingsCatalog.FindChoice("theme");
+            Assert.AreEqual(SettingsHit.Option(theme, 1), SettingsHit.Option(theme, 1));
+            Assert.AreNotEqual(SettingsHit.Option(theme, 0), SettingsHit.Option(theme, 1));
+            Assert.AreEqual(1, SettingsHit.Option(theme, 1).OptionIndex);
+            Assert.Throws<ArgumentOutOfRangeException>(() => SettingsHit.Option(theme, 2));
         }
     }
 
@@ -729,6 +817,39 @@ namespace VRime.App.Tests
         }
 
         [Test]
+        public void テーマの選択肢と値の読み書き()
+        {
+            ChoiceSettingItem theme = SettingsCatalog.FindChoice("theme");
+            CollectionAssert.AreEqual(new[] { "ダーク", "ライム" }, theme.Labels);
+            Assert.AreEqual(0, theme.GetIndex(UserSettings.Default));
+            UserSettings lime = theme.SetIndex(UserSettings.Default, 1);
+            Assert.AreEqual(UserSettings.Default.WithTheme(ColorTheme.Lime), lime);
+            Assert.AreEqual(1, theme.GetIndex(lime));
+            Assert.AreEqual(UserSettings.Default, theme.ResetToDefault(lime));
+            Assert.Throws<ArgumentOutOfRangeException>(() => theme.SetIndex(UserSettings.Default, 2));
+            Assert.Throws<ArgumentOutOfRangeException>(() => theme.SetIndex(UserSettings.Default, -1));
+        }
+
+        [Test]
+        public void 選択肢が2つ未満_または値か表示名が重複する項目は例外()
+        {
+            Func<UserSettings, ColorTheme> get = s => s.Theme;
+            Func<UserSettings, ColorTheme, UserSettings> set = (s, v) => s.WithTheme(v);
+            Assert.Throws<ArgumentException>(() => ChoiceSettingItem.Create("one", new[] { (ColorTheme.Dark, "ダーク") }, get, set));
+            Assert.Throws<ArgumentException>(() => ChoiceSettingItem.Create("value", new[] { (ColorTheme.Dark, "ダーク"), (ColorTheme.Dark, "ライム") }, get, set));
+            Assert.Throws<ArgumentException>(() => ChoiceSettingItem.Create("label", new[] { (ColorTheme.Dark, "ダーク"), (ColorTheme.Lime, "ダーク") }, get, set));
+            Assert.Throws<ArgumentException>(() => ChoiceSettingItem.Create("empty", new[] { (ColorTheme.Dark, "ダーク"), (ColorTheme.Lime, "") }, get, set));
+        }
+
+        [Test]
+        public void 選択肢にない値を読むと例外()
+        {
+            ChoiceSettingItem item = ChoiceSettingItem.Create("partial", new[] { (ColorTheme.Dark, "ダーク"), ((ColorTheme)99, "ほか") },
+                s => s.Theme, (s, v) => s);
+            Assert.Throws<InvalidOperationException>(() => item.GetIndex(UserSettings.Default.WithTheme(ColorTheme.Lime)));
+        }
+
+        [Test]
         public void スイッチは押すたびに切り替わる()
         {
             ToggleSettingItem focus = SettingsCatalog.FindToggle("focusOnStartup");
@@ -747,7 +868,7 @@ namespace VRime.App.Tests
         public void カテゴリの並びと項目()
         {
             CollectionAssert.AreEqual(new[] { "display", "grip", "vrchat", "privacy" }, Keys(SettingsCatalog.Categories, c => c.Key));
-            CollectionAssert.AreEqual(new[] { "downMeters", "forwardMeters", "rightMeters", "tiltDegrees", "widthMeters" },
+            CollectionAssert.AreEqual(new[] { "theme", "downMeters", "forwardMeters", "rightMeters", "tiltDegrees", "widthMeters" },
                 Keys(SettingsCatalog.FindCategory("display").Items, i => i.Key));
             CollectionAssert.AreEqual(new[] { "triggerThreshold", "stickThreshold", "repeatDelaySeconds" },
                 Keys(SettingsCatalog.FindCategory("grip").Items, i => i.Key));
@@ -789,15 +910,20 @@ namespace VRime.App.Tests
         {
             UserSettings changed = UserSettings.Default
                 .WithPlacement(KeyboardPlacement.Default.WithTilt(30f))
+                .WithTheme(ColorTheme.Lime)
                 .WithStickThreshold(0.8f)
                 .WithRepeatDelaySeconds(0.7f)
                 .WithVRChat(new VRChatSettings(false, false))
                 .WithPrivacy(new PrivacySettings(true));
 
+            UserSettings display = SettingsCatalog.FindCategory("display").ResetToDefault(changed);
+            Assert.AreEqual(changed.WithPlacement(KeyboardPlacement.Default).WithTheme(ColorTheme.Dark), display);
+
             UserSettings grip = SettingsCatalog.FindCategory("grip").ResetToDefault(changed);
             Assert.AreEqual(UserSettings.Default.StickThreshold, grip.StickThreshold);
             Assert.AreEqual(UserSettings.Default.RepeatDelaySeconds, grip.RepeatDelaySeconds);
             Assert.AreEqual(changed.Placement, grip.Placement);
+            Assert.AreEqual(changed.Theme, grip.Theme);
             Assert.AreEqual(changed.VRChat, grip.VRChat);
             Assert.AreEqual(changed.Privacy, grip.Privacy);
 
@@ -818,6 +944,7 @@ namespace VRime.App.Tests
             Assert.Throws<ArgumentException>(() => SettingsCatalog.Find("unknown"));
             Assert.Throws<ArgumentException>(() => SettingsCatalog.FindNumber("focusOnStartup"));
             Assert.Throws<ArgumentException>(() => SettingsCatalog.FindToggle("downMeters"));
+            Assert.Throws<ArgumentException>(() => SettingsCatalog.FindChoice("downMeters"));
             Assert.Throws<ArgumentException>(() => SettingsCatalog.FindCategory("unknown"));
         }
 
@@ -1193,6 +1320,101 @@ namespace VRime.App.Tests
             Click(enabled, _layout.Reset.center);
             Assert.IsNull(enabled.ConsentItem);
             Assert.AreEqual(UserSettings.Default, enabled.Settings);
+        }
+
+        SettingsDropdownLayout ThemeDropdown() => _layout.PageOf(SettingsCatalog.FindCategory("display")).DropdownOf(SettingsCatalog.FindChoice("theme"));
+
+        [Test]
+        public void ドロップダウンを押して離すと値を変えずに一覧を開く()
+        {
+            SettingsDropdownLayout dropdown = ThemeDropdown();
+            _form.PointerDown(dropdown.Button.center);
+            Assert.AreEqual(SettingsHit.Dropdown(dropdown.Item), _form.Pressed);
+            Assert.IsNull(_form.OpenDropdown, "押しただけでは開かない");
+
+            int version = _form.Version;
+            _form.PointerUp(dropdown.Button.center);
+            Assert.AreSame(dropdown.Item, _form.OpenDropdown);
+            Assert.Greater(_form.Version, version);
+            Assert.AreEqual(SettingsHit.None, _form.Hover, "開いた直後は何も指していない");
+            Assert.AreEqual(0, _changed.Count);
+            Assert.AreEqual(0, _committed.Count);
+        }
+
+        [Test]
+        public void 選択肢を押して離すと値が変わって確定し一覧を閉じる()
+        {
+            SettingsDropdownLayout dropdown = ThemeDropdown();
+            Click(_form, dropdown.Button.center);
+            _form.PointerDown(dropdown.Options[1].center);
+            Assert.AreEqual(SettingsHit.Option(dropdown.Item, 1), _form.Pressed);
+            Assert.AreEqual(ColorTheme.Dark, _form.Settings.Theme, "押しただけでは変わらない");
+            _form.PointerUp(dropdown.Options[1].center);
+
+            Assert.IsNull(_form.OpenDropdown);
+            Assert.AreEqual(ColorTheme.Lime, _form.Settings.Theme);
+            Assert.AreEqual(1, _changed.Count);
+            Assert.AreEqual(1, _committed.Count);
+            Assert.AreEqual(_form.Settings, _committed[0]);
+        }
+
+        [Test]
+        public void いまの値の選択肢を選ぶと一覧を閉じるだけで確定しない()
+        {
+            SettingsDropdownLayout dropdown = ThemeDropdown();
+            Click(_form, dropdown.Button.center);
+            Click(_form, dropdown.Options[0].center);
+            Assert.IsNull(_form.OpenDropdown);
+            Assert.AreEqual(UserSettings.Default, _form.Settings);
+            Assert.AreEqual(0, _committed.Count);
+        }
+
+        [Test]
+        public void 選択肢以外の場所を押して離すと何も変えずに一覧を閉じ_後ろの対象は働かない()
+        {
+            SettingsDropdownLayout dropdown = ThemeDropdown();
+            Click(_form, dropdown.Button.center);
+            Click(_form, _layout.Reset.center);
+            Assert.IsNull(_form.OpenDropdown);
+
+            Click(_form, dropdown.Button.center);
+            Click(_form, _layout.PageOf(SettingsCatalog.FindCategory("grip")).Tab.center);
+            Assert.IsNull(_form.OpenDropdown);
+            Assert.AreEqual("display", _form.Category.Key);
+            Assert.AreEqual(UserSettings.Default, _form.Settings);
+            Assert.AreEqual(0, _changed.Count);
+            Assert.AreEqual(0, _committed.Count);
+        }
+
+        [Test]
+        public void 一覧を開いている間に選択肢の外で離すと選ばない()
+        {
+            SettingsDropdownLayout dropdown = ThemeDropdown();
+            Click(_form, dropdown.Button.center);
+            _form.PointerDown(dropdown.Options[1].center);
+            _form.PointerUp(_layout.Reset.center);
+            Assert.AreSame(dropdown.Item, _form.OpenDropdown);
+            Assert.AreEqual(UserSettings.Default, _form.Settings);
+        }
+
+        [Test]
+        public void ポインターが外れると一覧を閉じる()
+        {
+            SettingsDropdownLayout dropdown = ThemeDropdown();
+            Click(_form, dropdown.Button.center);
+            _form.PointerDown(dropdown.Options[1].center);
+            _form.PointerLeave();
+            Assert.IsNull(_form.OpenDropdown);
+            Assert.AreEqual(SettingsHit.None, _form.Pressed);
+            Assert.AreEqual(UserSettings.Default, _form.Settings);
+        }
+
+        [Test]
+        public void 表示のカテゴリを既定に戻すとテーマもダークに戻る()
+        {
+            var form = new SettingsForm(_layout, UserSettings.Default.WithTheme(ColorTheme.Lime));
+            Click(form, _layout.Reset.center);
+            Assert.AreEqual(UserSettings.Default, form.Settings);
         }
 
         [Test]

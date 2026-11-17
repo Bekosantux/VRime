@@ -44,7 +44,7 @@ namespace VRime.App.View
         }
 
         /// <param name="layout">この画面の <see cref="BuildLayout"/> で作った配置。</param>
-        public void Initialize(SettingsConsentLayout layout, KeyboardTheme theme)
+        public void Initialize(SettingsConsentLayout layout, ActiveTheme theme)
         {
             if (layout == null) throw new ArgumentNullException(nameof(layout));
             CheckItem(layout.Item);

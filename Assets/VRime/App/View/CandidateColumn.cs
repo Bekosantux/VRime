@@ -22,7 +22,7 @@ namespace VRime.App.View
         [SerializeField] CandidateLabel _candidateTemplate;
 
         readonly List<CandidateLabel> _candidates = new List<CandidateLabel>();
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
         float _maxWidth;
 
         public CandidateLabel Heading => _heading;
@@ -42,10 +42,10 @@ namespace VRime.App.View
         }
 
         /// <param name="maxWidth">カードの最大の幅。見出しと候補は、カードの左右の余白を除いた幅に収める。</param>
-        public void Initialize(KeyboardTheme theme, float maxWidth)
+        public void Initialize(ActiveTheme theme, float maxWidth)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             _maxWidth = maxWidth - _layout.padding.horizontal;
             _heading.Initialize(theme, maxWidth);
             _candidateTemplate.gameObject.SetActive(false);

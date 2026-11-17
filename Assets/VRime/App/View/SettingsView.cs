@@ -9,7 +9,8 @@ namespace VRime.App.View
     /// <summary>
     /// 設定画面（<see cref="SettingsForm"/>）の状態を uGUI に反映する。設定画面のキャンバスに置く。
     /// 操作の対象の配置（<see cref="SettingsLayout"/>）はシーンの uGUI の矩形から作るため、シーンで動かした位置がそのまま当たり判定になる。
-    /// 毎フレーム <see cref="RefreshIfChanged"/> を呼ぶと、<see cref="SettingsForm.Version"/> が変わったときだけ uGUI を更新する。
+    /// 毎フレーム <see cref="RefreshIfChanged"/> を呼ぶと、<see cref="SettingsForm.Version"/> か <see cref="ActiveTheme.Version"/> が変わったときだけ uGUI を更新する。
+    /// テーマが変わったときは、状態によらない色（<see cref="ThemeColor"/>）も塗り直す。
     /// 題名・見出し・説明・項目名はシーンに置いたまま変えない。
     /// </summary>
     public sealed class SettingsView : MonoBehaviour
@@ -28,7 +29,9 @@ namespace VRime.App.View
         [SerializeField] TextMeshProUGUI _notice;
 
         SettingsForm _form;
+        ActiveTheme _theme;
         int _renderedVersion = -1;
+        int _renderedThemeVersion = -1;
 
         RectTransform Canvas => (RectTransform)transform;
 
@@ -99,11 +102,11 @@ namespace VRime.App.View
         }
 
         /// <param name="form">このビューの <see cref="CreateLayout"/> で作った配置を持つ設定画面。</param>
-        public void Initialize(SettingsForm form, KeyboardTheme theme)
+        public void Initialize(SettingsForm form, ActiveTheme theme)
         {
             Validate();
             _form = form ?? throw new ArgumentNullException(nameof(form));
-            if (theme == null) throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             IReadOnlyList<SettingsPageLayout> pages = form.Layout.Pages;
             if (pages.Count != _pages.Length)
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " のページの数が配置のページの数と一致しません。");
@@ -115,14 +118,21 @@ namespace VRime.App.View
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の同意の画面の数が配置の同意の画面の数と一致しません。");
             for (int i = 0; i < consents.Count; i++) _consents[i].Initialize(consents[i], theme);
             _renderedVersion = -1;
+            _renderedThemeVersion = -1;
         }
 
         /// <summary>表示に関わる状態が変わっていれば uGUI を更新して true を返す。</summary>
         public bool RefreshIfChanged()
         {
             int version = _form.Version;
-            if (version == _renderedVersion) return false;
+            int themeVersion = _theme.Version;
+            if (version == _renderedVersion && themeVersion == _renderedThemeVersion) return false;
             _renderedVersion = version;
+            if (themeVersion != _renderedThemeVersion)
+            {
+                _renderedThemeVersion = themeVersion;
+                ThemeColor.ApplyAll(transform, _theme.Current);
+            }
 
             foreach (SettingsPage page in _pages) page.Refresh(_form);
             _reset.Refresh(_form);

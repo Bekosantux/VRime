@@ -41,7 +41,7 @@ namespace VRime.App.View
         [SerializeField] GripPanelChip _widthChip;
         [SerializeField] GripPanelChip _caseChip;
 
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
         GripPanelCell[] _consonantCells;
         GripPanelCell[] _vowelCells;
         GripPanelCaption _consonantCaption;
@@ -66,10 +66,10 @@ namespace VRime.App.View
             _caseChip.Validate();
         }
 
-        public void Initialize(Hand consonantHand, KeyboardTheme theme)
+        public void Initialize(Hand consonantHand, ActiveTheme theme)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             bool consonantLeft = consonantHand == Hand.Left;
             _consonantCells = consonantLeft ? _leftCells : _rightCells;
             _vowelCells = consonantLeft ? _rightCells : _leftCells;
@@ -90,7 +90,7 @@ namespace VRime.App.View
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
             GripViewState view = input.View;
-            _group.alpha = dimmed ? _theme.PanelDimAlpha : 1f;
+            _group.alpha = dimmed ? _theme.Current.PanelDimAlpha : 1f;
 
             for (int i = 0; i < _consonantCells.Length; i++)
             {

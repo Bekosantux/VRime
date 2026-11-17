@@ -16,7 +16,7 @@ namespace VRime.App.View
         [Tooltip("機能ページのキーの頭文字。主の文字を妨げないよう、小さく薄く示す。")]
         [SerializeField] TextMeshProUGUI _hint;
 
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
 
         public void Validate()
         {
@@ -26,10 +26,10 @@ namespace VRime.App.View
             SceneChecks.Require(_hint, this, nameof(_hint));
         }
 
-        public void Initialize(KeyboardTheme theme)
+        public void Initialize(ActiveTheme theme)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
         }
 
         public void SetActive(bool active)
@@ -51,14 +51,14 @@ namespace VRime.App.View
             bool placeholder = cell.Label == GripCell.Empty.Label;
             // 点灯中の文字は点灯色にする。選択中は背景が変わるため文字の色を保つ。
             Color textColor;
-            if (cell.Disabled || placeholder) textColor = selected ? _theme.CellTextDisabledSelected : _theme.CellTextDisabled;
-            else if (cell.Lit && !selected) textColor = _theme.CellTextLit;
-            else textColor = _theme.CellText;
+            if (cell.Disabled || placeholder) textColor = selected ? _theme.Current.CellTextDisabledSelected : _theme.Current.CellTextDisabled;
+            else if (cell.Lit && !selected) textColor = _theme.Current.CellTextLit;
+            else textColor = _theme.Current.CellText;
 
-            _background.color = selected ? _theme.CellSelected : (cell.Disabled ? _theme.CellDisabled : _theme.Cell);
+            _background.color = selected ? _theme.Current.CellSelected : (cell.Disabled ? _theme.Current.CellDisabled : _theme.Current.Cell);
             _litBar.SetActive(cell.Lit);
             _label.color = textColor;
-            _label.fontSize = cell.Label.Length > 1 ? _theme.CellFunctionFontSize : _theme.CellFontSize;
+            _label.fontSize = cell.Label.Length > 1 ? _theme.Current.CellFunctionFontSize : _theme.Current.CellFontSize;
             if (_label.text != cell.Label) _label.text = cell.Label;
             SetHint(hint);
         }

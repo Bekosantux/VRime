@@ -11,24 +11,24 @@ namespace VRime.App.View
     {
         [SerializeField] TextMeshProUGUI _role;
 
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
 
         public void Validate()
         {
             SceneChecks.Require(_role, this, nameof(_role));
         }
 
-        public void Initialize(KeyboardTheme theme)
+        public void Initialize(ActiveTheme theme)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
         }
 
         public void Set(string role, bool functionPage)
         {
             if (role == null) throw new ArgumentNullException(nameof(role));
             if (_role.text != role) _role.text = role;
-            _role.color = functionPage ? _theme.CaptionRoleFunction : _theme.CaptionRole;
+            _role.color = functionPage ? _theme.Current.CaptionRoleFunction : _theme.Current.CaptionRole;
         }
     }
 }

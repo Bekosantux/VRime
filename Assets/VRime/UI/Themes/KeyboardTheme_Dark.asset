@@ -10,8 +10,25 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5efc5c8a7e5e8fb46a0057c165edc4d9, type: 3}
-  m_Name: KeyboardTheme
+  m_Name: KeyboardTheme_Dark
   m_EditorClassIdentifier: VRime.App::VRime.App.View.KeyboardTheme
+  _id: 0
+  _keyboardBoard: {r: 0.0706, g: 0.0824, b: 0.1059, a: 0.949}
+  _keyboardRim: {r: 0.1255, g: 0.1373, b: 0.1608, a: 1}
+  _keyboardField: {r: 0.1059, g: 0.1216, b: 0.1529, a: 1}
+  _keyboardText: {r: 0.96, g: 0.97, b: 0.98, a: 1}
+  _keyboardTextSub: {r: 0.788, g: 0.812, b: 0.847, a: 1}
+  _keyboardTextMuted: {r: 0.557, g: 0.596, b: 0.659, a: 1}
+  _keyboardCaret: {r: 0.451, g: 0.78, b: 1, a: 1}
+  _keyboardNoticeBackground: {r: 0.18, g: 0.176, b: 0.153, a: 1}
+  _keyboardNoticeText: {r: 1, g: 0.878, b: 0.51, a: 1}
+  _keyboardLitBar: {r: 1, g: 0.78, b: 0.2, a: 1}
+  _keyboardHint: {r: 0.96, g: 0.97, b: 0.98, a: 0.5}
+  _keyboardCard: {r: 0.094, g: 0.11, b: 0.137, a: 0.969}
+  _keyboardCardText: {r: 0.96, g: 0.97, b: 0.98, a: 1}
+  _keyboardSeparator: {r: 0.149, g: 0.165, b: 0.188, a: 1}
+  _keyboardBannerBackground: {r: 0.227, g: 0.141, b: 0.094, a: 0.969}
+  _keyboardBannerText: {r: 1, g: 0.627, b: 0.4, a: 1}
   _cell: {r: 0.18, g: 0.208, b: 0.259, a: 1}
   _cellDisabled: {r: 0.098, g: 0.11, b: 0.137, a: 1}
   _cellSelected: {r: 0.14, g: 0.5, b: 0.95, a: 1}
@@ -35,11 +52,21 @@ MonoBehaviour:
   _lengthOverLimit: {r: 1, g: 0.36, b: 0.36, a: 1}
   _candidate: {r: 0, g: 0, b: 0, a: 0}
   _candidateSelected: {r: 0.14, g: 0.5, b: 0.95, a: 1}
+  _settingsBackground: {r: 0.06, g: 0.07, b: 0.09, a: 1}
+  _settingsText: {r: 0.96, g: 0.97, b: 0.98, a: 1}
+  _settingsNote: {r: 0.6, g: 0.64, b: 0.7, a: 1}
+  _settingsNotice: {r: 1, g: 0.6, b: 0.35, a: 1}
+  _settingsTrack: {r: 0.13, g: 0.15, b: 0.19, a: 1}
+  _settingsSliderFill: {r: 0.14, g: 0.5, b: 0.95, a: 1}
+  _settingsBackdrop: {r: 0, g: 0, b: 0, a: 0.7}
+  _settingsDialog: {r: 0.1, g: 0.12, b: 0.15, a: 1}
+  _settingsListBorder: {r: 0.227, g: 0.263, b: 0.329, a: 1}
+  _settingsWindowMargin: {r: 0.08, g: 0.09, b: 0.11, a: 1}
   _settingsButton: {r: 0.2, g: 0.23, b: 0.29, a: 1}
   _settingsButtonHover: {r: 0.27, g: 0.31, b: 0.39, a: 1}
   _settingsButtonPressed: {r: 0.14, g: 0.5, b: 0.95, a: 1}
   _settingsQuit: {r: 0.29, g: 0.2, b: 0.2, a: 1}
-  _settingsQuitHover: {r: 0.38, g: 0.25, b: 0.25, a: 1}
+  _settingsQuitHover: {r: 0.5377358, g: 0.23589353, b: 0.23589353, a: 1}
   _settingsQuitPressed: {r: 0.86, g: 0.27, b: 0.27, a: 1}
   _settingsThumb: {r: 0.96, g: 0.97, b: 0.98, a: 1}
   _settingsThumbActive: {r: 0.45, g: 0.78, b: 1, a: 1}
@@ -47,3 +74,5 @@ MonoBehaviour:
   _settingsTabSelected: {r: 0.14, g: 0.5, b: 0.95, a: 1}
   _settingsSwitchOn: {r: 0.14, g: 0.5, b: 0.95, a: 1}
   _settingsSwitchOff: {r: 0.27, g: 0.31, b: 0.39, a: 1}
+  _settingsOption: {r: 0, g: 0, b: 0, a: 0}
+  _settingsOptionSelected: {r: 0.14, g: 0.5, b: 0.95, a: 1}

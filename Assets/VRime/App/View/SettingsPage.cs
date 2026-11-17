@@ -9,6 +9,7 @@ namespace VRime.App.View
     /// 設定画面の 1 カテゴリのページ。カテゴリの項目の行を子に持ち、選んでいるカテゴリのページだけを表示する（GameObject を切り替える）。
     /// どのカテゴリのページかは <see cref="_key"/>（<see cref="SettingsCatalog"/> のカテゴリのキー）で決める。
     /// タブは表示を切り替えても見えている必要があるため、ページの外に置く。
+    /// 選択肢の一覧（<see cref="SettingsDropdownRow.List"/>）は、ほかの行の上に描くため、ページの直下の末尾に置く。
     /// </summary>
     public sealed class SettingsPage : MonoBehaviour
     {
@@ -24,6 +25,9 @@ namespace VRime.App.View
         [Tooltip("オン・オフの項目の行。")]
         [SerializeField] SettingsToggleRow[] _toggles = Array.Empty<SettingsToggleRow>();
 
+        [Tooltip("選択肢の項目の行。")]
+        [SerializeField] SettingsDropdownRow[] _dropdowns = Array.Empty<SettingsDropdownRow>();
+
         SettingsCategory _category;
 
         public string Key => _key;
@@ -36,9 +40,11 @@ namespace VRime.App.View
                 throw new InvalidOperationException(SceneChecks.PathOf(_tab.transform) + " は " + SceneChecks.PathOf(transform) + " の外に置く必要があります。");
             if (_rows == null) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_rows) + " が null です。");
             if (_toggles == null) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_toggles) + " が null です。");
+            if (_dropdowns == null) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_dropdowns) + " が null です。");
             SceneChecks.RequireAll(_rows, _rows.Length, this, nameof(_rows));
             SceneChecks.RequireAll(_toggles, _toggles.Length, this, nameof(_toggles));
-            if (_rows.Length + _toggles.Length == 0) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " に項目の行がありません。");
+            SceneChecks.RequireAll(_dropdowns, _dropdowns.Length, this, nameof(_dropdowns));
+            if (_rows.Length + _toggles.Length + _dropdowns.Length == 0) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " に項目の行がありません。");
             for (int i = 0; i < _rows.Length; i++)
             {
                 SceneChecks.RequireUnder(_rows[i], this, this, nameof(_rows) + "[" + i + "]");
@@ -48,6 +54,16 @@ namespace VRime.App.View
             {
                 SceneChecks.RequireUnder(_toggles[i], this, this, nameof(_toggles) + "[" + i + "]");
                 _toggles[i].Validate();
+            }
+            for (int i = 0; i < _dropdowns.Length; i++)
+            {
+                SettingsDropdownRow dropdown = _dropdowns[i];
+                SceneChecks.RequireUnder(dropdown, this, this, nameof(_dropdowns) + "[" + i + "]");
+                dropdown.Validate();
+                // 選択肢の一覧を末尾にまとめて置き、ページのほかの子より後に描く。
+                Transform list = dropdown.List;
+                if (list.parent != transform || list.GetSiblingIndex() < transform.childCount - _dropdowns.Length)
+                    throw new InvalidOperationException(SceneChecks.PathOf(list) + " は " + SceneChecks.PathOf(transform) + " の直下の末尾に置く必要があります。");
             }
             _tab.Validate();
         }
@@ -62,9 +78,11 @@ namespace VRime.App.View
             Validate();
             Dictionary<string, SettingsRow> rows = ByKey(_rows, row => row.Key, row => row.transform);
             Dictionary<string, SettingsToggleRow> toggles = ByKey(_toggles, toggle => toggle.Key, toggle => toggle.transform);
+            Dictionary<string, SettingsDropdownRow> dropdowns = ByKey(_dropdowns, dropdown => dropdown.Key, dropdown => dropdown.transform);
 
             var rowLayouts = new List<SettingsRowLayout>();
             var toggleLayouts = new List<SettingsToggleLayout>();
+            var dropdownLayouts = new List<SettingsDropdownLayout>();
             foreach (SettingItem item in category.Items)
             {
                 switch (item)
@@ -79,26 +97,33 @@ namespace VRime.App.View
                             throw new InvalidOperationException(SceneChecks.PathOf(transform) + " に " + item.Key + " のオン・オフの行がありません。");
                         toggleLayouts.Add(toggleRow.BuildLayout(toggle, canvas));
                         break;
+                    case ChoiceSettingItem choice:
+                        if (!dropdowns.TryGetValue(item.Key, out SettingsDropdownRow dropdownRow))
+                            throw new InvalidOperationException(SceneChecks.PathOf(transform) + " に " + item.Key + " の選択肢の行がありません。");
+                        dropdownLayouts.Add(dropdownRow.BuildLayout(choice, canvas));
+                        break;
                     default:
                         throw new InvalidOperationException("未知の種類の項目です: " + item.Key);
                 }
             }
-            if (rowLayouts.Count != _rows.Length || toggleLayouts.Count != _toggles.Length)
+            if (rowLayouts.Count != _rows.Length || toggleLayouts.Count != _toggles.Length || dropdownLayouts.Count != _dropdowns.Length)
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " に " + category.Key + " の項目にない行があります。");
 
-            return new SettingsPageLayout(category, UiRects.RectIn(_tab.Rect, canvas), rowLayouts, toggleLayouts);
+            return new SettingsPageLayout(category, UiRects.RectIn(_tab.Rect, canvas), rowLayouts, toggleLayouts, dropdownLayouts);
         }
 
         /// <param name="layout">このページの <see cref="BuildLayout"/> で作った配置。</param>
-        public void Initialize(SettingsPageLayout layout, KeyboardTheme theme)
+        public void Initialize(SettingsPageLayout layout, ActiveTheme theme)
         {
             if (layout == null) throw new ArgumentNullException(nameof(layout));
             CheckCategory(layout.Category);
             Validate();
             Dictionary<string, SettingsRow> rows = ByKey(_rows, row => row.Key, row => row.transform);
             Dictionary<string, SettingsToggleRow> toggles = ByKey(_toggles, toggle => toggle.Key, toggle => toggle.transform);
+            Dictionary<string, SettingsDropdownRow> dropdowns = ByKey(_dropdowns, dropdown => dropdown.Key, dropdown => dropdown.transform);
             foreach (SettingsRowLayout row in layout.Rows) rows[row.Item.Key].Initialize(row.Item, theme);
             foreach (SettingsToggleLayout toggle in layout.Toggles) toggles[toggle.Item.Key].Initialize(toggle.Item, theme);
+            foreach (SettingsDropdownLayout dropdown in layout.Dropdowns) dropdowns[dropdown.Item.Key].Initialize(dropdown.Item, theme);
             _tab.Initialize(theme, layout.Category);
             _category = layout.Category;
         }
@@ -111,6 +136,7 @@ namespace VRime.App.View
             if (!selected) return;
             foreach (SettingsRow row in _rows) row.Refresh(form);
             foreach (SettingsToggleRow toggle in _toggles) toggle.Refresh(form);
+            foreach (SettingsDropdownRow dropdown in _dropdowns) dropdown.Refresh(form);
         }
 
         void CheckCategory(SettingsCategory category)

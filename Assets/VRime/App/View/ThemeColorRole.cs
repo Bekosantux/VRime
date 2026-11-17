@@ -1,0 +1,81 @@
+namespace VRime.App.View
+{
+    /// <summary>
+    /// 状態によらない色の役割。シーンの uGUI に <see cref="ThemeColor"/> で指定し、色はテーマ（<see cref="KeyboardTheme.ColorOf"/>）から取る。
+    /// 値はシーンに数値で保存されるため、途中に足したり並べ替えたりしない（足すときは末尾に置く）。
+    /// </summary>
+    public enum ThemeColorRole
+    {
+        /// <summary>キーボードの盤面。</summary>
+        KeyboardBoard = 0,
+
+        /// <summary>盤面の縁。</summary>
+        KeyboardRim = 1,
+
+        /// <summary>入力欄と、札を並べた地。</summary>
+        KeyboardField = 2,
+
+        /// <summary>入力した文字など、主の文字。</summary>
+        KeyboardText = 3,
+
+        /// <summary>送信先の名前・「変換中…」。</summary>
+        KeyboardTextSub = 4,
+
+        /// <summary>「送信先」の見出し。</summary>
+        KeyboardTextMuted = 5,
+
+        KeyboardCaret = 6,
+
+        /// <summary>通知の札。</summary>
+        KeyboardNoticeBackground = 7,
+
+        KeyboardNoticeText = 8,
+
+        /// <summary>セルの下の点灯の帯。</summary>
+        KeyboardLitBar = 9,
+
+        /// <summary>機能ページのキーの頭文字（セルの右下）。</summary>
+        KeyboardHint = 10,
+
+        /// <summary>候補欄のカード。</summary>
+        KeyboardCard = 11,
+
+        /// <summary>候補欄の見出しと候補の文字。</summary>
+        KeyboardCardText = 12,
+
+        /// <summary>候補欄の見出しと候補の間の線。</summary>
+        KeyboardSeparator = 13,
+
+        /// <summary>変換に失敗したときの帯。</summary>
+        KeyboardBannerBackground = 14,
+
+        KeyboardBannerText = 15,
+
+        /// <summary>設定画面の背景。</summary>
+        SettingsBackground = 16,
+
+        /// <summary>設定画面の題名・項目名・値・ボタンの文字。</summary>
+        SettingsText = 17,
+
+        /// <summary>設定画面のページの見出し。</summary>
+        SettingsNote = 18,
+
+        /// <summary>設定画面の下部の通知。</summary>
+        SettingsNotice = 19,
+
+        /// <summary>スライダーの溝。</summary>
+        SettingsTrack = 20,
+
+        /// <summary>スライダーの値までの塗り。</summary>
+        SettingsSliderFill = 21,
+
+        /// <summary>同意の画面の後ろ。</summary>
+        SettingsBackdrop = 22,
+
+        /// <summary>同意の画面と、選択肢の一覧の地。</summary>
+        SettingsDialog = 23,
+
+        /// <summary>選択肢の一覧の枠。</summary>
+        SettingsListBorder = 24,
+    }
+}
