@@ -90,7 +90,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `OverlayPlacement` | `KeyboardPlacement`（SPEC 4.1）を 3×4 の行列にする。基準は盤面の中心（テクスチャの中心ではない）で、そのずれは `KeyboardView.BoardCenterOffset`（シーンの盤面の位置から求める）を受け取る |
 | | `OpenVRErrors` | `EVRInputError` / `EVROverlayError` の検査。失敗は操作名とエラー名を含む例外にする |
 | `View/` | `KeyboardView` | キーボードの表示の根（キャンバスに置く）。`RefreshIfChanged()` で `ViewVersion` か `ForegroundWindowMonitor.Version` が変わったときだけ各部を更新する。`BoardCenterOffset` は盤面（`_board`）の中心のテクスチャの中心からのずれ |
-| | `GripPanelView` / `GripPanelCell` / `GripPanelChip` / `GripPanelCaption` | グリップのパネル（左右 3×3 のセル・見出し・ページ・全半角・大小の札）。子音を担当する手に応じて、左右のどちらを子音側にするかを決める。見出し（`GripPanelCaption`）は手の名前と役割を別の文字に持ち、機能ページの間は役割の色を変える。2つの文字の並びと寄せはシーンの `HorizontalLayoutGroup` で決める |
+| | `GripPanelView` / `GripPanelCell` / `GripPanelChip` / `GripPanelCaption` | グリップのパネル（左右 3×3 のセル・見出し・ページ・全半角・大小の札）。子音を担当する手に応じて、左右のどちらを子音側にするかを決める。見出し（`GripPanelCaption`）は役割（子音・母音・機能）を示し、機能ページの間は役割の色を変える |
 | | `InputAreaView` | 入力欄（確定・未確定・キャレット）と状態行（通知・送信先・文字数）。キャレットは文字の配置から位置と高さを決め、行が溢れたら文字をずらす。状態行は表示を更新するたびにコードで並べる（通知の札は文字に合わせた幅で、通知が空なら隠す。続けて「送信先」のラベルと名前、右端に文字数）。通知と名前は残りの幅に収まるよう `TextFitting` で切る |
 | | `CandidateAreaView` / `CandidateColumn` / `CandidateLabel` | 候補欄（応答待ち・文節と候補・失敗の帯）。文節の列と候補の行はシーンの雛形を複製し、雛形は起動時に非表示にする。文節の並び（`_row`）は左下を基準にし、下端を入力欄の直上にそろえる（候補の数で上端が動く）。シーンでの位置がずらしていないときの位置で、左の余白と同じ幅を右にも空ける。失敗の帯は配置を確定させた後、文節の並びの上に置く。列のカードの地と影は `LayoutElement.ignoreLayout` の子として列の先頭に置く（子は親より後に描かれるため、影を列自身の `Image` にはできない）。見出しと候補の間の区切りは候補を表示している列だけに出す |
 | | `TextFitting` | 1行の文字を幅に収め、収まらなければ切って省略記号を付ける（候補欄・失敗の帯・通知・送信先の名前で使う） |

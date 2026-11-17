@@ -29,10 +29,10 @@ namespace VRime.App.View
         [Tooltip("右のパネルの 3×3 のセル。左上から行ごとの順。")]
         [SerializeField] GripPanelCell[] _rightCells = new GripPanelCell[CellCount];
 
-        [Tooltip("左のパネルの見出し（手の名前と役割）。")]
+        [Tooltip("左のパネルの見出し（役割）。")]
         [SerializeField] GripPanelCaption _leftCaption;
 
-        [Tooltip("右のパネルの見出し（手の名前と役割）。")]
+        [Tooltip("右のパネルの見出し（役割）。")]
         [SerializeField] GripPanelCaption _rightCaption;
 
         [Tooltip("かな・英字・数字の順。")]
@@ -42,7 +42,6 @@ namespace VRime.App.View
         [SerializeField] GripPanelChip _caseChip;
 
         KeyboardTheme _theme;
-        Hand _consonantHand;
         GripPanelCell[] _consonantCells;
         GripPanelCell[] _vowelCells;
         GripPanelCaption _consonantCaption;
@@ -71,7 +70,6 @@ namespace VRime.App.View
         {
             Validate();
             _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
-            _consonantHand = consonantHand;
             bool consonantLeft = consonantHand == Hand.Left;
             _consonantCells = consonantLeft ? _leftCells : _rightCells;
             _vowelCells = consonantLeft ? _rightCells : _leftCells;
@@ -128,8 +126,8 @@ namespace VRime.App.View
                 }
             }
 
-            _consonantCaption.Set(_consonantHand, view.ConsonantFunctionPage ? "機能" : "子音", view.ConsonantFunctionPage);
-            _vowelCaption.Set(_consonantHand.Opposite(), view.VowelFunctionPage ? "機能" : "母音", view.VowelFunctionPage);
+            _consonantCaption.Set(view.ConsonantFunctionPage ? "機能" : "子音", view.ConsonantFunctionPage);
+            _vowelCaption.Set(view.VowelFunctionPage ? "機能" : "母音", view.VowelFunctionPage);
 
             RefreshChips(input, view.Page);
         }
