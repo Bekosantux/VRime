@@ -1,3 +1,5 @@
+![Banner](Images/Banners/VRime_Banner_White.png)
+
 # VRime
 
 VRime（ブイライム）は、SteamVR 上で動作する日本語入力用のキーボードオーバーレイアプリです。VR 内で、HMD を外さずに日本語の文章を入力・変換・送信できます。主に VRChat のテキストチャットでの利用を想定していますが、その他のVRやデスクトップアプリへの入力にも対応します。
