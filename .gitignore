@@ -111,6 +111,7 @@ InitTestScene*.unity*
 # IDE / ツールのローカル設定
 .idea/
 .ai/
+.yomiyasu/
 
 # 試作（技術検証）のフォルダ。必要なコードは Assets に移植済み
 /scratch-*/
