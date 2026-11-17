@@ -145,6 +145,23 @@ namespace VRime.App.Tests
         }
 
         [Test]
+        public void テーマは既定でダーク_変えてもほかの値は変わらない()
+        {
+            Assert.AreEqual(ColorTheme.Dark, UserSettings.Default.Theme);
+            UserSettings lime = UserSettings.Default.WithTheme(ColorTheme.Lime);
+            Assert.AreEqual(ColorTheme.Lime, lime.Theme);
+            Assert.AreNotEqual(UserSettings.Default, lime);
+            Assert.AreEqual(UserSettings.Default, lime.WithTheme(ColorTheme.Dark));
+            Assert.AreEqual(ColorTheme.Lime, lime.WithStickThreshold(0.4f).WithPlacement(KeyboardPlacement.Default.WithTilt(30f)).Theme);
+        }
+
+        [Test]
+        public void 未知のテーマは例外()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default.WithTheme((ColorTheme)99));
+        }
+
+        [Test]
         public void VRChatの設定は既定でどちらもオン()
         {
             Assert.IsTrue(UserSettings.Default.VRChat.FocusOnStartup);
@@ -195,6 +212,7 @@ namespace VRime.App.Tests
         {
             UserSettings settings = UserSettings.Default
                 .WithPlacement(new KeyboardPlacement(0.31f, 0.72f, -0.12f, 25f, 0.52f))
+                .WithTheme(ColorTheme.Lime)
                 .WithTriggerThreshold(0.55f)
                 .WithStickThreshold(0.35f)
                 .WithRepeatDelaySeconds(0.65f)
@@ -214,6 +232,8 @@ namespace VRime.App.Tests
             StringAssert.Contains("\"focusOnStartup\": true", json);
             StringAssert.Contains("\"showTypingText\": true", json);
             StringAssert.Contains("\"useGoogleConversion\": false", json);
+            StringAssert.Contains("\"theme\": \"dark\"", json);
+            StringAssert.Contains("\"theme\": \"lime\"", SettingsSerializer.Serialize(UserSettings.Default.WithTheme(ColorTheme.Lime)));
         }
 
         [Test]
@@ -231,6 +251,8 @@ namespace VRime.App.Tests
                 SettingsSerializer.Deserialize("{\"version\":1,\"vrchat\":{\"showTypingText\":false}}").VRChat);
 
             Assert.AreEqual(UserSettings.Default, SettingsSerializer.Deserialize("{\"version\":1}"));
+            Assert.AreEqual(ColorTheme.Dark, settings.Theme);
+            Assert.AreEqual(ColorTheme.Lime, SettingsSerializer.Deserialize("{\"version\":1,\"display\":{\"theme\":\"lime\"}}").Theme);
         }
 
         [TestCase("")]
@@ -251,6 +273,10 @@ namespace VRime.App.Tests
         [TestCase("{\"version\":1,\"vrchat\":{\"showTypingText\":null}}")]
         [TestCase("{\"version\":1,\"privacy\":false}")]
         [TestCase("{\"version\":1,\"privacy\":{\"useGoogleConversion\":\"true\"}}")]
+        [TestCase("{\"version\":1,\"display\":{\"theme\":\"blue\"}}")]
+        [TestCase("{\"version\":1,\"display\":{\"theme\":\"Lime\"}}")]
+        [TestCase("{\"version\":1,\"display\":{\"theme\":1}}")]
+        [TestCase("{\"version\":1,\"display\":{\"theme\":null}}")]
         public void 正しくない内容はFormatException(string json)
         {
             Assert.Throws<FormatException>(() => SettingsSerializer.Deserialize(json));
