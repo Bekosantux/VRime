@@ -209,7 +209,7 @@ namespace VRime.App.Settings
         {
             new SettingsCategory("display", new SettingItem[]
             {
-                ChoiceSettingItem.Create("theme", new[] { (ColorTheme.Dark, "ダーク"), (ColorTheme.Lime, "ライム") },
+                ChoiceSettingItem.Create("theme", new[] { (ColorTheme.Lime, "ライム"), (ColorTheme.Dark, "ダーク") },
                     s => s.Theme, (s, v) => s.WithTheme(v)),
                 new NumberSettingItem("downMeters", KeyboardPlacement.DownRange,
                     s => s.Placement.DownMeters, (s, v) => s.WithPlacement(s.Placement.WithDown(v)), Centimeters),

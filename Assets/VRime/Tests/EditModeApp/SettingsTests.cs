@@ -145,14 +145,14 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void テーマは既定でダーク_変えてもほかの値は変わらない()
+        public void テーマは既定でライム_変えてもほかの値は変わらない()
         {
-            Assert.AreEqual(ColorTheme.Dark, UserSettings.Default.Theme);
-            UserSettings lime = UserSettings.Default.WithTheme(ColorTheme.Lime);
-            Assert.AreEqual(ColorTheme.Lime, lime.Theme);
-            Assert.AreNotEqual(UserSettings.Default, lime);
-            Assert.AreEqual(UserSettings.Default, lime.WithTheme(ColorTheme.Dark));
-            Assert.AreEqual(ColorTheme.Lime, lime.WithStickThreshold(0.4f).WithPlacement(KeyboardPlacement.Default.WithTilt(30f)).Theme);
+            Assert.AreEqual(ColorTheme.Lime, UserSettings.Default.Theme);
+            UserSettings dark = UserSettings.Default.WithTheme(ColorTheme.Dark);
+            Assert.AreEqual(ColorTheme.Dark, dark.Theme);
+            Assert.AreNotEqual(UserSettings.Default, dark);
+            Assert.AreEqual(UserSettings.Default, dark.WithTheme(ColorTheme.Lime));
+            Assert.AreEqual(ColorTheme.Dark, dark.WithStickThreshold(0.4f).WithPlacement(KeyboardPlacement.Default.WithTilt(30f)).Theme);
         }
 
         [Test]
@@ -232,8 +232,8 @@ namespace VRime.App.Tests
             StringAssert.Contains("\"focusOnStartup\": true", json);
             StringAssert.Contains("\"showTypingText\": true", json);
             StringAssert.Contains("\"useGoogleConversion\": false", json);
-            StringAssert.Contains("\"theme\": \"dark\"", json);
-            StringAssert.Contains("\"theme\": \"lime\"", SettingsSerializer.Serialize(UserSettings.Default.WithTheme(ColorTheme.Lime)));
+            StringAssert.Contains("\"theme\": \"lime\"", json);
+            StringAssert.Contains("\"theme\": \"dark\"", SettingsSerializer.Serialize(UserSettings.Default.WithTheme(ColorTheme.Dark)));
         }
 
         [Test]
@@ -251,8 +251,8 @@ namespace VRime.App.Tests
                 SettingsSerializer.Deserialize("{\"version\":1,\"vrchat\":{\"showTypingText\":false}}").VRChat);
 
             Assert.AreEqual(UserSettings.Default, SettingsSerializer.Deserialize("{\"version\":1}"));
-            Assert.AreEqual(ColorTheme.Dark, settings.Theme);
-            Assert.AreEqual(ColorTheme.Lime, SettingsSerializer.Deserialize("{\"version\":1,\"display\":{\"theme\":\"lime\"}}").Theme);
+            Assert.AreEqual(ColorTheme.Lime, settings.Theme);
+            Assert.AreEqual(ColorTheme.Dark, SettingsSerializer.Deserialize("{\"version\":1,\"display\":{\"theme\":\"dark\"}}").Theme);
         }
 
         [TestCase("")]
@@ -820,12 +820,12 @@ namespace VRime.App.Tests
         public void テーマの選択肢と値の読み書き()
         {
             ChoiceSettingItem theme = SettingsCatalog.FindChoice("theme");
-            CollectionAssert.AreEqual(new[] { "ダーク", "ライム" }, theme.Labels);
+            CollectionAssert.AreEqual(new[] { "ライム", "ダーク" }, theme.Labels);
             Assert.AreEqual(0, theme.GetIndex(UserSettings.Default));
-            UserSettings lime = theme.SetIndex(UserSettings.Default, 1);
-            Assert.AreEqual(UserSettings.Default.WithTheme(ColorTheme.Lime), lime);
-            Assert.AreEqual(1, theme.GetIndex(lime));
-            Assert.AreEqual(UserSettings.Default, theme.ResetToDefault(lime));
+            UserSettings dark = theme.SetIndex(UserSettings.Default, 1);
+            Assert.AreEqual(UserSettings.Default.WithTheme(ColorTheme.Dark), dark);
+            Assert.AreEqual(1, theme.GetIndex(dark));
+            Assert.AreEqual(UserSettings.Default, theme.ResetToDefault(dark));
             Assert.Throws<ArgumentOutOfRangeException>(() => theme.SetIndex(UserSettings.Default, 2));
             Assert.Throws<ArgumentOutOfRangeException>(() => theme.SetIndex(UserSettings.Default, -1));
         }
@@ -910,14 +910,14 @@ namespace VRime.App.Tests
         {
             UserSettings changed = UserSettings.Default
                 .WithPlacement(KeyboardPlacement.Default.WithTilt(30f))
-                .WithTheme(ColorTheme.Lime)
+                .WithTheme(ColorTheme.Dark)
                 .WithStickThreshold(0.8f)
                 .WithRepeatDelaySeconds(0.7f)
                 .WithVRChat(new VRChatSettings(false, false))
                 .WithPrivacy(new PrivacySettings(true));
 
             UserSettings display = SettingsCatalog.FindCategory("display").ResetToDefault(changed);
-            Assert.AreEqual(changed.WithPlacement(KeyboardPlacement.Default).WithTheme(ColorTheme.Dark), display);
+            Assert.AreEqual(changed.WithPlacement(KeyboardPlacement.Default).WithTheme(ColorTheme.Lime), display);
 
             UserSettings grip = SettingsCatalog.FindCategory("grip").ResetToDefault(changed);
             Assert.AreEqual(UserSettings.Default.StickThreshold, grip.StickThreshold);
@@ -1348,11 +1348,11 @@ namespace VRime.App.Tests
             Click(_form, dropdown.Button.center);
             _form.PointerDown(dropdown.Options[1].center);
             Assert.AreEqual(SettingsHit.Option(dropdown.Item, 1), _form.Pressed);
-            Assert.AreEqual(ColorTheme.Dark, _form.Settings.Theme, "押しただけでは変わらない");
+            Assert.AreEqual(ColorTheme.Lime, _form.Settings.Theme, "押しただけでは変わらない");
             _form.PointerUp(dropdown.Options[1].center);
 
             Assert.IsNull(_form.OpenDropdown);
-            Assert.AreEqual(ColorTheme.Lime, _form.Settings.Theme);
+            Assert.AreEqual(ColorTheme.Dark, _form.Settings.Theme);
             Assert.AreEqual(1, _changed.Count);
             Assert.AreEqual(1, _committed.Count);
             Assert.AreEqual(_form.Settings, _committed[0]);
@@ -1410,9 +1410,9 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 表示のカテゴリを既定に戻すとテーマもダークに戻る()
+        public void 表示のカテゴリを既定に戻すとテーマもライムに戻る()
         {
-            var form = new SettingsForm(_layout, UserSettings.Default.WithTheme(ColorTheme.Lime));
+            var form = new SettingsForm(_layout, UserSettings.Default.WithTheme(ColorTheme.Dark));
             Click(form, _layout.Reset.center);
             Assert.AreEqual(UserSettings.Default, form.Settings);
         }

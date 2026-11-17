@@ -108,7 +108,7 @@ namespace VRime.App.Settings
         static UserSettings CreateDefault()
         {
             var core = new KeyboardSettings();
-            return new UserSettings(KeyboardPlacement.Default, ColorTheme.Dark, core.TriggerThreshold, core.StickThreshold, (float)core.RepeatDelaySeconds,
+            return new UserSettings(KeyboardPlacement.Default, ColorTheme.Lime, core.TriggerThreshold, core.StickThreshold, (float)core.RepeatDelaySeconds,
                 VRChatSettings.Default, PrivacySettings.Default);
         }
 
