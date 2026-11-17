@@ -5,16 +5,16 @@
 ## アセンブリと依存の方向
 
 ```
-VRKeyboard.App  ──→  VRKeyboard.Core
+VRime.App  ──→  VRime.Core
       │
       └──────────→  Valve.OpenVR
 ```
 
 | アセンブリ | 場所 | 責務 |
 |---|---|---|
-| `VRKeyboard.Core` | `Assets/VRKeyboard/Core/` | Unity・OpenVR・Win32 に依存しない純粋なロジック（`noEngineReferences`）。入力方式の状態機械、入力バッファ、変換候補の選択状態、OSC エンコードなど。EditMode テストで仕様を検証する |
-| `VRKeyboard.App` | `Assets/VRKeyboard/App/` | MonoBehaviour、OpenVR、描画、通信、Win32 の呼び出し。Core の状態機械に入力を渡し、その結果を各部へ振り分ける |
-| `Valve.OpenVR` | `Assets/VRKeyboard/ThirdParty/OpenVR/` | Valve 配布の `openvr_api.cs` をそのまま置く |
+| `VRime.Core` | `Assets/VRime/Core/` | Unity・OpenVR・Win32 に依存しない純粋なロジック（`noEngineReferences`）。入力方式の状態機械、入力バッファ、変換候補の選択状態、OSC エンコードなど。EditMode テストで仕様を検証する |
+| `VRime.App` | `Assets/VRime/App/` | MonoBehaviour、OpenVR、描画、通信、Win32 の呼び出し。Core の状態機械に入力を渡し、その結果を各部へ振り分ける |
+| `Valve.OpenVR` | `Assets/VRime/ThirdParty/OpenVR/` | Valve 配布の `openvr_api.cs` をそのまま置く |
 
 - Core は App を参照しない。Core から外部への作用（振動・変換の要求・送信）は、戻り値またはイベントとして App に返す。
 
@@ -22,14 +22,14 @@ VRKeyboard.App  ──→  VRKeyboard.Core
 
 | 場所 | 内容 | 注意 |
 |---|---|---|
-| `Assets/VRKeyboard/ThirdParty/OpenVR/` | Valve 配布の `openvr_api.cs`・`LICENSE`、`Plugins/x86_64/openvr_api.dll` | Valve 配布のまま変更しない。asmdef は Editor と Windows 64bit に限定し、自動参照しない（`VRKeyboard.App` から明示参照する） |
+| `Assets/VRime/ThirdParty/OpenVR/` | Valve 配布の `openvr_api.cs`・`LICENSE`、`Plugins/x86_64/openvr_api.dll` | Valve 配布のまま変更しない。asmdef は Editor と Windows 64bit に限定し、自動参照しない（`VRime.App` から明示参照する） |
 | `Assets/StreamingAssets/SteamVR/` | SteamVR アクションマニフェスト（`actions.json`）とコントローラー別の既定バインディング（`bindings_*.json`）、ダッシュボードのタブのアイコン（`dashboard_icon.png`。自作） | ビルド後も実ファイルとして配置される必要があるため StreamingAssets に置く。SteamVR にはこのファイルのパスを渡す。既定のバインドは、グリップを展開・収納とパネルの切り替えの 2つのエントリーに割り当てる（1つのエントリーは 1つのアクションにしか出力できないため） |
 | `Assets/StreamingAssets/Windows/tray_icon.ico` | タスクトレイのアイコン。`dashboard_icon.png` から Pillow で 16・20・24・32・40・48・64px を生成したもの | Win32 の `LoadImage` にファイルのパスを渡すため StreamingAssets に置く（小さいアイコンの大きさに合うものが選ばれる）。ダッシュボードのアイコンを変えたら作り直す |
-| `Assets/VRKeyboard/Fonts/` | Noto Sans JP（Regular・Bold の静的 OTF）と `OFL.txt`、編集用の TMP フォントアセット（`NotoSansJP-* SDF.asset`） | ライセンス文は再配布に必要なため同梱する。OTF は Include Font Data を有効にしておく（実行用のフォントアセットの元になる）。編集用のフォントアセットは Dynamic・atlas 512・Clear Dynamic Data On Build。エディターでシーンを開くと表示した文字が atlas に追加され、アセットに差分が出る（Play 中は実行用のアセットに差し替えるため出ない） |
+| `Assets/VRime/Fonts/` | Noto Sans JP（Regular・Bold の静的 OTF）と `OFL.txt`、編集用の TMP フォントアセット（`NotoSansJP-* SDF.asset`） | ライセンス文は再配布に必要なため同梱する。OTF は Include Font Data を有効にしておく（実行用のフォントアセットの元になる）。編集用のフォントアセットは Dynamic・atlas 512・Clear Dynamic Data On Build。エディターでシーンを開くと表示した文字が atlas に追加され、アセットに差分が出る（Play 中は実行用のアセットに差し替えるため出ない） |
 
-## VRKeyboard.Core の構成
+## VRime.Core の構成
 
-`Assets/VRKeyboard/Core/` のクラスと責務。テストは `Assets/VRKeyboard/Tests/EditMode/`（`VRKeyboard.Core.Tests`）にあり、`KeyboardSession` に操作を与える `Rig`（`TestSupport.cs`）で実際の操作と同じ入力列を再現する。
+`Assets/VRime/Core/` のクラスと責務。テストは `Assets/VRime/Tests/EditMode/`（`VRime.Core.Tests`）にあり、`KeyboardSession` に操作を与える `Rig`（`TestSupport.cs`）で実際の操作と同じ入力列を再現する。
 
 ```
 App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboardEffects──→ App
@@ -65,9 +65,9 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 - 表示用の状態は `ViewVersion`（セッション全体）と各クラスの `Version` で変化を検出できる。App は変化したときだけ描き直す。
 - 時刻・スティックの傾き・押下状態はすべて引数で受け取るため、Core のテストでは時間の経過を決め打ちで再現できる。
 
-## VRKeyboard.App の構成
+## VRime.App の構成
 
-`Assets/VRKeyboard/App/`。asmdef は Editor と Windows 64bit に限定する。テストは `Assets/VRKeyboard/Tests/EditModeApp/`（`VRKeyboard.App.Tests`）にある。
+`Assets/VRime/App/`。asmdef は Editor と Windows 64bit に限定する。テストは `Assets/VRime/Tests/EditModeApp/`（`VRime.App.Tests`）にある。
 
 | 場所 | クラス | 責務 |
 |---|---|---|
@@ -97,7 +97,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `SettingsRow` / `SettingsToggleRow` / `SettingsButton` | 数値の項目の行（［−］・スライダー・［＋］・値）と、オン・オフの項目の行（スイッチ・値。行の矩形全体が当たり判定）。「既定に戻す」（`SettingsView._reset`）と「アプリを終了」（`SettingsView._quit`）は `SettingsButton` で、キャンバスの直下に置く。`_key` で `SettingsCatalog` の項目と対応させる |
 | | `OverlayRenderTarget` | 描画先の根（MonoBehaviour）。子に無効な正投影のカメラと World Space のキャンバスを持つ。`Initialize` でキャンバスと同じピクセル数の透明な RenderTexture を作り、カメラをキャンバスの正面に合わせる。`Render()` を呼んだときだけ 1回描き、`Rendered` イベントで通知する。テクスチャの破棄（`Release`）はオーバーレイの破棄の後に `KeyboardApp` が呼ぶ |
 | | `KeyboardFonts` | 編集用のフォントアセットの元のフォントから、実行用の Dynamic SDF フォントアセット（atlas 2048・multi atlas）を作り、描画先の下のすべての文字のフォントを差し替える（保存しない）。最初の描画より前に差し替えるため、編集用のアセットは書き換わらない |
-| | `KeyboardTheme` | 状態によって切り替わる色と文字の大きさ（ScriptableObject。`Assets/VRKeyboard/UI/KeyboardTheme.asset`）。状態によらない見た目はシーンに置く |
+| | `KeyboardTheme` | 状態によって切り替わる色と文字の大きさ（ScriptableObject。`Assets/VRime/UI/KeyboardTheme.asset`）。状態によらない見た目はシーンに置く |
 | | `UiRects` / `SceneChecks` | 左上を原点・下向きを正とする矩形の配置と読み取り（当たり判定と盤面の位置に使う）。シーンの参照の検証（どのオブジェクトのどの欄かを示す例外） |
 | | `KeyboardPreview` | エディター専用。メインカメラを使わず OnGUI で、テクスチャ・振動・操作キーを表示する。設定画面の表示中は設定画面のテクスチャを表示し、開発用の環境ではマウスの操作を `SettingsMouseInput` で `ISettingsPointer` へ渡す。ビルドではプレイヤーのウィンドウを隠し、表示するときは設定ウィンドウとして使うため、開発ビルドでも作らない |
 | | `DesktopSettingsWindow` | ビルド専用のデスクトップの設定ウィンドウ。`PlayerWindow` でプレイヤーのウィンドウを表示・非表示にし、表示中は OnGUI で設定画面のテクスチャを描いて、`SettingsMouseInput` でマウスの操作を `SettingsForm` へ渡す（ダッシュボードのレーザーと同じ入口）。大きさとタイトルは最初に開いたときだけ決める（`Screen.SetResolution`） |
@@ -131,16 +131,16 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 - 描画は `KeyboardApp.Update` が `KeyboardView.RefreshIfChanged()` で `ViewVersion` の変化を検出したときだけ `OverlayRenderTarget.Render()` を呼ぶ。キーボードは開いている間と位置の確認用に表示している間（設定タブか設定ウィンドウで「表示位置」のカテゴリを選んでいる間）だけ描き、表示し始めたフレームでは版が変わっていなくても描く。設定画面は `SettingsView.RefreshIfChanged()` が true のときに描く。
 - `Render()` は `Canvas.ForceUpdateCanvases()` でレイアウトと TMP のメッシュを確定してから、`RenderPipeline.SubmitRenderRequest`（URP の `SingleCameraRequest`）で無効なカメラを 1回描く。`Camera.Render()` と違い、出力先を要求に含められ、対応していないパイプラインでは例外にできる。
-- 描画先ごとのレイヤー `VRKeyboardOverlay`（キーボード）と `VRKeyboardSettings`（設定画面）を Tags and Layers に登録している。各カメラは自分のレイヤーだけを映す（同じ位置にある別の描画先の uGUI を映さないため）。TMP の `Mobile/Distance Field` シェーダーは Always Included Shaders に登録している（ビルドで除外されないため）。
+- 描画先ごとのレイヤー `VRimeKeyboard`（キーボード）と `VRimeSettings`（設定画面）を Tags and Layers に登録している。各カメラは自分のレイヤーだけを映す（同じ位置にある別の描画先の uGUI を映さないため）。TMP の `Mobile/Distance Field` シェーダーは Always Included Shaders に登録している（ビルドで除外されないため）。
 - TMP の `Ellipsis` は、レイアウトで幅が決まる文字では描かれなくなるため、幅に収める文字は `TextFitting` で切って省略記号を付ける。
-- シーン `Assets/VRKeyboard/Scenes/Main.unity` を Build Settings の先頭に登録している。
+- シーン `Assets/VRime/Scenes/Main.unity` を Build Settings の先頭に登録している。
 
 **シーンの uGUI**
 
 - `Main.unity` は `KeyboardApp` と、2つの描画先 `KeyboardOverlay`（キャンバス 1024×1024）・`SettingsOverlay`（1280×872）で構成する。キャンバスの大きさがテクスチャのピクセル数になり、拡大率は 1 のままにする。2つの描画先は互いに離して置く（エディターで重ならないようにするため。描画はレイヤーで分かれる）。
 - 描画先の下のオブジェクトはすべて描画先のレイヤーに置く。部品を足すときもレイヤーを合わせる（違えば起動時の検証で例外）。
 - 配置・大きさ・固定の色・項目名などのラベルはシーンで調整する。状態で変わる色と大きさは `KeyboardTheme`、文字の内容は各ビューが書き換える。シーンの文字には仮の文字を入れてある。
-- キーボードの角丸と影は `Assets/VRKeyboard/UI/Sprites/` の 9 スライスのスプライト（自作）を `Image`（Sliced）に使う。スプライトは白（影も白）で作り、色は `Image.color` で付ける（状態で変わる色は `KeyboardTheme` から入る）。Pixels Per Unit 100・Full Rect で、キャンバスの `referencePixelsPerUnit` も 100 のため、スプライトの 1px がテクスチャの 1px になる。`ui_round_32`（盤面）・`ui_ring_32`（盤面の縁）・`ui_round_20`（入力欄・候補のカード）・`ui_round_16`（セル・札の地）・`ui_round_12`（札・見出し・候補・帯・点灯の帯）・`ui_shadow_20`（浮いた部品の影。矩形は部品より各辺 24 大きく、下へ 6 ずらす）。境界より低い矩形（点灯の帯の高さ 6）では Unity が境界を縮めるため、両端が半円になる。
+- キーボードの角丸と影は `Assets/VRime/UI/Sprites/` の 9 スライスのスプライト（自作）を `Image`（Sliced）に使う。スプライトは白（影も白）で作り、色は `Image.color` で付ける（状態で変わる色は `KeyboardTheme` から入る）。Pixels Per Unit 100・Full Rect で、キャンバスの `referencePixelsPerUnit` も 100 のため、スプライトの 1px がテクスチャの 1px になる。`ui_round_32`（盤面）・`ui_ring_32`（盤面の縁）・`ui_round_20`（入力欄・候補のカード）・`ui_round_16`（セル・札の地）・`ui_round_12`（札・見出し・候補・帯・点灯の帯）・`ui_shadow_20`（浮いた部品の影。矩形は部品より各辺 24 大きく、下へ 6 ずらす）。境界より低い矩形（点灯の帯の高さ 6）では Unity が境界を縮めるため、両端が半円になる。
 - プロジェクトの色空間は Linear のため、半透明の色は線形空間で混ざる。不透明度の低い明るい色はガンマ空間で混ぜる場合（デザインの CSS）より大きく明るくなる（白 6% の縁で約 2 倍）。下地が決まっている部品（盤面の縁・通知の札・候補の区切り）は、混ぜた後の色を不透明で指定する。
 - 文字のフォントは2つの編集用のフォントアセットのどちらかにする。リッチテキストは入力欄の文字だけが使う。
 - `KeyboardApp.ValidateScene()` は EditMode テスト（`MainSceneTests`）でも実行する。シーンを変えたらテストで確かめる。
@@ -154,7 +154,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 **設定の流れ**
 
-- 起動時に `SettingsStore.Load` で `%AppData%\VRKeyboard\settings.json` を読み、`UserSettings` から Core の `KeyboardSettings` とオーバーレイの最初の位置を作る。
+- 起動時に `SettingsStore.Load` で `%AppData%\VRime\settings.json` を読み、`UserSettings` から Core の `KeyboardSettings` とオーバーレイの最初の位置を作る。
 - 設定タブのレーザー操作は `SettingsDashboardOverlay.Update`（`BeginFrame` の中）→ `SettingsForm` と流れる。ビルドでは `DesktopSettingsWindow`、エディターの開発用の環境では `KeyboardPreview` のマウス操作が同じ `ISettingsPointer` に入る（どちらも `OnGUI` の中）。
 - `SettingsForm.Changed` で `KeyboardSession.ApplySettings` と `IKeyboardPlatform.SetPlacement` を呼び（入力中の文字の表示は毎フレーム `SettingsForm.Settings` を読む）、`Committed` で保存する。保存の失敗（`IOException` / `UnauthorizedAccessException`）は `SettingsForm.SetNotice` で画面に出し、次に保存できたら読み込み時の通知に戻す。
 

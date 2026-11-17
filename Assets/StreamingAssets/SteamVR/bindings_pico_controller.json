@@ -1,7 +1,7 @@
 {
   "action_manifest_version": 0,
   "controller_type": "pico_controller",
-  "name": "VR日本語キーボードの既定（Pico）",
+  "name": "VRime の既定（Pico）",
   "description": "グリップ: 展開・収納（両手で2回続けて同時押し）とパネルの切り替え / スティック: キーの選択 / トリガー: キーの入力",
   "bindings": {
     "/actions/keyboard": {

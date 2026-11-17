@@ -1,4 +1,4 @@
-# VR日本語キーボード 仕様書
+# VRime 仕様書
 
 - 版: 0.3（ドラフト）
 - 更新日: 2026-10-11
@@ -44,7 +44,7 @@ SteamVR 上で動作する、日本語入力用のキーボードオーバーレ
 Unity でビルドした単一の `.exe` を基本とする（開発環境は 3.3 を参照）。
 
 ```
-VRKeyboard.exe（Unity）
+VRime.exe（Unity）
 ├─ オーバーレイ表示    ... キーボード・候補欄・入力欄を SteamVR オーバーレイとして描画
 ├─ 入力処理            ... SteamVR Input（アクションマニフェスト）でコントローラーを読む
 ├─ 入力方式            ... グリップ / フリック / QWERTY → かな・英字を作る
@@ -66,12 +66,12 @@ VRKeyboard.exe（Unity）
 ### 3.2 試作から流用するコード
 | 試作のファイル | 用途 | 移植先 |
 |---|---|---|
-| `Spike2.InputPriority/FlipInput.cs` | グリップ入力の判定・かなの組み立て・小゛゜の切り替え | `Assets/VRKeyboard/Core/`（`GripInputMethod` ほか） |
+| `Spike2.InputPriority/FlipInput.cs` | グリップ入力の判定・かなの組み立て・小゛゜の切り替え | `Assets/VRime/Core/`（`GripInputMethod` ほか） |
 | `Spike2.InputPriority/Input/*.json` | アクションマニフェストと既定のバインディング | `Assets/StreamingAssets/SteamVR/` |
-| `Spike2.InputPriority/Program.cs`（OpenVR の初期化・入力の優先度・振動・オーバーレイ） | OpenVR との接続 | `Assets/VRKeyboard/App/SteamVR/` |
-| `Spike2.InputPriority/TextOutput.cs` | 出力先の振り分けとデスクトップへの送信 | `Assets/VRKeyboard/App/Output/` |
-| `Spike3.Osc/Osc.cs` | OSC のエンコード | `Assets/VRKeyboard/Core/`（`OscCodec`） |
-| `Spike2.InputPriority/OpenVR/openvr_api.cs` | OpenVR の C# バインディング（Valve 配布） | `Assets/VRKeyboard/ThirdParty/OpenVR/` |
+| `Spike2.InputPriority/Program.cs`（OpenVR の初期化・入力の優先度・振動・オーバーレイ） | OpenVR との接続 | `Assets/VRime/App/SteamVR/` |
+| `Spike2.InputPriority/TextOutput.cs` | 出力先の振り分けとデスクトップへの送信 | `Assets/VRime/App/Output/` |
+| `Spike3.Osc/Osc.cs` | OSC のエンコード | `Assets/VRime/Core/`（`OscCodec`） |
+| `Spike2.InputPriority/OpenVR/openvr_api.cs` | OpenVR の C# バインディング（Valve 配布） | `Assets/VRime/ThirdParty/OpenVR/` |
 
 試作のコードは C# 9 で書いてあり、Unity 6.3 にそのまま持ち込める。ただし試作は .NET 10 の標準ライブラリでビルドしているため、Unity（Mono）にない API を使っている箇所は移植時に置き換える。
 
@@ -515,10 +515,10 @@ Google CGI API for Japanese Input（https://www.google.co.jp/ime/cgiapi.html）�
 
 ## 8. 設定（SteamVR ダッシュボード）
 
-SteamVR ダッシュボードにこのアプリのタブを追加し、そこで設定する。設定はファイルに保存する（例: `%AppData%\VRKeyboard\settings.json`）。【暫定】
+SteamVR ダッシュボードにこのアプリのタブを追加し、そこで設定する。設定はファイルに保存する（例: `%AppData%\VRime\settings.json`）。【暫定】
 
 ### 8.1 実装済みの設定画面 【暫定】
-- ダッシュボードのタブ「VR Keyboard」（アイコンは `StreamingAssets/SteamVR/dashboard_icon.png`）。SteamVR 標準のレーザーで操作する。
+- ダッシュボードのタブ「VRime」（アイコンは `StreamingAssets/SteamVR/dashboard_icon.png`）。SteamVR 標準のレーザーで操作する。
 - 画面の左にカテゴリのタブを縦に並べ、選んだカテゴリの項目だけを右に表示する。起動時は先頭のカテゴリを表示する。右下に「既定に戻す」を置き、表示中のカテゴリの項目だけを既定値に戻す。左下（タブの列の下）に「アプリを終了」を置き、確認せずにアプリを終了する（終了時の処理は SteamVR の終了時と同じ）。
 - 数値の項目は項目名・［−］・スライダー・［＋］・現在の値を並べる。［−］［＋］は刻み1つ分ずつ変える。スライダーはつまんで動かす。オン・オフの項目は項目名・スイッチ・現在の値（オン / オフ）を並べ、行のどこを押しても切り替わる。
 - ボタン・スイッチ・タブは押したのと同じものの上で離したときに働く。
@@ -575,7 +575,7 @@ SteamVR ダッシュボードにこのアプリのタブを追加し、そこで
 
 - SteamVR にアプリとして登録し（`.vrmanifest`）、SteamVR と同時に自動で起動できるようにする（設定で切り替え）。
 - 起動後は画面に何も出さず、システムトレイにアイコンを置く（ビルドだけ。エディターでは置かない）。
-  - アイコンは `StreamingAssets/Windows/tray_icon.ico`、ツールチップは「VR Keyboard」。
+  - アイコンは `StreamingAssets/Windows/tray_icon.ico`、ツールチップは「VRime」。
   - 右クリック（キーボードではメニューキー・Shift+F10）でメニューを開く。項目は「設定を開く」（太字の既定の項目。デスクトップの設定ウィンドウを開く。8.1）と「終了」（確認せずに終了する。終了時の処理は SteamVR の終了時と同じ）。
   - 左クリック・Space・Enter は「設定を開く」と同じ。
   - メニューを開いている間も、キーボードは動き続ける。
