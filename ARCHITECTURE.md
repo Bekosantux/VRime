@@ -26,7 +26,7 @@ VRime.App  ──→  VRime.Core
 | `Assets/StreamingAssets/SteamVR/` | SteamVR アクションマニフェスト（`actions.json`）とコントローラー別の既定バインディング（`bindings_*.json`）、ダッシュボードのタブのアイコン（`dashboard_icon.png`。256px） | ビルド後も実ファイルとして配置される必要があるため StreamingAssets に置く。SteamVR にはこのファイルのパスを渡す。既定のバインドは、グリップを展開・収納とパネルの切り替えの 2つのエントリーに割り当てる（1つのエントリーは 1つのアクションにしか出力できないため） |
 | `Assets/StreamingAssets/Windows/tray_icon.ico` | タスクトレイのアイコン。16・20・24・32・40・48px（`SM_CXSMICON` の表示倍率 100〜300% の大きさ） | Win32 の `LoadImage` にファイルのパスを渡すため StreamingAssets に置く（小さいアイコンの大きさに合うものが選ばれる）。16〜32px は線を太く描き直した版で、SVG を縮小したものとは異なる |
 | `Assets/VRime/Icon/vrime-icon-1024.png` | exe のアイコン（Player Settings の Default Icon） | Unity が各サイズに縮小する |
-| `docs/icon/` | アイコンの原版（`vrime-icon.svg`）と 1024px の PNG | 上の 3つのアイコンはここから作る。色や形を変えたら 3つとも作り直す |
+| `Images/Icons/` | アイコンの原版（`vrime-icon.svg`）と 1024px の PNG | 上の 3つのアイコンはここから作る。色や形を変えたら 3つとも作り直す |
 | `Assets/VRime/Fonts/` | Noto Sans JP（Regular・Bold の静的 OTF）と `OFL.txt`、編集用の TMP フォントアセット（`NotoSansJP-* SDF.asset`） | ライセンス文は再配布に必要なため同梱する。OTF は Include Font Data を有効にしておく（実行用のフォントアセットの元になる）。編集用のフォントアセットは Dynamic・atlas 512・Clear Dynamic Data On Build。エディターでシーンを開くと表示した文字が atlas に追加され、アセットに差分が出る（Play 中は実行用のアセットに差し替えるため出ない） |
 
 ## VRime.Core の構成
