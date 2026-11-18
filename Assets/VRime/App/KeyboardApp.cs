@@ -36,6 +36,7 @@ namespace VRime.App
     /// 組み立てが終わった後にタスクトレイにアイコンを置き、Unity のウィンドウを隠す。
     /// 隠したウィンドウは、トレイの「設定を開く」でデスクトップの設定ウィンドウとして表示する（<see cref="DesktopSettingsWindow"/>）。
     /// 終了は SteamVR の終了・設定画面の「アプリを終了」・トレイの「終了」で行う。
+    /// ビルドで起動の処理（Awake・Start）が例外で終わったときは、その内容をメッセージボックスで示してから終了する（<see cref="ErrorDialog"/>）。
     /// </summary>
     public sealed class KeyboardApp : MonoBehaviour, IKeyboardEffects
     {
@@ -104,7 +105,9 @@ namespace VRime.App
 
         public KeyboardSession Session => _session;
 
-        void Awake()
+        void Awake() => RunStartupStep(AwakeCore);
+
+        void AwakeCore()
         {
 #if !UNITY_EDITOR
             // 起動済みのプロセスがあれば、SteamVR とトレイに何も作らずに終了する。Start と Update は呼ばれない。
@@ -115,17 +118,60 @@ namespace VRime.App
                 return;
             }
 #endif
+            Initialize();
+        }
+
+        // 起動の処理（Awake・Start）を実行する。失敗したら、組み立てに失敗した状態で Update が回り続け、同じ例外が毎フレーム出るのを防ぐ。
+        // ビルドでは、例外の内容をメッセージボックスで示してから終了する（SPEC 3.1）。エディターでは例外をそのまま送出し、コンソールに出す。
+        void RunStartupStep(Action step)
+        {
             try
             {
-                Initialize();
+                step();
             }
+#if UNITY_EDITOR
             catch
             {
-                // 組み立てに失敗した状態で Update が回り続け、同じ例外が毎フレーム出るのを防ぐ。
                 enabled = false;
                 throw;
             }
+#else
+            catch (Exception e)
+            {
+                enabled = false;
+                QuitWithStartupError(e);
+            }
+#endif
         }
+
+#if !UNITY_EDITOR
+        void QuitWithStartupError(Exception error)
+        {
+            // 例外を送出しないため、Unity の代わりにログに残す。
+            Debug.LogException(error);
+            _quitting = true;
+            try
+            {
+                ErrorDialog.Show(AppInfo.DisplayName, FormatStartupError(error));
+            }
+            finally
+            {
+                // メッセージボックスを表示できなくても終了する。表示の失敗は例外として Unity がログに残す。
+                Application.Quit();
+            }
+        }
+
+        static string FormatStartupError(Exception error)
+        {
+            string text = AppInfo.DisplayName + " の起動中にエラーが発生しました。\n" +
+                "頻繁に発生する場合は、開発者に問い合わせてください。\n" +
+                "Ctrl+C でエラー文をクリップボードにコピーできます。\n\n" +
+                error.Message + "\n\n" +
+                error.StackTrace;
+            if (error.InnerException != null) text += "\n\n内部の例外:\n" + error.InnerException;
+            return text;
+        }
+#endif
 
         /// <summary>
         /// シーンの構成を検証する。足りない参照・誤った設定は、どこが誤っているかを示す例外にする。シーンの状態は変えない。
@@ -225,8 +271,10 @@ namespace VRime.App
 
         // Unity は最初のシーンの Awake の後、Start の前にプレイヤーのウィンドウを表示する。Awake で隠しても表示し直されるため、
         // VRChat を前面にする処理とウィンドウを隠す処理は Start で行う（SPEC 3.1）。
-        // Awake が例外で終わったときは enabled が false になり Start は呼ばれないため、ウィンドウが残り、異常に気付ける。
-        void Start()
+        // Awake が例外で終わったときは enabled が false になり、Start は呼ばれない。
+        void Start() => RunStartupStep(StartCore);
+
+        void StartCore()
         {
             // 開発用のキーボードの入力は前面のウィンドウにしか届かないため、その環境では前面を移さない。
             if (_settingsForm.Settings.VRChat.FocusOnStartup && !_platform.RequiresOwnWindowFocus) FocusVRChat();
