@@ -57,7 +57,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | グリップ入力 | `GripInputMethod` | セル・方向の選択、機能ページ、トリガーによる入力と直前の文字の切り替え（手ごとの役割は SPEC 5.2）、長押しによる連続入力。連続入力は `KeyRepeater` で時刻を管理し、繰り返すときは同じセルをもう一度押したものとして処理する。止める条件（選択の変化・別のトリガー・引き量がしきい値未満・`Reset`）はここで判定する。バッファを更新し、変換・確定は要求（`GripRequest`）として返す。ページは言語と数字ページの有無から導出する |
 | | `GripLayout` / `GripCell` | SPEC 5.2 の表をデータとして持つ |
 | | `StickClassifier` / `StickDirectionTracker` | スティックの 8方向（3×3 のセル）・4方向への分類（倒し量がしきい値未満なら中央。直前の状態によらない）と、中央から倒した瞬間の検出。候補欄のスティック操作でも使う |
-| | `GripViewState` | 描画用のスナップショット（ラベル・無効・点灯・選択位置と、通常のページに重ねる機能ページのヒント）。App はこれを描くだけにする |
+| | `GripViewState` | 描画用のスナップショット（ラベル・無効・点灯・選択位置と、通常のページに重ねる機能ページのヒント）。文字のセルの方向のヒントはセルの内容なので `GripCellView` に持たせ、位置で決まる機能ページのヒントはパネルの位置ごとの配列で持つ。App はこれを描くだけにする |
 | テキスト | `InputBuffer` | 確定済みと未確定の文字列とそれぞれのカーソル、長さの上限の検査。上限は途中で変えられ（null は上限なし）、変えても内容は切り詰めないため、上限を超えた状態がありうる（`IsOverLengthLimit`）。操作の結果は `EditResult` で返す |
 | | `CharacterModifier` / `CharacterWidth` / `Katakana` | 直前の文字の切り替え（かなの小゛゜の巡回・英字の大文字/小文字）・全角化・ひらがな→カタカナの変換表 |
 | 変換 | `TransliterateApi` | Google CGI API のリクエスト URL の組み立てと応答 JSON の解析（通信は App が行う） |
@@ -92,7 +92,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 | | `OverlayPlacement` | `KeyboardPlacement`（SPEC 4.1）を 3×4 の行列にする。基準は盤面の中心（テクスチャの中心ではない）で、そのずれは `KeyboardView.BoardCenterOffset`（シーンの盤面の位置から求める）を受け取る |
 | | `OpenVRErrors` | `EVRInputError` / `EVROverlayError` の検査。失敗は操作名とエラー名を含む例外にする |
 | `View/` | `KeyboardView` | キーボードの表示の根（キャンバスに置く）。`RefreshIfChanged()` で `ViewVersion`・`ForegroundWindowMonitor.Version`・`ActiveTheme.Version` のどれかが変わったときだけ各部を更新する（テーマが変わったときは `ThemeColor.ApplyAll` で状態によらない色も塗り直す）。`BoardCenterOffset` は盤面（`_board`）の中心のテクスチャの中心からのずれ |
-| | `GripPanelView` / `GripPanelCell` / `GripPanelChip` / `GripPanelCaption` | グリップのパネル（左右 3×3 のセル・見出し・ページ・全半角・大小の札）。子音を担当する手に応じて、左右のどちらを子音側にするかを決める。見出し（`GripPanelCaption`）は役割（子音・母音・機能）を示し、機能ページの間は役割の色を変える |
+| | `GripPanelView` / `GripPanelCell` / `GripPanelChip` / `GripPanelCaption` | グリップのパネル（左右 3×3 のセル・見出し・ページ・全半角・大小の札）。子音を担当する手に応じて、左右のどちらを子音側にするかを決める。見出し（`GripPanelCaption`）は役割（子音・母音・機能）を示し、機能ページの間は役割の色を変える。セル（`GripPanelCell`）は主の文字に、上下左右の辺の方向のヒントと右下の機能ページのヒントを重ねる。ヒントの色は選択の状態で変わるため、`ThemeColor` ではなくセルが塗る |
 | | `InputAreaView` | 入力欄（確定・未確定・キャレット）と状態行（通知・送信先・文字数）。キャレットは文字の配置から位置と高さを決め、行が溢れたら文字をずらす。状態行は表示を更新するたびにコードで並べる（通知の札は文字に合わせた幅で、通知が空なら隠す。続けて「送信先」のラベルと名前、右端に文字数）。通知と名前は残りの幅に収まるよう `TextFitting` で切る |
 | | `CandidateAreaView` / `CandidateColumn` / `CandidateLabel` | 候補欄（応答待ち・文節と候補・失敗の帯）。文節の列と候補の行はシーンの雛形を複製し、雛形は起動時に非表示にする。文節の並び（`_row`）は左下を基準にし、下端を入力欄の直上にそろえる（候補の数で上端が動く）。シーンでの位置がずらしていないときの位置で、左の余白と同じ幅を右にも空ける。失敗の帯は配置を確定させた後、文節の並びの上に置く。列のカードの地と影は `LayoutElement.ignoreLayout` の子として列の先頭に置く（子は親より後に描かれるため、影を列自身の `Image` にはできない）。見出しと候補の間の区切りは候補を表示している列だけに出す |
 | | `TextFitting` | 1行の文字を幅に収め、収まらなければ切って省略記号を付ける（候補欄・失敗の帯・通知・送信先の名前で使う） |

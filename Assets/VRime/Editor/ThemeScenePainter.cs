@@ -7,6 +7,8 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using VRime.App.Settings;
 using VRime.App.View;
+using VRime.Core;
+using VRime.Core.Input;
 using Object = UnityEngine.Object;
 
 namespace VRime.Editor
@@ -15,7 +17,7 @@ namespace VRime.Editor
     /// シーンの uGUI をテーマの色で塗る（エディタでの確認用。Undo に記録する）。
     /// 状態によらない色（<see cref="ThemeColor"/>）に加え、状態で色が変わる部品も、操作していない状態の色で塗る。
     /// 操作していない状態は、セル・札・候補は選んでいない状態、タブは表示しているページ（GameObject が有効なページ）だけ選んでいる状態、
-    /// スイッチとドロップダウンは既定の設定値（<see cref="UserSettings.Default"/>）とする。
+    /// スイッチとドロップダウンは既定の設定値（<see cref="UserSettings.Default"/>）、グリップのパネルは既定の子音の手で通常のページを表示している状態とする。
     /// 状態で変わる部品は、ビューのシリアライズフィールドの名前で色の対象を探す。ビューのフィールドや色の扱いを変えたら、ここも合わせる。
     /// 対象が見つからない・同じ部品を二重に塗る（<see cref="ThemeColor"/> を状態で変わる部品に付けている）ときは、何も塗らずに例外にする。
     /// </summary>
@@ -49,10 +51,25 @@ namespace VRime.Editor
 
         static void AddKeyboard(Scene scene, KeyboardTheme theme, Action<Graphic, Color, string> set)
         {
+            // 母音側の通常ページの四隅はセルを置かず（地は透明）、機能ページのヒントだけを示す。
+            var vowelCorners = new HashSet<GripPanelCell>();
+            string vowelCellsField = new KeyboardSettings().ConsonantHand == Hand.Left ? "_rightCells" : "_leftCells";
+            foreach (GripPanelView panels in All<GripPanelView>(scene))
+            {
+                IReadOnlyList<GripPanelCell> vowelCells = References<GripPanelCell>(panels, vowelCellsField);
+                for (int i = 0; i < vowelCells.Count; i++)
+                {
+                    if (!GripPanelView.HasVowelDirection(i)) vowelCorners.Add(vowelCells[i]);
+                }
+            }
+
             foreach (GripPanelCell cell in All<GripPanelCell>(scene))
             {
-                set(Field(cell, "_background"), theme.Cell, nameof(GripPanelCell));
+                set(Field(cell, "_background"), vowelCorners.Contains(cell) ? Color.clear : theme.Cell, nameof(GripPanelCell));
                 set(Field(cell, "_label"), theme.CellText, nameof(GripPanelCell));
+                set(Field(cell, "_hint"), theme.CellHint, nameof(GripPanelCell));
+                foreach (Graphic hint in References<Graphic>(cell, "_directionHints"))
+                    set(hint, theme.CellHint, nameof(GripPanelCell));
             }
             foreach (GripPanelChip chip in All<GripPanelChip>(scene))
             {

@@ -451,10 +451,22 @@ namespace VRime.Core.Grip
             {
                 case GripCellKind.Characters:
                     // 表示名が決まっていないセルは、入力される文字（中央）をそのまま表示する。
-                    return new GripCellView(cell.Label ?? ApplyDisplayOptions(cell.CharacterAt(StickDirection.Center)), false, false);
+                    return new GripCellView(cell.Label ?? ApplyDisplayOptions(cell.CharacterAt(StickDirection.Center)), false, false, DirectionHints(cell));
                 default:
                     return new GripCellView(cell.Label, false, false);
             }
+        }
+
+        /// <summary>文字グループのセルの、左・上・右・下に倒したときに入力される文字。未割り当ての方向は空文字列。</summary>
+        string[] DirectionHints(GripCell cell)
+        {
+            var hints = new string[GripCellView.DirectionHintCount];
+            for (int i = 0; i < hints.Length; i++)
+            {
+                string character = cell.CharacterAt((StickDirection)(i + 1));
+                hints[i] = character == null ? string.Empty : ApplyDisplayOptions(character);
+            }
+            return hints;
         }
 
         string ApplyDisplayOptions(string character)

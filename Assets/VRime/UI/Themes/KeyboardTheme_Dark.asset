@@ -23,7 +23,6 @@ MonoBehaviour:
   _keyboardNoticeBackground: {r: 0.18, g: 0.176, b: 0.153, a: 1}
   _keyboardNoticeText: {r: 1, g: 0.878, b: 0.51, a: 1}
   _keyboardLitBar: {r: 1, g: 0.78, b: 0.2, a: 1}
-  _keyboardHint: {r: 0.96, g: 0.97, b: 0.98, a: 0.5}
   _keyboardCard: {r: 0.094, g: 0.11, b: 0.137, a: 0.969}
   _keyboardCardText: {r: 0.96, g: 0.97, b: 0.98, a: 1}
   _keyboardSeparator: {r: 0.149, g: 0.165, b: 0.188, a: 1}
@@ -36,6 +35,8 @@ MonoBehaviour:
   _cellTextLit: {r: 1, g: 0.78, b: 0.2, a: 1}
   _cellTextDisabled: {r: 0.31, g: 0.337, b: 0.388, a: 1}
   _cellTextDisabledSelected: {r: 0.737, g: 0.827, b: 0.969, a: 1}
+  _cellHint: {r: 0.96, g: 0.97, b: 0.98, a: 0.5}
+  _cellHintSelected: {r: 0.96, g: 0.97, b: 0.98, a: 0.8}
   _cellFontSize: 54
   _cellFunctionFontSize: 38
   _panelDimAlpha: 0.35

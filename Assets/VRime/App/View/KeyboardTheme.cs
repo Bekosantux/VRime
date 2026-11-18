@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 using VRime.App.Settings;
 
 namespace VRime.App.View
@@ -44,9 +45,6 @@ namespace VRime.App.View
         [Tooltip("オンの状態を示す、セルの下の点灯の帯。")]
         [SerializeField] Color _keyboardLitBar = new Color(1f, 0.78f, 0.2f, 1f);
 
-        [Tooltip("機能ページのキーの頭文字（セルの右下）。")]
-        [SerializeField] Color _keyboardHint = new Color(0.96f, 0.97f, 0.98f, 0.5f);
-
         [Tooltip("候補欄のカード（文節の列・応答待ち）。")]
         [SerializeField] Color _keyboardCard = new Color(0.094f, 0.110f, 0.137f, 0.969f);
 
@@ -75,6 +73,13 @@ namespace VRime.App.View
 
         [Tooltip("無効なセルと、文字のないセルを選んでいるときの文字。")]
         [SerializeField] Color _cellTextDisabledSelected = new Color(0.737f, 0.827f, 0.969f, 1f);
+
+        [Tooltip("セルに重ねるヒント（方向の文字と、機能ページのキーの頭文字）。主の文字を妨げないよう薄くする。")]
+        [FormerlySerializedAs("_keyboardHint")]
+        [SerializeField] Color _cellHint = new Color(0.96f, 0.97f, 0.98f, 0.5f);
+
+        [Tooltip("選択中のセルのヒント。選択中の背景の上で読めるよう、通常のヒントとは別に決める。")]
+        [SerializeField] Color _cellHintSelected = new Color(0.96f, 0.97f, 0.98f, 0.8f);
 
         [Tooltip("1文字のラベル。")]
         [SerializeField] float _cellFontSize = 54f;
@@ -196,6 +201,8 @@ namespace VRime.App.View
         public Color CellTextLit => _cellTextLit;
         public Color CellTextDisabled => _cellTextDisabled;
         public Color CellTextDisabledSelected => _cellTextDisabledSelected;
+        public Color CellHint => _cellHint;
+        public Color CellHintSelected => _cellHintSelected;
         public float CellFontSize => _cellFontSize;
         public float CellFunctionFontSize => _cellFunctionFontSize;
         public float PanelDimAlpha => _panelDimAlpha;
@@ -248,7 +255,6 @@ namespace VRime.App.View
                 case ThemeColorRole.KeyboardNoticeBackground: return _keyboardNoticeBackground;
                 case ThemeColorRole.KeyboardNoticeText: return _keyboardNoticeText;
                 case ThemeColorRole.KeyboardLitBar: return _keyboardLitBar;
-                case ThemeColorRole.KeyboardHint: return _keyboardHint;
                 case ThemeColorRole.KeyboardCard: return _keyboardCard;
                 case ThemeColorRole.KeyboardCardText: return _keyboardCardText;
                 case ThemeColorRole.KeyboardSeparator: return _keyboardSeparator;

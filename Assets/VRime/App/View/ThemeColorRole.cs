@@ -3,6 +3,7 @@ namespace VRime.App.View
     /// <summary>
     /// 状態によらない色の役割。シーンの uGUI に <see cref="ThemeColor"/> で指定し、色はテーマ（<see cref="KeyboardTheme.ColorOf"/>）から取る。
     /// 値はシーンに数値で保存されるため、途中に足したり並べ替えたりしない（足すときは末尾に置く）。
+    /// 10 は欠番（セルのヒントの色は、選択の状態で変わるため <see cref="GripPanelCell"/> が塗る）。古いシーンの値と取り違えないよう、再利用しない。
     /// </summary>
     public enum ThemeColorRole
     {
@@ -33,9 +34,6 @@ namespace VRime.App.View
 
         /// <summary>セルの下の点灯の帯。</summary>
         KeyboardLitBar = 9,
-
-        /// <summary>機能ページのキーの頭文字（セルの右下）。</summary>
-        KeyboardHint = 10,
 
         /// <summary>候補欄のカード。</summary>
         KeyboardCard = 11,

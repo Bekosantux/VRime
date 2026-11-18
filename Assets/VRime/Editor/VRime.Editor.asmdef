@@ -3,6 +3,7 @@
     "rootNamespace": "VRime.Editor",
     "references": [
         "VRime.App",
+        "VRime.Core",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],
