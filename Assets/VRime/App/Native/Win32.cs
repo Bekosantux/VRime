@@ -28,6 +28,7 @@ namespace VRime.App.Native
         public const uint CF_GDIOBJLAST = 0x03FF;
         public const uint GMEM_MOVEABLE = 0x0002;
         public const int ERROR_SUCCESS = 0;
+        public const int ERROR_ALREADY_EXISTS = 183;
 
         /// <summary>CreateWindowEx の親に渡すと、メッセージ専用のウィンドウになる。</summary>
         public static readonly IntPtr HWND_MESSAGE = new IntPtr(-3);
@@ -354,6 +355,9 @@ namespace VRime.App.Native
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool CloseHandle(IntPtr handle);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr CreateMutex(IntPtr attributes, bool initialOwner, string name);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder name, ref uint size);

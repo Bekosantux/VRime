@@ -32,7 +32,8 @@ namespace VRime.App
     /// 設定画面で変えた値は、キーボードの動作と表示位置へ随時反映し、確定したときに保存する。
     /// 前面のウィンドウ（<see cref="ForegroundWindowMonitor"/>）を毎フレーム調べ、送信先の表示・文字数の上限・チャットボックスへの入力中の表示を合わせる。
     /// キーボードと設定画面の uGUI はシーンに置き、起動時に検証してから組み立てる（<see cref="ValidateScene"/>）。
-    /// ビルドでは、組み立てが終わった後にタスクトレイにアイコンを置き、Unity のウィンドウを隠す。
+    /// ビルドでは、ほかに本アプリのプロセスがあれば何もせずに終了する（<see cref="SingleInstanceLock"/>）。
+    /// 組み立てが終わった後にタスクトレイにアイコンを置き、Unity のウィンドウを隠す。
     /// 隠したウィンドウは、トレイの「設定を開く」でデスクトップの設定ウィンドウとして表示する（<see cref="DesktopSettingsWindow"/>）。
     /// 終了は SteamVR の終了・設定画面の「アプリを終了」・トレイの「終了」で行う。
     /// </summary>
@@ -92,6 +93,7 @@ namespace VRime.App
 
         // ビルドでだけ作る。エディターでは null のため、未代入の警告（CS0649）になるので抑止する。
 #pragma warning disable CS0649
+        SingleInstanceLock _instanceLock;
         TrayIcon _tray;
         DesktopSettingsWindow _desktopSettings;
 #pragma warning restore CS0649
@@ -104,6 +106,15 @@ namespace VRime.App
 
         void Awake()
         {
+#if !UNITY_EDITOR
+            // 起動済みのプロセスがあれば、SteamVR とトレイに何も作らずに終了する。Start と Update は呼ばれない。
+            if (!SingleInstanceLock.TryAcquire(out _instanceLock))
+            {
+                enabled = false;
+                Application.Quit();
+                return;
+            }
+#endif
             try
             {
                 Initialize();
@@ -358,6 +369,7 @@ namespace VRime.App
             if (_tray != null) Application.wantsToQuit -= OnWantsToQuit;
             // 失敗すると例外になるため、他の後始末を終えた後に行う。
             _tray?.Dispose();
+            _instanceLock?.Dispose();
         }
 
         // 終了の前に、チャットボックスに入力途中の文字を残さない。送れなくても終了は続ける。
