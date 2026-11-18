@@ -10,6 +10,8 @@ namespace VRime.App.Settings
     /// 表示するページはタブで選ぶ（<see cref="Category"/>）。「既定に戻す」は表示中のカテゴリの項目だけを戻す。「アプリを終了」は確認せずにアプリの終了を求める（<see cref="QuitRequested"/>）。
     /// オンにする前に同意が必要なスイッチ（<see cref="ToggleSettingItem.RequiresConsentToEnable"/>）は、オフから押すと値を変えずに同意の画面を開く（<see cref="ConsentItem"/>）。
     /// 同意すればオンにして確定し、取り消せば何も変えずに閉じる。開いている間は同意の画面のボタンだけを操作できる。オフにするときと「既定に戻す」では確認しない。
+    /// 選択肢の項目（<see cref="ChoiceSettingItem"/>）は、ボタンを押すと選択肢の一覧を開く（<see cref="OpenDropdown"/>）。
+    /// 選択肢を押すと値を変えて確定し、一覧を閉じる。選択肢以外の場所を押す・ポインターが画面から離れると、何も変えずに閉じる。開いている間は選択肢だけを操作できる。
     /// 表示（<see cref="View.SettingsView"/>）は <see cref="Version"/> の変化を見て描き直す。
     /// </summary>
     public sealed class SettingsForm : ISettingsPointer
@@ -45,6 +47,9 @@ namespace VRime.App.Settings
         /// <summary>同意の画面を開いている項目。開いていなければ null。ポインターが画面から離れても閉じない。</summary>
         public ToggleSettingItem ConsentItem { get; private set; }
 
+        /// <summary>選択肢の一覧を開いている項目。開いていなければ null。</summary>
+        public ChoiceSettingItem OpenDropdown { get; private set; }
+
         /// <summary>画面の下部に表示する通知。なければ null。</summary>
         public string Notice { get; private set; }
 
@@ -69,7 +74,7 @@ namespace VRime.App.Settings
 
         public void PointerMove(Vector2 position)
         {
-            SetHover(_layout.HitTest(position, Category, ConsentItem));
+            SetHover(_layout.HitTest(position, Category, ConsentItem, OpenDropdown));
             if (DraggingItem != null) SetValueAt(DraggingItem, position.x);
         }
 
@@ -94,6 +99,9 @@ namespace VRime.App.Settings
                 case SettingsTarget.Quit:
                 case SettingsTarget.ConsentAccept:
                 case SettingsTarget.ConsentCancel:
+                case SettingsTarget.Dropdown:
+                case SettingsTarget.DropdownOption:
+                case SettingsTarget.DropdownDismiss:
                     Pressed = Hover;
                     Version++;
                     break;
@@ -113,6 +121,7 @@ namespace VRime.App.Settings
         {
             SetHover(SettingsHit.None);
             EndOperation();
+            if (OpenDropdown != null) SetOpenDropdown(null);
         }
 
         // スライダーをつまんでいれば離して確定し、押しているボタンは働かせずに離す。
@@ -167,6 +176,16 @@ namespace VRime.App.Settings
                 case SettingsTarget.ConsentCancel:
                     SetConsentItem(null);
                     return;
+                case SettingsTarget.Dropdown:
+                    SetOpenDropdown(hit.ChoiceItem);
+                    return;
+                case SettingsTarget.DropdownOption:
+                    SetOpenDropdown(null);
+                    SetSettings(hit.ChoiceItem.SetIndex(Settings, hit.OptionIndex));
+                    break;
+                case SettingsTarget.DropdownDismiss:
+                    SetOpenDropdown(null);
+                    return;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(hit), hit.Target, null);
             }
@@ -195,6 +214,14 @@ namespace VRime.App.Settings
         void SetConsentItem(ToggleSettingItem item)
         {
             ConsentItem = item;
+            Version++;
+            SetHover(SettingsHit.None);
+        }
+
+        // 同意の画面と同じく、開閉で操作できる対象が入れ替わるため、指している対象は次にポインターが動くまで外す。
+        void SetOpenDropdown(ChoiceSettingItem item)
+        {
+            OpenDropdown = item;
             Version++;
             SetHover(SettingsHit.None);
         }

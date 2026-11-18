@@ -44,8 +44,8 @@ namespace VRime.App
         [Tooltip("Noto Sans JP Bold の編集用のフォントアセット（Dynamic）。")]
         [SerializeField] TMP_FontAsset _boldFont;
 
-        [Tooltip("状態によって切り替わる色と文字の大きさ。")]
-        [SerializeField] KeyboardTheme _theme;
+        [Tooltip("色のテーマごとの色と文字の大きさ。")]
+        [SerializeField] ThemeCatalog _themes;
 
         [Tooltip("キーボードの描画先。")]
         [SerializeField] OverlayRenderTarget _keyboardTarget;
@@ -78,6 +78,7 @@ namespace VRime.App
         KeyboardSession _session;
         IKeyboardPlatform _platform;
         KeyboardFonts _fonts;
+        ActiveTheme _theme;
         bool _keyboardShown;
         SettingsStore _settingsStore;
         SettingsForm _settingsForm;
@@ -120,14 +121,14 @@ namespace VRime.App
         /// </summary>
         public void ValidateScene()
         {
-            SceneChecks.Require(_theme, this, nameof(_theme));
+            SceneChecks.Require(_themes, this, nameof(_themes));
             SceneChecks.Require(_keyboardTarget, this, nameof(_keyboardTarget));
             SceneChecks.Require(_keyboardView, this, nameof(_keyboardView));
             SceneChecks.Require(_settingsTarget, this, nameof(_settingsTarget));
             SceneChecks.Require(_settingsView, this, nameof(_settingsView));
             KeyboardFonts.ValidateEditFont(_regularFont, SceneChecks.PathOf(transform) + " の " + nameof(_regularFont));
             KeyboardFonts.ValidateEditFont(_boldFont, SceneChecks.PathOf(transform) + " の " + nameof(_boldFont));
-            _theme.Validate();
+            _themes.Validate();
 
             _keyboardTarget.Validate(KeyboardLayer);
             _settingsTarget.Validate(SettingsLayer);
@@ -174,6 +175,7 @@ namespace VRime.App
             _keyboardTarget.Initialize(KeyboardLayer);
             _settingsTarget.Initialize(SettingsLayer);
             _monitor = ForegroundWindowMonitor.CreateForSystem();
+            _theme = new ActiveTheme(_themes.Get(loaded.Settings.Theme));
             _keyboardView.Initialize(_session, _monitor, settings.ConsonantHand, _theme);
 
             _settingsForm = new SettingsForm(_settingsView.CreateLayout(SettingsCatalog.Categories), loaded.Settings);
@@ -202,7 +204,7 @@ namespace VRime.App
 
 #if !UNITY_EDITOR
             // ウィンドウを隠した後も設定を開けて終了できるよう、隠す（Start）前にトレイのアイコンを置く（SPEC 9）。
-            _desktopSettings = new DesktopSettingsWindow(_settingsTarget.Texture, _settingsForm, AppInfo.DisplayName + " の設定");
+            _desktopSettings = new DesktopSettingsWindow(_settingsTarget.Texture, _settingsForm, _theme, AppInfo.DisplayName + " の設定");
             _tray = new TrayIcon(Path.Combine(Application.streamingAssetsPath, TrayIconRelativePath), AppInfo.DisplayName);
             Application.wantsToQuit += OnWantsToQuit;
 #endif
@@ -413,6 +415,8 @@ namespace VRime.App
         {
             _session.ApplySettings(settings.ToKeyboardSettings());
             _platform.SetPlacement(settings.Placement);
+            // 描き直しは、各ビューがテーマの版の変化を見て行う。
+            _theme.Set(_themes.Get(settings.Theme));
         }
 
         // 保存の失敗ではアプリを止めない。設定画面に通知し、次に保存できたときに通知を戻す。

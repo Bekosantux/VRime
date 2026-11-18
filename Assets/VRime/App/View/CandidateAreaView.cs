@@ -40,7 +40,7 @@ namespace VRime.App.View
         [SerializeField] float _bannerGap = 8f;
 
         readonly List<CandidateColumn> _columns = new List<CandidateColumn>();
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
         Vector2 _rowOrigin;
         float _visibleWidth;
         float _bannerPadding;
@@ -75,10 +75,10 @@ namespace VRime.App.View
             _columnTemplate.Validate();
         }
 
-        public void Initialize(KeyboardTheme theme)
+        public void Initialize(ActiveTheme theme)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             _rowOrigin = _row.anchoredPosition;
             _visibleWidth = _viewport.rect.width - 2f * _rowOrigin.x;
             if (!(_rowOrigin.x >= 0f && _visibleWidth > 0f))

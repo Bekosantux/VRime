@@ -8,8 +8,9 @@ namespace VRime.App.View
 {
     /// <summary>
     /// <see cref="KeyboardSession"/> の状態と送信先を uGUI に反映する。表示の内容はこれらの状態だけで決まり、入力の判断は持たない。
-    /// 毎フレーム <see cref="RefreshIfChanged"/> を呼ぶと、<see cref="KeyboardSession.ViewVersion"/> か
-    /// <see cref="ForegroundWindowMonitor.Version"/> が変わったときだけ uGUI を更新する。
+    /// 毎フレーム <see cref="RefreshIfChanged"/> を呼ぶと、<see cref="KeyboardSession.ViewVersion"/>・
+    /// <see cref="ForegroundWindowMonitor.Version"/>・<see cref="ActiveTheme.Version"/> のどれかが変わったときだけ uGUI を更新する。
+    /// テーマが変わったときは、状態によらない色（<see cref="ThemeColor"/>）も塗り直す。
     /// キーボードのキャンバスに置く。部品の配置はシーンで決め、盤面（<see cref="_board"/>）の外側は透明にする。
     /// </summary>
     public sealed class KeyboardView : MonoBehaviour
@@ -23,8 +24,10 @@ namespace VRime.App.View
 
         KeyboardSession _session;
         ForegroundWindowMonitor _monitor;
+        ActiveTheme _theme;
         int _renderedVersion = -1;
         int _renderedTargetVersion = -1;
+        int _renderedThemeVersion = -1;
 
         /// <summary>
         /// テクスチャの中心から盤面の中心までの下向きの距離を、テクスチャの幅で割った値。
@@ -56,17 +59,18 @@ namespace VRime.App.View
             _candidates.Validate();
         }
 
-        public void Initialize(KeyboardSession session, ForegroundWindowMonitor monitor, Hand consonantHand, KeyboardTheme theme)
+        public void Initialize(KeyboardSession session, ForegroundWindowMonitor monitor, Hand consonantHand, ActiveTheme theme)
         {
             Validate();
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _monitor = monitor ?? throw new ArgumentNullException(nameof(monitor));
-            if (theme == null) throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             _input.Initialize(theme);
             _panels.Initialize(consonantHand, theme);
             _candidates.Initialize(theme);
             _renderedVersion = -1;
             _renderedTargetVersion = -1;
+            _renderedThemeVersion = -1;
         }
 
         /// <summary>表示に関わる状態が変わっていれば uGUI を更新して true を返す。</summary>
@@ -74,9 +78,15 @@ namespace VRime.App.View
         {
             int version = _session.ViewVersion;
             int targetVersion = _monitor.Version;
-            if (version == _renderedVersion && targetVersion == _renderedTargetVersion) return false;
+            int themeVersion = _theme.Version;
+            if (version == _renderedVersion && targetVersion == _renderedTargetVersion && themeVersion == _renderedThemeVersion) return false;
             _renderedVersion = version;
             _renderedTargetVersion = targetVersion;
+            if (themeVersion != _renderedThemeVersion)
+            {
+                _renderedThemeVersion = themeVersion;
+                ThemeColor.ApplyAll(transform, _theme.Current);
+            }
 
             _candidates.Refresh(_session);
             _input.Refresh(_session, _monitor.Target);

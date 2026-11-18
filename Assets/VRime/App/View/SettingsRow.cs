@@ -35,7 +35,7 @@ namespace VRime.App.View
 
         NumberSettingItem _item;
         SettingsHit _sliderHit;
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
 
         public string Key => _key;
 
@@ -68,11 +68,11 @@ namespace VRime.App.View
                 UiRects.RectIn(_track, canvas));
         }
 
-        public void Initialize(NumberSettingItem item, KeyboardTheme theme)
+        public void Initialize(NumberSettingItem item, ActiveTheme theme)
         {
             Validate();
             CheckItem(item);
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             _item = item;
             _sliderHit = SettingsHit.Slider(item);
             _decrease.Initialize(theme, SettingsHit.Decrease(item));
@@ -91,7 +91,7 @@ namespace VRime.App.View
             thumb.anchorMin = new Vector2(fraction, thumb.anchorMin.y);
             thumb.anchorMax = new Vector2(fraction, thumb.anchorMax.y);
             bool active = form.DraggingItem == _item || form.Hover == _sliderHit;
-            _thumb.color = active ? _theme.SettingsThumbActive : _theme.SettingsThumb;
+            _thumb.color = active ? _theme.Current.SettingsThumbActive : _theme.Current.SettingsThumb;
 
             string text = _item.Format(value);
             if (_value.text != text) _value.text = text;

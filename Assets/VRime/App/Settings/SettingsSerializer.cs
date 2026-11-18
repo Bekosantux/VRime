@@ -20,6 +20,9 @@ namespace VRime.App.Settings
         const string RightKey = "rightMeters";
         const string TiltKey = "tiltDegrees";
         const string WidthKey = "widthMeters";
+        const string ThemeKey = "theme";
+        const string DarkTheme = "dark";
+        const string LimeTheme = "lime";
         const string GripKey = "grip";
         const string TriggerKey = "triggerThreshold";
         const string StickKey = "stickThreshold";
@@ -44,6 +47,7 @@ namespace VRime.App.Settings
                     [RightKey] = Number(p.RightMeters),
                     [TiltKey] = Number(p.TiltDegrees),
                     [WidthKey] = Number(p.WidthMeters),
+                    [ThemeKey] = ThemeName(settings.Theme),
                 },
                 [GripKey] = new JObject
                 {
@@ -95,6 +99,8 @@ namespace VRime.App.Settings
                 OptionalBool(vrchat, ShowTypingTextKey, defaults.VRChat.ShowTypingText));
             var privacySettings = new PrivacySettings(
                 OptionalBool(privacy, UseGoogleConversionKey, defaults.Privacy.UseGoogleConversion));
+            string themeName = OptionalString(display, ThemeKey);
+            ColorTheme theme = themeName == null ? defaults.Theme : ParseTheme(themeName);
 
             try
             {
@@ -106,6 +112,7 @@ namespace VRime.App.Settings
                     OptionalNumber(display, WidthKey, dp.WidthMeters));
                 return new UserSettings(
                     placement,
+                    theme,
                     OptionalNumber(grip, TriggerKey, defaults.TriggerThreshold),
                     OptionalNumber(grip, StickKey, defaults.StickThreshold),
                     OptionalNumber(grip, RepeatDelayKey, defaults.RepeatDelaySeconds),
@@ -145,6 +152,35 @@ namespace VRime.App.Settings
             if (double.IsNaN(value) || double.IsInfinity(value) || Math.Abs(value) > float.MaxValue)
                 throw new FormatException("\"" + key + "\" が有限の数値ではありません。");
             return (float)value;
+        }
+
+        // 親または項目が欠けていれば null。文字列以外は不正。
+        static string OptionalString(JObject parent, string key)
+        {
+            JToken token = parent?[key];
+            if (token == null) return null;
+            if (token.Type != JTokenType.String) throw new FormatException("\"" + key + "\" が文字列ではありません。");
+            return (string)token;
+        }
+
+        static string ThemeName(ColorTheme theme)
+        {
+            switch (theme)
+            {
+                case ColorTheme.Dark: return DarkTheme;
+                case ColorTheme.Lime: return LimeTheme;
+                default: throw new ArgumentOutOfRangeException(nameof(theme), theme, "未知のテーマです。");
+            }
+        }
+
+        static ColorTheme ParseTheme(string name)
+        {
+            switch (name)
+            {
+                case DarkTheme: return ColorTheme.Dark;
+                case LimeTheme: return ColorTheme.Lime;
+                default: throw new FormatException("\"" + ThemeKey + "\" が未知のテーマです: " + name);
+            }
         }
 
         // 親または項目が欠けていれば既定値。真偽値以外は不正。

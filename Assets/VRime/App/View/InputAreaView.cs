@@ -52,11 +52,12 @@ namespace VRime.App.View
         [Tooltip("「送信先」のラベルと名前の間。")]
         [SerializeField] float _targetLabelGap = 10f;
 
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
         RectTransform _textRect;
         float _caretWidth;
         float _noticePadding;
         string _compositionOpenTag;
+        KeyboardTheme _compositionTagTheme;
         readonly StringBuilder _builder = new StringBuilder();
 
         public void Validate()
@@ -89,10 +90,10 @@ namespace VRime.App.View
                 throw new InvalidOperationException(SceneChecks.PathOf(_text.transform) + " のリッチテキストが無効です。");
         }
 
-        public void Initialize(KeyboardTheme theme)
+        public void Initialize(ActiveTheme theme)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             _textRect = _text.rectTransform;
             _caretWidth = _caret.sizeDelta.x;
             RectTransform noticeRect = _notice.rectTransform;
@@ -101,7 +102,7 @@ namespace VRime.App.View
             _noticePadding = noticeRect.offsetMin.x - noticeRect.offsetMax.x;
             if (!(_noticeMaxWidth > _noticePadding))
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_noticeMaxWidth) + " が通知の文字の左右の余白より狭いです。");
-            _compositionOpenTag = "<color=#" + ColorUtility.ToHtmlStringRGBA(theme.Composition) + "><u>";
+            _compositionTagTheme = null;
         }
 
         public void Refresh(KeyboardSession session, OutputTarget target)
@@ -158,14 +159,14 @@ namespace VRime.App.View
             if (limit.HasValue)
             {
                 text = length + " / " + limit.Value;
-                color = length > limit.Value ? _theme.LengthOverLimit
-                    : length == limit.Value ? _theme.LengthAtLimit
-                    : _theme.Length;
+                color = length > limit.Value ? _theme.Current.LengthOverLimit
+                    : length == limit.Value ? _theme.Current.LengthAtLimit
+                    : _theme.Current.Length;
             }
             else
             {
                 text = length + " 文字";
-                color = _theme.Length;
+                color = _theme.Current.Length;
             }
             if (_length.text != text) _length.text = text;
             _length.color = color;
@@ -181,7 +182,7 @@ namespace VRime.App.View
             AppendEscaped(_builder, committed, 0, committedCursor);
             if (composition.Length > 0)
             {
-                _builder.Append(_compositionOpenTag);
+                _builder.Append(CompositionOpenTag());
                 AppendEscaped(_builder, composition, 0, composition.Length);
                 _builder.Append("</u></color>");
             }
@@ -244,6 +245,18 @@ namespace VRime.App.View
                 if (text[i] == '<') builder.Append("<noparse><</noparse>");
                 else builder.Append(text[i]);
             }
+        }
+
+        // 未確定のかなの色のタグ。テーマが変わったときだけ作り直す。
+        string CompositionOpenTag()
+        {
+            KeyboardTheme theme = _theme.Current;
+            if (theme != _compositionTagTheme)
+            {
+                _compositionOpenTag = "<color=#" + ColorUtility.ToHtmlStringRGBA(theme.Composition) + "><u>";
+                _compositionTagTheme = theme;
+            }
+            return _compositionOpenTag;
         }
 
         static int CountCharacters(string text, int utf16Length)
