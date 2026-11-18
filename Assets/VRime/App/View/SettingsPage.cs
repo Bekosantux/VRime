@@ -92,7 +92,7 @@ namespace VRime.App.View
                             throw new InvalidOperationException(SceneChecks.PathOf(transform) + " に " + item.Key + " の数値の行がありません。");
                         rowLayouts.Add(row.BuildLayout(number, canvas));
                         break;
-                    case ToggleSettingItem toggle:
+                    case SwitchSettingItem toggle:
                         if (!toggles.TryGetValue(item.Key, out SettingsToggleRow toggleRow))
                             throw new InvalidOperationException(SceneChecks.PathOf(transform) + " に " + item.Key + " のオン・オフの行がありません。");
                         toggleLayouts.Add(toggleRow.BuildLayout(toggle, canvas));

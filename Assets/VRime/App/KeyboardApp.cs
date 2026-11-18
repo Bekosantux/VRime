@@ -205,6 +205,8 @@ namespace VRime.App
             // 環境の作成は、描画先が揃ったあとに行う。OpenVR の初期化に失敗した場合は例外にする（別の環境へは切り替えない）。
             _platform = CreatePlatform();
             _platform.QuitRequested += OnQuitRequested;
+            _settingsForm.ExternalChangeRequested += OnExternalChangeRequested;
+            ReadExternalSettings();
 #if UNITY_EDITOR
             var debugPlatform = _platform as DebugKeyboardPlatform;
             _preview = new KeyboardPreview(_session, _platform, _keyboardTarget.Texture, _settingsTarget.Texture,
@@ -304,6 +306,8 @@ namespace VRime.App
             bool keyboardShown = _session.IsOpen || placementPreview;
             if (keyboardShown && (_keyboardView.RefreshIfChanged() || !_keyboardShown)) _keyboardTarget.Render();
             _keyboardShown = keyboardShown;
+            // SteamVR の設定画面でも変えられるため、設定画面の表示中は毎フレーム読み直す。
+            if (settingsVisible) ReadExternalSettings();
             if (_settingsView.RefreshIfChanged()) _settingsTarget.Render();
 
             UpdateChatbox(now);
@@ -431,6 +435,20 @@ namespace VRime.App
             _platform.SetPlacement(settings.Placement);
             // 描き直しは、各ビューがテーマの版の変化を見て行う。
             _theme.Set(_themes.Get(settings.Theme));
+        }
+
+        // 値をアプリの外が持つ設定項目の値を、外から読んで設定画面に渡す。
+        void ReadExternalSettings()
+        {
+            _settingsForm.SetExternalValue(SettingsCatalog.AutoLaunch, _platform.AutoLaunch);
+        }
+
+        // 外の値を変えた後、読み直して設定画面に渡す（設定画面は自分では値を変えない）。
+        void OnExternalChangeRequested(ExternalToggleSettingItem item, bool value)
+        {
+            if (item != SettingsCatalog.AutoLaunch) throw new ArgumentException("未知の項目です: " + item.Key, nameof(item));
+            _platform.SetAutoLaunch(value);
+            ReadExternalSettings();
         }
 
         // 保存の失敗ではアプリを止めない。設定画面に通知し、次に保存できたときに通知を戻す。

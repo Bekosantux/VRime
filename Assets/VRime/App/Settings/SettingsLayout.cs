@@ -75,8 +75,10 @@ namespace VRime.App.Settings
             {
                 foreach (SettingsToggleLayout toggle in page.Toggles)
                 {
-                    if (toggle.Item.RequiresConsentToEnable != consentItems.Remove(toggle.Item))
-                        throw new ArgumentException(toggle.Item.RequiresConsentToEnable
+                    bool requiresConsent = toggle.Item is ToggleSettingItem stored && stored.RequiresConsentToEnable;
+                    bool hasConsent = toggle.Item is ToggleSettingItem item && consentItems.Remove(item);
+                    if (requiresConsent != hasConsent)
+                        throw new ArgumentException(requiresConsent
                             ? toggle.Item.Key + " の同意の画面がありません。"
                             : toggle.Item.Key + " は同意の確認が必要な項目ではありません。", nameof(consents));
                 }
@@ -311,13 +313,13 @@ namespace VRime.App.Settings
     public sealed class SettingsToggleLayout
     {
         /// <param name="area">押すと切り替わる領域。</param>
-        public SettingsToggleLayout(ToggleSettingItem item, Rect area)
+        public SettingsToggleLayout(SwitchSettingItem item, Rect area)
         {
             Item = item ?? throw new ArgumentNullException(nameof(item));
             Area = area;
         }
 
-        public ToggleSettingItem Item { get; }
+        public SwitchSettingItem Item { get; }
 
         /// <summary>押すと切り替わる領域。</summary>
         public Rect Area { get; }
@@ -433,7 +435,7 @@ namespace VRime.App.Settings
         public static SettingsHit Slider(NumberSettingItem item) => ForItem(SettingsTarget.Slider, item);
         public static SettingsHit Decrease(NumberSettingItem item) => ForItem(SettingsTarget.Decrease, item);
         public static SettingsHit Increase(NumberSettingItem item) => ForItem(SettingsTarget.Increase, item);
-        public static SettingsHit Toggle(ToggleSettingItem item) => ForItem(SettingsTarget.Toggle, item);
+        public static SettingsHit Toggle(SwitchSettingItem item) => ForItem(SettingsTarget.Toggle, item);
         public static SettingsHit Dropdown(ChoiceSettingItem item) => ForItem(SettingsTarget.Dropdown, item);
 
         /// <summary>item の index 番目の選択肢。</summary>
@@ -454,7 +456,7 @@ namespace VRime.App.Settings
             ?? throw new InvalidOperationException("数値の項目の操作ではありません: " + Target);
 
         /// <summary>スイッチの項目。それ以外では例外。</summary>
-        public ToggleSettingItem ToggleItem => Item as ToggleSettingItem
+        public SwitchSettingItem ToggleItem => Item as SwitchSettingItem
             ?? throw new InvalidOperationException("スイッチの操作ではありません: " + Target);
 
         /// <summary>ドロップダウン・選択肢の項目。それ以外では例外。</summary>

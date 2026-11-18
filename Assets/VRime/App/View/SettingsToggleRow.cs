@@ -8,12 +8,13 @@ namespace VRime.App.View
 {
     /// <summary>
     /// 設定画面のオン・オフの項目の行。スイッチと現在の値を表示する。行の矩形全体が、押すと切り替わる領域になる。
+    /// 値をアプリの外が持つ項目で値を利用できない間は、スイッチをオフの色にし、値の欄に「利用不可」と表示する。
     /// どの項目の行かは <see cref="_key"/>（<see cref="SettingsCatalog"/> の項目のキー）で決める。項目名などのラベルはシーンに置いたまま変えない。
     /// つまみは、アンカーとピボットの x をオフで 0（左端）、オンで 1（右端）にして置く。
     /// </summary>
     public sealed class SettingsToggleRow : MonoBehaviour
     {
-        [Tooltip("項目のキー（設定ファイルの項目名と同じ）。focusOnStartup / showTypingText / useGoogleConversion。")]
+        [Tooltip("項目のキー（SettingsCatalog の項目のキー）。focusOnStartup / showTypingText / autoLaunch / useGoogleConversion。")]
         [SerializeField] string _key;
 
         [Tooltip("スイッチの地。色でオン・オフを示す。")]
@@ -24,7 +25,9 @@ namespace VRime.App.View
 
         [SerializeField] TextMeshProUGUI _value;
 
-        ToggleSettingItem _item;
+        const string UnavailableText = "利用不可";
+
+        SwitchSettingItem _item;
         SettingsHit _hit;
         ActiveTheme _theme;
 
@@ -43,13 +46,13 @@ namespace VRime.App.View
         }
 
         /// <summary>この行の操作の対象の配置を、canvas の左上を原点とする座標で作る。</summary>
-        public SettingsToggleLayout BuildLayout(ToggleSettingItem item, RectTransform canvas)
+        public SettingsToggleLayout BuildLayout(SwitchSettingItem item, RectTransform canvas)
         {
             CheckItem(item);
             return new SettingsToggleLayout(item, UiRects.RectIn(Area, canvas));
         }
 
-        public void Initialize(ToggleSettingItem item, ActiveTheme theme)
+        public void Initialize(SwitchSettingItem item, ActiveTheme theme)
         {
             Validate();
             CheckItem(item);
@@ -60,7 +63,8 @@ namespace VRime.App.View
 
         public void Refresh(SettingsForm form)
         {
-            bool on = _item.Get(form.Settings);
+            bool? value = form.IsOn(_item);
+            bool on = value == true;
             _switch.color = on ? _theme.Current.SettingsSwitchOn : _theme.Current.SettingsSwitchOff;
 
             float x = on ? 1f : 0f;
@@ -71,11 +75,11 @@ namespace VRime.App.View
             bool active = form.Pressed == _hit || form.Hover == _hit;
             _knob.color = active ? _theme.Current.SettingsThumbActive : _theme.Current.SettingsThumb;
 
-            string text = on ? "オン" : "オフ";
+            string text = !value.HasValue ? UnavailableText : on ? "オン" : "オフ";
             if (_value.text != text) _value.text = text;
         }
 
-        void CheckItem(ToggleSettingItem item)
+        void CheckItem(SwitchSettingItem item)
         {
             if (item == null) throw new ArgumentNullException(nameof(item));
             if (item.Key != _key)

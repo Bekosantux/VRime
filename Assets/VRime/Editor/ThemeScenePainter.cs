@@ -83,7 +83,12 @@ namespace VRime.Editor
                 set(Field(row, "_thumb"), theme.SettingsThumb, nameof(SettingsRow));
             foreach (SettingsToggleRow row in All<SettingsToggleRow>(scene))
             {
-                bool on = SettingsCatalog.FindToggle(row.Key).Get(UserSettings.Default);
+                bool on = SettingsCatalog.FindSwitch(row.Key) switch
+                {
+                    ToggleSettingItem stored => stored.Get(UserSettings.Default),
+                    ExternalToggleSettingItem external => external.DefaultValue,
+                    _ => throw new InvalidOperationException("未知の種類の項目です: " + row.Key),
+                };
                 set(Field(row, "_switch"), on ? theme.SettingsSwitchOn : theme.SettingsSwitchOff, nameof(SettingsToggleRow));
                 set(Field(row, "_knob"), theme.SettingsThumb, nameof(SettingsToggleRow));
             }
