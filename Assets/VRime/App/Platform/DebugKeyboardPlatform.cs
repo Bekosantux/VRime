@@ -31,6 +31,14 @@ namespace VRime.App.Platform
         /// <summary>PC のキーボードの入力は、前面のウィンドウにしか届かない。</summary>
         public bool RequiresOwnWindowFocus => true;
 
+        /// <summary>SteamVR に接続しないため、自動で起動するかどうかを扱えない。</summary>
+        public bool? AutoLaunch => null;
+
+        public void SetAutoLaunch(bool enabled)
+        {
+            throw new NotSupportedException("開発用の環境では、SteamVR の自動起動を変えられません。");
+        }
+
         public event Action QuitRequested
         {
             add { }

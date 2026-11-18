@@ -229,4 +229,65 @@ namespace VRime.App.Tests
             }
         }
     }
+
+    public sealed class ApplicationManifestTests
+    {
+        const string Binary = @"C:\Games\VRime\VRime.exe";
+        const string Actions = @"C:\Games\VRime\VRime_Data\StreamingAssets\SteamVR\actions.json";
+        const string Image = @"C:\Games\VRime\VRime_Data\StreamingAssets\SteamVR\dashboard_icon.png";
+
+        string _directory;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _directory = Path.Combine(Path.GetTempPath(), "VRimeTests-" + Guid.NewGuid().ToString("N"));
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (Directory.Exists(_directory)) Directory.Delete(_directory, true);
+        }
+
+        [Test]
+        public void 自動で起動できるダッシュボードのオーバーレイとして絶対パスで登録する()
+        {
+            JObject manifest = JObject.Parse(OpenVRApplicationManifest.Create(Binary, Actions, Image));
+            JToken application = manifest["applications"].Single();
+            Assert.AreEqual(OpenVRApplicationManifest.AppKey, (string)application["app_key"]);
+            Assert.AreEqual("binary", (string)application["launch_type"]);
+            Assert.AreEqual(Binary, (string)application["binary_path_windows"]);
+            Assert.IsTrue((bool)application["is_dashboard_overlay"]);
+            Assert.AreEqual(Actions, (string)application["action_manifest_path"]);
+            Assert.AreEqual(Image, (string)application["image_path"]);
+            Assert.AreEqual(AppInfo.DisplayName, (string)application["strings"]["en_us"]["name"]);
+        }
+
+        [Test]
+        public void パスが空か相対パスなら例外()
+        {
+            Assert.Throws<ArgumentException>(() => OpenVRApplicationManifest.Create("VRime.exe", Actions, Image));
+            Assert.Throws<ArgumentException>(() => OpenVRApplicationManifest.Create(Binary, "", Image));
+            Assert.Throws<ArgumentException>(() => OpenVRApplicationManifest.Create(Binary, Actions, null));
+        }
+
+        [Test]
+        public void フォルダを作って書き_同じ内容なら書き直さない()
+        {
+            string path = Path.Combine(_directory, OpenVRApplicationManifest.FileName);
+            string content = OpenVRApplicationManifest.Create(Binary, Actions, Image);
+            OpenVRApplicationManifest.Write(path, content);
+            Assert.AreEqual(content, File.ReadAllText(path));
+
+            var written = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            File.SetLastWriteTimeUtc(path, written);
+            OpenVRApplicationManifest.Write(path, content);
+            Assert.AreEqual(written, File.GetLastWriteTimeUtc(path));
+
+            string moved = OpenVRApplicationManifest.Create(@"D:\VRime\VRime.exe", Actions, Image);
+            OpenVRApplicationManifest.Write(path, moved);
+            Assert.AreEqual(moved, File.ReadAllText(path));
+        }
+    }
 }

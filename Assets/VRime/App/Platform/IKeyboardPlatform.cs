@@ -35,6 +35,15 @@ namespace VRime.App.Platform
         /// </summary>
         bool RequiresOwnWindowFocus { get; }
 
+        /// <summary>
+        /// SteamVR の起動時に本アプリを自動で起動するか（SPEC 9）。値は SteamVR が持ち、本アプリの外でも変わるため、読むたびに問い合わせる。
+        /// 本アプリを SteamVR に登録しない環境（エディター・開発用の環境）では null。
+        /// </summary>
+        bool? AutoLaunch { get; }
+
+        /// <summary>SteamVR の起動時に本アプリを自動で起動するかを変える。<see cref="AutoLaunch"/> が null の環境では例外。</summary>
+        void SetAutoLaunch(bool enabled);
+
         /// <summary>毎フレームの最初に呼ぶ。環境のイベントを処理し、状態を読み取る。</summary>
         void BeginFrame();
 

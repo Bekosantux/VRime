@@ -268,7 +268,9 @@ namespace VRime.App
         OpenVRPlatform CreateOpenVRPlatform()
         {
             var overlayPlacement = new OverlayPlacement(_keyboardView.BoardCenterOffset);
-            return new OpenVRPlatform(_keyboardTarget, _settingsTarget, _settingsForm, overlayPlacement, _settingsForm.Settings.Placement);
+            // エディターではエディター自体が SteamVR に登録されてしまうため、登録はビルドだけで行う。
+            return new OpenVRPlatform(_keyboardTarget, _settingsTarget, _settingsForm, overlayPlacement, _settingsForm.Settings.Placement,
+                registerApplication: !Application.isEditor);
         }
 
         void Update()
