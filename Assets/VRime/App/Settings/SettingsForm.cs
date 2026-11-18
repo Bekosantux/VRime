@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VRime.App.Settings
@@ -12,11 +13,14 @@ namespace VRime.App.Settings
     /// 同意すればオンにして確定し、取り消せば何も変えずに閉じる。開いている間は同意の画面のボタンだけを操作できる。オフにするときと「既定に戻す」では確認しない。
     /// 選択肢の項目（<see cref="ChoiceSettingItem"/>）は、ボタンを押すと選択肢の一覧を開く（<see cref="OpenDropdown"/>）。
     /// 選択肢を押すと値を変えて確定し、一覧を閉じる。選択肢以外の場所を押す・ポインターが画面から離れると、何も変えずに閉じる。開いている間は選択肢だけを操作できる。
+    /// 値をアプリの外が持つ項目（<see cref="ExternalToggleSettingItem"/>）は、値を自分では変えず、押す・「既定に戻す」で変更を求める（<see cref="ExternalChangeRequested"/>）。
+    /// 値はアプリが外から読んで渡す（<see cref="SetExternalValue"/>）。渡されるまでと、外が値を扱えない環境では「利用できない」（null）で、押しても何もしない。
     /// 表示（<see cref="View.SettingsView"/>）は <see cref="Version"/> の変化を見て描き直す。
     /// </summary>
     public sealed class SettingsForm : ISettingsPointer
     {
         readonly SettingsLayout _layout;
+        readonly Dictionary<ExternalToggleSettingItem, bool?> _external = new Dictionary<ExternalToggleSettingItem, bool?>();
         UserSettings _committed;
 
         public SettingsForm(SettingsLayout layout, UserSettings initial)
@@ -25,6 +29,13 @@ namespace VRime.App.Settings
             Settings = initial ?? throw new ArgumentNullException(nameof(initial));
             _committed = initial;
             Category = layout.Pages[0].Category;
+            foreach (SettingsPageLayout page in layout.Pages)
+            {
+                foreach (SettingsToggleLayout toggle in page.Toggles)
+                {
+                    if (toggle.Item is ExternalToggleSettingItem external) _external.Add(external, null);
+                }
+            }
         }
 
         public SettingsLayout Layout => _layout;
@@ -64,6 +75,45 @@ namespace VRime.App.Settings
 
         /// <summary>「アプリを終了」が押された。</summary>
         public event Action QuitRequested;
+
+        /// <summary>
+        /// 値をアプリの外が持つ項目の値を変えるよう求められた（押された・「既定に戻す」）。
+        /// フォームの値は変えないため、受けた側は外の値を変えた後、読み直して <see cref="SetExternalValue"/> で渡すこと。
+        /// </summary>
+        public event Action<ExternalToggleSettingItem, bool> ExternalChangeRequested;
+
+        /// <summary>値をアプリの外が持つ項目の、いまの値。利用できなければ null。この配置にない項目は例外。</summary>
+        public bool? GetExternalValue(ExternalToggleSettingItem item)
+        {
+            if (item == null) throw new ArgumentNullException(nameof(item));
+            if (!_external.TryGetValue(item, out bool? value))
+                throw new ArgumentException("この配置にない項目です: " + item.Key, nameof(item));
+            return value;
+        }
+
+        /// <summary>値をアプリの外が持つ項目の値を、外から読んだ値にする。利用できなければ null。この配置にない項目は例外。</summary>
+        public void SetExternalValue(ExternalToggleSettingItem item, bool? value)
+        {
+            if (GetExternalValue(item) == value) return;
+            _external[item] = value;
+            Version++;
+        }
+
+        /// <summary>スイッチがオンか。値をアプリの外が持つ項目で、利用できなければ null。</summary>
+        public bool? IsOn(SwitchSettingItem item)
+        {
+            switch (item)
+            {
+                case ToggleSettingItem stored:
+                    return stored.Get(Settings);
+                case ExternalToggleSettingItem external:
+                    return GetExternalValue(external);
+                case null:
+                    throw new ArgumentNullException(nameof(item));
+                default:
+                    throw new ArgumentException("未知の種類の項目です: " + item.Key, nameof(item));
+            }
+        }
 
         public void SetNotice(string notice)
         {
@@ -154,7 +204,13 @@ namespace VRime.App.Settings
                     Step(hit.NumberItem, 1);
                     break;
                 case SettingsTarget.Toggle:
-                    ToggleSettingItem toggle = hit.ToggleItem;
+                    if (hit.ToggleItem is ExternalToggleSettingItem external)
+                    {
+                        bool? on = GetExternalValue(external);
+                        if (on.HasValue) ExternalChangeRequested?.Invoke(external, !on.Value);
+                        return;
+                    }
+                    var toggle = (ToggleSettingItem)hit.ToggleItem;
                     if (toggle.RequiresConsentToEnable && !toggle.Get(Settings))
                     {
                         SetConsentItem(toggle);
@@ -164,6 +220,7 @@ namespace VRime.App.Settings
                     break;
                 case SettingsTarget.Reset:
                     SetSettings(Category.ResetToDefault(Settings));
+                    ResetExternalToDefault();
                     break;
                 case SettingsTarget.Quit:
                     QuitRequested?.Invoke();
@@ -190,6 +247,17 @@ namespace VRime.App.Settings
                     throw new ArgumentOutOfRangeException(nameof(hit), hit.Target, null);
             }
             Commit();
+        }
+
+        // 表示中のカテゴリの、外が値を持つ項目のうち、利用でき、既定値と異なるものの変更を求める。
+        void ResetExternalToDefault()
+        {
+            foreach (SettingItem item in Category.Items)
+            {
+                if (!(item is ExternalToggleSettingItem external)) continue;
+                bool? on = GetExternalValue(external);
+                if (on.HasValue && on.Value != external.DefaultValue) ExternalChangeRequested?.Invoke(external, external.DefaultValue);
+            }
         }
 
         void SelectCategory(SettingsCategory category)

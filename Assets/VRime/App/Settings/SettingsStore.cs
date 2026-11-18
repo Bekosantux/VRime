@@ -28,8 +28,7 @@ namespace VRime.App.Settings
         }
 
         /// <summary>%AppData%\VRime\settings.json</summary>
-        public static string DefaultPath => System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VRime", FileName);
+        public static string DefaultPath => System.IO.Path.Combine(AppInfo.DataDirectory, FileName);
 
         public string Path { get; }
 

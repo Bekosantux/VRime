@@ -16,6 +16,11 @@ namespace VRime.App.SteamVR
             if (error != EVROverlayError.None) throw new InvalidOperationException(operation + " に失敗しました: " + error);
         }
 
+        public static void Check(EVRApplicationError error, string operation)
+        {
+            if (error != EVRApplicationError.None) throw new InvalidOperationException(operation + " に失敗しました: " + error);
+        }
+
         /// <summary>
         /// 入力値・振動の取得に対する検査。<see cref="EVRInputError.NoData"/> は、そのアクションに今データがない
         /// （バインドされていない、他のアプリが入力を占有しているなど）ことを表し、故障ではない。

@@ -32,9 +32,11 @@ namespace VRime.App
     /// 設定画面で変えた値は、キーボードの動作と表示位置へ随時反映し、確定したときに保存する。
     /// 前面のウィンドウ（<see cref="ForegroundWindowMonitor"/>）を毎フレーム調べ、送信先の表示・文字数の上限・チャットボックスへの入力中の表示を合わせる。
     /// キーボードと設定画面の uGUI はシーンに置き、起動時に検証してから組み立てる（<see cref="ValidateScene"/>）。
-    /// ビルドでは、組み立てが終わった後にタスクトレイにアイコンを置き、Unity のウィンドウを隠す。
+    /// ビルドでは、ほかに本アプリのプロセスがあれば何もせずに終了する（<see cref="SingleInstanceLock"/>）。
+    /// 組み立てが終わった後にタスクトレイにアイコンを置き、Unity のウィンドウを隠す。
     /// 隠したウィンドウは、トレイの「設定を開く」でデスクトップの設定ウィンドウとして表示する（<see cref="DesktopSettingsWindow"/>）。
     /// 終了は SteamVR の終了・設定画面の「アプリを終了」・トレイの「終了」で行う。
+    /// ビルドで起動の処理（Awake・Start）が例外で終わったときは、その内容をメッセージボックスで示してから終了する（<see cref="ErrorDialog"/>）。
     /// </summary>
     public sealed class KeyboardApp : MonoBehaviour, IKeyboardEffects
     {
@@ -92,6 +94,7 @@ namespace VRime.App
 
         // ビルドでだけ作る。エディターでは null のため、未代入の警告（CS0649）になるので抑止する。
 #pragma warning disable CS0649
+        SingleInstanceLock _instanceLock;
         TrayIcon _tray;
         DesktopSettingsWindow _desktopSettings;
 #pragma warning restore CS0649
@@ -102,19 +105,73 @@ namespace VRime.App
 
         public KeyboardSession Session => _session;
 
-        void Awake()
+        void Awake() => RunStartupStep(AwakeCore);
+
+        void AwakeCore()
+        {
+#if !UNITY_EDITOR
+            // 起動済みのプロセスがあれば、SteamVR とトレイに何も作らずに終了する。Start と Update は呼ばれない。
+            if (!SingleInstanceLock.TryAcquire(out _instanceLock))
+            {
+                enabled = false;
+                Application.Quit();
+                return;
+            }
+#endif
+            Initialize();
+        }
+
+        // 起動の処理（Awake・Start）を実行する。失敗したら、組み立てに失敗した状態で Update が回り続け、同じ例外が毎フレーム出るのを防ぐ。
+        // ビルドでは、例外の内容をメッセージボックスで示してから終了する（SPEC 3.1）。エディターでは例外をそのまま送出し、コンソールに出す。
+        void RunStartupStep(Action step)
         {
             try
             {
-                Initialize();
+                step();
             }
+#if UNITY_EDITOR
             catch
             {
-                // 組み立てに失敗した状態で Update が回り続け、同じ例外が毎フレーム出るのを防ぐ。
                 enabled = false;
                 throw;
             }
+#else
+            catch (Exception e)
+            {
+                enabled = false;
+                QuitWithStartupError(e);
+            }
+#endif
         }
+
+#if !UNITY_EDITOR
+        void QuitWithStartupError(Exception error)
+        {
+            // 例外を送出しないため、Unity の代わりにログに残す。
+            Debug.LogException(error);
+            _quitting = true;
+            try
+            {
+                ErrorDialog.Show(AppInfo.DisplayName, FormatStartupError(error));
+            }
+            finally
+            {
+                // メッセージボックスを表示できなくても終了する。表示の失敗は例外として Unity がログに残す。
+                Application.Quit();
+            }
+        }
+
+        static string FormatStartupError(Exception error)
+        {
+            string text = AppInfo.DisplayName + " の起動中にエラーが発生しました。\n" +
+                "頻繁に発生する場合は、開発者に問い合わせてください。\n" +
+                "Ctrl+C でエラー文をクリップボードにコピーできます。\n\n" +
+                error.Message + "\n\n" +
+                error.StackTrace;
+            if (error.InnerException != null) text += "\n\n内部の例外:\n" + error.InnerException;
+            return text;
+        }
+#endif
 
         /// <summary>
         /// シーンの構成を検証する。足りない参照・誤った設定は、どこが誤っているかを示す例外にする。シーンの状態は変えない。
@@ -194,6 +251,8 @@ namespace VRime.App
             // 環境の作成は、描画先が揃ったあとに行う。OpenVR の初期化に失敗した場合は例外にする（別の環境へは切り替えない）。
             _platform = CreatePlatform();
             _platform.QuitRequested += OnQuitRequested;
+            _settingsForm.ExternalChangeRequested += OnExternalChangeRequested;
+            ReadExternalSettings();
 #if UNITY_EDITOR
             var debugPlatform = _platform as DebugKeyboardPlatform;
             _preview = new KeyboardPreview(_session, _platform, _keyboardTarget.Texture, _settingsTarget.Texture,
@@ -212,8 +271,10 @@ namespace VRime.App
 
         // Unity は最初のシーンの Awake の後、Start の前にプレイヤーのウィンドウを表示する。Awake で隠しても表示し直されるため、
         // VRChat を前面にする処理とウィンドウを隠す処理は Start で行う（SPEC 3.1）。
-        // Awake が例外で終わったときは enabled が false になり Start は呼ばれないため、ウィンドウが残り、異常に気付ける。
-        void Start()
+        // Awake が例外で終わったときは enabled が false になり、Start は呼ばれない。
+        void Start() => RunStartupStep(StartCore);
+
+        void StartCore()
         {
             // 開発用のキーボードの入力は前面のウィンドウにしか届かないため、その環境では前面を移さない。
             if (_settingsForm.Settings.VRChat.FocusOnStartup && !_platform.RequiresOwnWindowFocus) FocusVRChat();
@@ -257,7 +318,9 @@ namespace VRime.App
         OpenVRPlatform CreateOpenVRPlatform()
         {
             var overlayPlacement = new OverlayPlacement(_keyboardView.BoardCenterOffset);
-            return new OpenVRPlatform(_keyboardTarget, _settingsTarget, _settingsForm, overlayPlacement, _settingsForm.Settings.Placement);
+            // エディターではエディター自体が SteamVR に登録されてしまうため、登録はビルドだけで行う。
+            return new OpenVRPlatform(_keyboardTarget, _settingsTarget, _settingsForm, overlayPlacement, _settingsForm.Settings.Placement,
+                registerApplication: !Application.isEditor);
         }
 
         void Update()
@@ -291,6 +354,8 @@ namespace VRime.App
             bool keyboardShown = _session.IsOpen || placementPreview;
             if (keyboardShown && (_keyboardView.RefreshIfChanged() || !_keyboardShown)) _keyboardTarget.Render();
             _keyboardShown = keyboardShown;
+            // SteamVR の設定画面でも変えられるため、設定画面の表示中は毎フレーム読み直す。
+            if (settingsVisible) ReadExternalSettings();
             if (_settingsView.RefreshIfChanged()) _settingsTarget.Render();
 
             UpdateChatbox(now);
@@ -358,6 +423,7 @@ namespace VRime.App
             if (_tray != null) Application.wantsToQuit -= OnWantsToQuit;
             // 失敗すると例外になるため、他の後始末を終えた後に行う。
             _tray?.Dispose();
+            _instanceLock?.Dispose();
         }
 
         // 終了の前に、チャットボックスに入力途中の文字を残さない。送れなくても終了は続ける。
@@ -417,6 +483,20 @@ namespace VRime.App
             _platform.SetPlacement(settings.Placement);
             // 描き直しは、各ビューがテーマの版の変化を見て行う。
             _theme.Set(_themes.Get(settings.Theme));
+        }
+
+        // 値をアプリの外が持つ設定項目の値を、外から読んで設定画面に渡す。
+        void ReadExternalSettings()
+        {
+            _settingsForm.SetExternalValue(SettingsCatalog.AutoLaunch, _platform.AutoLaunch);
+        }
+
+        // 外の値を変えた後、読み直して設定画面に渡す（設定画面は自分では値を変えない）。
+        void OnExternalChangeRequested(ExternalToggleSettingItem item, bool value)
+        {
+            if (item != SettingsCatalog.AutoLaunch) throw new ArgumentException("未知の項目です: " + item.Key, nameof(item));
+            _platform.SetAutoLaunch(value);
+            ReadExternalSettings();
         }
 
         // 保存の失敗ではアプリを止めない。設定画面に通知し、次に保存できたときに通知を戻す。

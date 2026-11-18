@@ -16,11 +16,8 @@ namespace VRime.App.Settings
             Key = key;
         }
 
-        /// <summary>項目を識別するキー。設定ファイルの値の名前（SPEC 8.1）と同じ。</summary>
+        /// <summary>項目を識別するキー。設定ファイルに保存する項目では、設定ファイルの値の名前（SPEC 8.1）と同じ。</summary>
         public string Key { get; }
-
-        /// <summary>この項目だけを <see cref="UserSettings.Default"/> の値に戻す。</summary>
-        public abstract UserSettings ResetToDefault(UserSettings settings);
     }
 
     /// <summary>数値の項目。［−］・スライダー・［＋］で変える。</summary>
@@ -48,12 +45,23 @@ namespace VRime.App.Settings
 
         public string Format(float value) => _format(value);
 
-        // 既定値は刻みに揃えずにそのまま使う。
-        public override UserSettings ResetToDefault(UserSettings settings) => _set(settings, _get(UserSettings.Default));
+        /// <summary>この項目だけを <see cref="UserSettings.Default"/> の値に戻す。既定値は刻みに揃えずにそのまま使う。</summary>
+        public UserSettings ResetToDefault(UserSettings settings) => _set(settings, _get(UserSettings.Default));
     }
 
-    /// <summary>オン・オフの項目。押すたびに切り替える。</summary>
-    public sealed class ToggleSettingItem : SettingItem
+    /// <summary>
+    /// オン・オフの項目（スイッチ）。値を設定ファイルに保存する <see cref="ToggleSettingItem"/> と、
+    /// 値をアプリの外が持つ <see cref="ExternalToggleSettingItem"/> がある。画面の行（<see cref="View.SettingsToggleRow"/>）はどちらにも使う。
+    /// </summary>
+    public abstract class SwitchSettingItem : SettingItem
+    {
+        private protected SwitchSettingItem(string key) : base(key)
+        {
+        }
+    }
+
+    /// <summary>設定ファイルに保存するオン・オフの項目。押すたびに切り替える。</summary>
+    public sealed class ToggleSettingItem : SwitchSettingItem
     {
         readonly Func<UserSettings, bool> _get;
         readonly Func<UserSettings, bool, UserSettings> _set;
@@ -76,7 +84,25 @@ namespace VRime.App.Settings
 
         public UserSettings Toggle(UserSettings settings) => _set(settings, !_get(settings));
 
-        public override UserSettings ResetToDefault(UserSettings settings) => _set(settings, _get(UserSettings.Default));
+        /// <summary>この項目だけを <see cref="UserSettings.Default"/> の値に戻す。</summary>
+        public UserSettings ResetToDefault(UserSettings settings) => _set(settings, _get(UserSettings.Default));
+    }
+
+    /// <summary>
+    /// 値をアプリの外（SteamVR など）が持つオン・オフの項目。設定ファイルには保存しない。
+    /// 値の読み書きは <see cref="SettingsForm"/> を通してアプリが行う（<see cref="SettingsForm.SetExternalValue"/> / <see cref="SettingsForm.ExternalChangeRequested"/>）。
+    /// 外の値はアプリの外でも変わりうるため、アプリは表示の前に読み直して渡す。
+    /// </summary>
+    public sealed class ExternalToggleSettingItem : SwitchSettingItem
+    {
+        /// <param name="defaultValue">「既定に戻す」で設定する値。</param>
+        public ExternalToggleSettingItem(string key, bool defaultValue) : base(key)
+        {
+            DefaultValue = defaultValue;
+        }
+
+        /// <summary>「既定に戻す」で設定する値。</summary>
+        public bool DefaultValue { get; }
     }
 
     /// <summary>
@@ -153,7 +179,8 @@ namespace VRime.App.Settings
             return _setIndex(settings, index);
         }
 
-        public override UserSettings ResetToDefault(UserSettings settings) => SetIndex(settings, GetIndex(UserSettings.Default));
+        /// <summary>この項目だけを <see cref="UserSettings.Default"/> の値に戻す。</summary>
+        public UserSettings ResetToDefault(UserSettings settings) => SetIndex(settings, GetIndex(UserSettings.Default));
     }
 
     /// <summary>設定画面のタブ 1 つ分の項目のまとまり。「既定に戻す」はカテゴリごとに働く。</summary>
@@ -193,11 +220,32 @@ namespace VRime.App.Settings
             return false;
         }
 
-        /// <summary>このカテゴリの項目だけを既定値に戻す。</summary>
+        /// <summary>
+        /// このカテゴリの、設定ファイルに保存する項目だけを既定値に戻す。
+        /// 値をアプリの外が持つ項目（<see cref="ExternalToggleSettingItem"/>）は戻さない（<see cref="SettingsForm"/> が外へ変更を求める）。
+        /// </summary>
         public UserSettings ResetToDefault(UserSettings settings)
         {
             if (settings == null) throw new ArgumentNullException(nameof(settings));
-            foreach (SettingItem item in Items) settings = item.ResetToDefault(settings);
+            foreach (SettingItem item in Items)
+            {
+                switch (item)
+                {
+                    case NumberSettingItem number:
+                        settings = number.ResetToDefault(settings);
+                        break;
+                    case ToggleSettingItem toggle:
+                        settings = toggle.ResetToDefault(settings);
+                        break;
+                    case ChoiceSettingItem choice:
+                        settings = choice.ResetToDefault(settings);
+                        break;
+                    case ExternalToggleSettingItem _:
+                        break;
+                    default:
+                        throw new InvalidOperationException("未知の種類の項目です: " + item.Key);
+                }
+            }
             return settings;
         }
     }
@@ -205,6 +253,10 @@ namespace VRime.App.Settings
     /// <summary>設定画面に並べるカテゴリと項目（SPEC 8章）。</summary>
     public static class SettingsCatalog
     {
+        /// <summary>SteamVR の起動時に自動で起動するか（SPEC 9）。値は SteamVR が持つ。</summary>
+        public static readonly ExternalToggleSettingItem AutoLaunch = new ExternalToggleSettingItem("autoLaunch", defaultValue: false);
+
+        // AutoLaunch より後に初期化する（静的フィールドは宣言の順に初期化される）。
         public static readonly IReadOnlyList<SettingsCategory> Categories = new[]
         {
             new SettingsCategory("display", new SettingItem[]
@@ -231,12 +283,13 @@ namespace VRime.App.Settings
                 new NumberSettingItem("repeatDelaySeconds", UserSettings.RepeatDelaySecondsRange,
                     s => s.RepeatDelaySeconds, (s, v) => s.WithRepeatDelaySeconds(v), Seconds),
             }),
-            new SettingsCategory("vrchat", new SettingItem[]
+            new SettingsCategory("integration", new SettingItem[]
             {
                 new ToggleSettingItem("focusOnStartup",
                     s => s.VRChat.FocusOnStartup, (s, v) => s.WithVRChat(s.VRChat.WithFocusOnStartup(v))),
                 new ToggleSettingItem("showTypingText",
                     s => s.VRChat.ShowTypingText, (s, v) => s.WithVRChat(s.VRChat.WithShowTypingText(v))),
+                AutoLaunch,
             }),
             new SettingsCategory("privacy", new SettingItem[]
             {
@@ -263,6 +316,10 @@ namespace VRime.App.Settings
             ?? throw new ArgumentException("数値の項目ではありません: " + key, nameof(key));
 
         public static ToggleSettingItem FindToggle(string key) => Find(key) as ToggleSettingItem
+            ?? throw new ArgumentException("設定ファイルに保存するオン・オフの項目ではありません: " + key, nameof(key));
+
+        /// <summary>キーに対応するオン・オフの項目（保存するもの・外が値を持つものの両方）。ない場合は例外。</summary>
+        public static SwitchSettingItem FindSwitch(string key) => Find(key) as SwitchSettingItem
             ?? throw new ArgumentException("オン・オフの項目ではありません: " + key, nameof(key));
 
         public static ChoiceSettingItem FindChoice(string key) => Find(key) as ChoiceSettingItem
