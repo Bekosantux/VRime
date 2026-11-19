@@ -47,6 +47,15 @@ namespace VRime.App.View
         GripPanelCaption _consonantCaption;
         GripPanelCaption _vowelCaption;
 
+        /// <summary>
+        /// 母音側の通常ページで、3×3 のその位置（行優先の 0..8）に5方向のマスを置くか。四隅には置かず、機能ページのヒントだけを示す。
+        /// </summary>
+        public static bool HasVowelDirection(int cell)
+        {
+            if (cell < 0 || cell >= CellCount) throw new ArgumentOutOfRangeException(nameof(cell), cell, null);
+            return CellToDirection[cell] >= 0;
+        }
+
         public void Validate()
         {
             SceneChecks.Require(_group, this, nameof(_group));
@@ -111,9 +120,9 @@ namespace VRime.App.View
                 {
                     GripPanelCell cell = _vowelCells[i];
                     string hint = view.VowelHints[i];
-                    int direction = CellToDirection[i];
-                    if (direction >= 0)
+                    if (HasVowelDirection(i))
                     {
+                        int direction = CellToDirection[i];
                         cell.SetActive(true);
                         cell.Set(view.VowelCells[direction], direction == view.VowelSelected, hint);
                     }

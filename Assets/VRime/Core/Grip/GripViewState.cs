@@ -6,11 +6,34 @@ namespace VRime.Core.Grip
     /// <summary>パネルの1マスの表示。</summary>
     public readonly struct GripCellView
     {
+        /// <summary>方向のヒントを持つ方向の数（左・上・右・下）。</summary>
+        public const int DirectionHintCount = GripCell.DirectionCount - 1;
+
+        static readonly string[] NoDirectionHints = { "", "", "", "" };
+
+        // 左・上・右・下の順（StickDirection の値 - 1 を添字にする）。
+        readonly IReadOnlyList<string> _directionHints;
+
+        /// <summary>方向のヒントのないマス。</summary>
         public GripCellView(string label, bool disabled, bool lit)
+            : this(label, disabled, lit, NoDirectionHints)
+        {
+        }
+
+        /// <param name="directionHints">左・上・右・下の順の4つ。ヒントのない方向は空文字列。</param>
+        public GripCellView(string label, bool disabled, bool lit, IReadOnlyList<string> directionHints)
         {
             Label = label ?? throw new ArgumentNullException(nameof(label));
             Disabled = disabled;
             Lit = lit;
+            if (directionHints == null) throw new ArgumentNullException(nameof(directionHints));
+            if (directionHints.Count != DirectionHintCount)
+                throw new ArgumentException("方向のヒントは左・上・右・下の " + DirectionHintCount + " つが必要です。", nameof(directionHints));
+            foreach (string hint in directionHints)
+            {
+                if (hint == null) throw new ArgumentException("ヒントのない方向は空文字列にします。", nameof(directionHints));
+            }
+            _directionHints = directionHints;
         }
 
         /// <summary>表示する文字。入力される文字（大文字・全角を反映）または動作名。</summary>
@@ -21,6 +44,18 @@ namespace VRime.Core.Grip
 
         /// <summary>オンの状態を示す点灯。</summary>
         public bool Lit { get; }
+
+        /// <summary>
+        /// 文字グループのマスで、母音パネルをその方向に倒したときに入力される文字（大文字・全角を反映）。
+        /// マスの同じ側の辺に示す。未割り当ての方向と、文字グループ以外のマスは空文字列。
+        /// </summary>
+        public string DirectionHint(StickDirection direction)
+        {
+            if (direction == StickDirection.Center || !Enum.IsDefined(typeof(StickDirection), direction))
+                throw new ArgumentOutOfRangeException(nameof(direction), direction, "方向のヒントは左・上・右・下にだけあります。");
+            if (_directionHints == null) throw new InvalidOperationException("初期化されていないマスです。");
+            return _directionHints[(int)direction - 1];
+        }
     }
 
     /// <summary>グリップ入力のビュー用の状態。</summary>
