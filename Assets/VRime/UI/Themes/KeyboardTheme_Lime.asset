@@ -35,8 +35,8 @@ MonoBehaviour:
   _cellTextLit: {r: 0.7607843, g: 0.41568628, b: 0, a: 1}
   _cellTextDisabled: {r: 0.6392157, g: 0.6862745, b: 0.5529412, a: 1}
   _cellTextDisabledSelected: {r: 0.27058825, g: 0.3764706, b: 0.16470589, a: 1}
-  _cellHint: {r: 0.12156863, g: 0.16470589, b: 0.078431375, a: 0.4509804}
-  _cellHintSelected: {r: 0.12156863, g: 0.16470589, b: 0.078431375, a: 0.65}
+  _cellHint: {r: 0.12156863, g: 0.16470589, b: 0.078431375, a: 0.89411765}
+  _cellHintSelected: {r: 0.12156863, g: 0.16470589, b: 0.078431375, a: 1}
   _cellFontSize: 54
   _cellFunctionFontSize: 38
   _panelDimAlpha: 0.35
