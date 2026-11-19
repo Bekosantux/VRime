@@ -1,9 +1,7 @@
 <!--
   Managed Code Stripping から丸ごと保護するアセンブリ。
   ネイティブ側（Win32・OpenVR・描画スレッド）から呼ばれるコールバックやマーシャリングされる構造体、
-  ライブラリの内部でリフレクションを使う処理は、静的な解析では使われていると判定できないことがあるため、削らせない。
-  ストリッピングを防ぐだけで、IL2CPP の AOT の制約（実行時のジェネリックの生成、Reflection.Emit）は解消しない。
--->
+  ライブラリの内部でリフレクションを使う処理は、静的な解析では使われていると判定できないことがあるため、削らせない。-->
 <linker>
   <assembly fullname="VRime.Core" preserve="all"/>
   <assembly fullname="VRime.App" preserve="all"/>
