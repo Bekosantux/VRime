@@ -172,6 +172,9 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 **ビルド**
 
-- Windows 64bit の出力先はプロジェクト直下の `Builds/` で、`.gitignore` により管理対象外。`openvr_api.dll` が `<名前>_Data/Plugins/x86_64/` に、アクションマニフェストが `<名前>_Data/StreamingAssets/SteamVR/` に入る。
+- ビルドはメニューの `VRime/Build/Development` と `VRime/Build/Release`（`PlayerBuilder`）で行う。Build Profile（`Assets/Settings/Build Profiles/` の `Windows Development` と `Windows Release`）を指定してビルドし、出力先はプロファイルに保存されないため `PlayerBuilder` が決める。出力先はプロジェクト直下の `Builds/Development/` と `Builds/Release/` で、`.gitignore` により管理対象外。ビルドの前に出力先を空にする。
+- 2つのプロファイルの違いは Development Build の有無だけで、Player Settings は上書きしない。スクリプトのバックエンド（Mono）と Managed Stripping Level（Medium）はプロジェクト共通の設定にし、ストリッピングによる欠落を開発用のビルドでも再現させる。IL2CPP は、このプロジェクトでは `GameAssembly.dll` が Mono のランタイムと IL の合計より大きくなり、配布物が Mono より約 7MB（zip で）大きくなるため使っていない。
+- `VRime/Build/Release` は、ビルドの後に `Builds/<製品名>-v<Version>-win64.zip` を作る。中身は製品名のフォルダーにまとめ、ライセンス文（`LICENSE` と、同梱するサードパーティのもの）を加え、配布してはいけないフォルダー（`*_BurstDebugInformation_DoNotShip` など）を除く。Version は Player Settings の Version（`bundleVersion`）。
+- `openvr_api.dll` が `<名前>_Data/Plugins/x86_64/` に、アクションマニフェストが `<名前>_Data/StreamingAssets/SteamVR/` に入る。
 - 開発用のツールが置く DLL（MCP for Unity が `Assets/Plugins/Roslyn/` に置く Roslyn。git の管理外）は、`EditorOnlyPlugins` がインポートのたびにエディター専用へ直す。ツールは全プラットフォーム向けの設定で置くため、そのままでは Player に約 12MB が入る。ビルドの前にも検査し、Player に含まれる設定ならビルドを止める。対象のフォルダーを増やすときは `EditorOnlyPlugins.Folders` に加える。
 - `Assets/VRime/link.xml` で、自前のアセンブリ（`VRime.Core`・`VRime.App`）と `Valve.OpenVR`・`Newtonsoft.Json` をストリッピングから丸ごと保護する。リフレクションを使う処理や、ネイティブ側から呼ばれる処理を加えても、これらのアセンブリの中なら削られない。それ以外のアセンブリ（パッケージなど）でリフレクションを使うときは、ここに加える。
