@@ -15,7 +15,7 @@ VRime.Editor  ──→  VRime.App  ──→  VRime.Core
 | `VRime.Core` | `Assets/VRime/Core/` | Unity・OpenVR・Win32 に依存しない純粋なロジック（`noEngineReferences`）。入力方式の状態機械、入力バッファ、変換候補の選択状態、OSC エンコードなど。EditMode テストで仕様を検証する |
 | `VRime.App` | `Assets/VRime/App/` | MonoBehaviour、OpenVR、描画、通信、Win32 の呼び出し。Core の状態機械に入力を渡し、その結果を各部へ振り分ける |
 | `Valve.OpenVR` | `Assets/VRime/ThirdParty/OpenVR/` | Valve 配布の `openvr_api.cs` をそのまま置く |
-| `VRime.Editor` | `Assets/VRime/Editor/` | エディター専用の開発用ツール。テーマのアセットのインスペクター（`KeyboardThemeEditor`）の「シーンに反映」で、`ThemeScenePainter` がそのテーマの色をアクティブなシーンの uGUI に塗る（Undo に記録し、保存はしない） |
+| `VRime.Editor` | `Assets/VRime/Editor/` | エディター専用の開発用ツール。テーマのアセットのインスペクター（`KeyboardThemeEditor`）の「シーンに反映」で、`ThemeScenePainter` がそのテーマの色をアクティブなシーンの uGUI に塗る（Undo に記録し、保存はしない）。`Build/` はビルド用（後述の「ビルド」） |
 
 - Core は App を参照しない。Core から外部への作用（振動・変換の要求・送信）は、戻り値またはイベントとして App に返す。
 
@@ -173,3 +173,4 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 **ビルド**
 
 - Windows 64bit の出力先はプロジェクト直下の `Builds/` で、`.gitignore` により管理対象外。`openvr_api.dll` が `<名前>_Data/Plugins/x86_64/` に、アクションマニフェストが `<名前>_Data/StreamingAssets/SteamVR/` に入る。
+- 開発用のツールが置く DLL（MCP for Unity が `Assets/Plugins/Roslyn/` に置く Roslyn。git の管理外）は、`EditorOnlyPlugins` がインポートのたびにエディター専用へ直す。ツールは全プラットフォーム向けの設定で置くため、そのままでは Player に約 12MB が入る。ビルドの前にも検査し、Player に含まれる設定ならビルドを止める。対象のフォルダーを増やすときは `EditorOnlyPlugins.Folders` に加える。
