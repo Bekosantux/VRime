@@ -4,10 +4,10 @@ using VRime.Core.Input;
 
 namespace VRime.Core.Tests
 {
-    /// <summary>グリップ入力（SPEC 5.2）の振る舞い。Rig を通して、実際の操作と同じ入力列で確認する。</summary>
+    /// <summary>グリップ入力（docs/spec/grip-input.md）の振る舞い。Rig を通して、実際の操作と同じ入力列で確認する。</summary>
     public class GripInputTests
     {
-        // 機能ページのセル番号（SPEC 5.2）
+        // 機能ページのセル番号（docs/spec/grip-input.md）
         const int Erase = 2;
         const int Modifier = 3;
         const int Wa = 4;

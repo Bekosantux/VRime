@@ -17,7 +17,7 @@ namespace VRime.App.Output
         Desktop,
     }
 
-    /// <summary>前面のウィンドウから決まる送信先（SPEC 7.2）。</summary>
+    /// <summary>前面のウィンドウから決まる送信先（docs/spec/output.md「送信先」）。</summary>
     public sealed class OutputTarget
     {
         const string VRChatProcessName = "VRChat";

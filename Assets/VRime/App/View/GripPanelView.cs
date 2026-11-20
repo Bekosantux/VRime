@@ -147,7 +147,7 @@ namespace VRime.App.View
             _pageChips[1].Set("英字", page == GripPage.Alpha ? GripChipState.Selected : GripChipState.Inactive);
             _pageChips[2].Set("数字", page == GripPage.Number ? GripChipState.Selected : GripChipState.Inactive);
 
-            // 全角/半角は英字・数字ページ、大文字/小文字は英字ページでのみ作用する（SPEC 5.2）。
+            // 全角/半角は英字・数字ページ、大文字/小文字は英字ページでのみ作用する（docs/spec/grip-input.md「母音側の機能ページ」）。
             bool widthApplies = page != GripPage.Kana;
             _widthChip.Set(input.IsFullWidth ? "全角" : "半角", widthApplies ? GripChipState.Active : GripChipState.Inactive);
             bool caseApplies = page == GripPage.Alpha;

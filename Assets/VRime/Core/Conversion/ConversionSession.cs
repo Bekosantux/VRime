@@ -27,7 +27,7 @@ namespace VRime.Core.Conversion
         }
 
         /// <summary>
-        /// 変換に失敗したときの代わりの候補。1文節で、候補は［ひらがなのまま, カタカナ］（SPEC 6.4）。
+        /// 変換に失敗したときの代わりの候補。1文節で、候補は［ひらがなのまま, カタカナ］（docs/spec/conversion.md「エラー時の扱い」）。
         /// </summary>
         public static ConversionSession CreateFallback(string reading)
         {

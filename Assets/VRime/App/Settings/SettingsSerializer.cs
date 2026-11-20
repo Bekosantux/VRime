@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 namespace VRime.App.Settings
 {
     /// <summary>
-    /// <see cref="UserSettings"/> と設定ファイルの JSON の相互変換（SPEC 8章）。
+    /// <see cref="UserSettings"/> と設定ファイルの JSON の相互変換（docs/spec/settings.md「設定ファイル」）。
     /// 項目が欠けている場合はその項目だけ既定値にする。形式・型・範囲・版が正しくない場合は <see cref="FormatException"/>。
     /// </summary>
     public static class SettingsSerializer

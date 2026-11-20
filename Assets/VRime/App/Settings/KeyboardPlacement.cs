@@ -3,7 +3,7 @@ using System;
 namespace VRime.App.Settings
 {
     /// <summary>
-    /// キーボードのオーバーレイの位置・傾き・大きさ（SPEC 4.1）。位置は HMD を基準にした「盤面の中心」の位置。
+    /// キーボードのオーバーレイの位置・傾き・大きさ（docs/spec/keyboard.md「表示位置」）。位置は HMD を基準にした「盤面の中心」の位置。
     /// 値は生成時に範囲を検査し、範囲外は例外にする。
     /// </summary>
     public sealed class KeyboardPlacement
@@ -14,7 +14,7 @@ namespace VRime.App.Settings
         public static readonly SettingRange TiltRange = new SettingRange(0f, 60f, 1f);
         public static readonly SettingRange WidthRange = new SettingRange(0.25f, 0.90f, 0.01f);
 
-        /// <summary>試作2の値（下 0.26m・前 0.85m・傾き 17°・幅 0.45m）。</summary>
+        /// <summary>既定の位置（下 0.26m・前 0.85m・傾き 17°・幅 0.45m）。</summary>
         public static readonly KeyboardPlacement Default = new KeyboardPlacement(0.26f, 0.85f, 0f, 17f, 0.45f);
 
         public KeyboardPlacement(float downMeters, float forwardMeters, float rightMeters, float tiltDegrees, float widthMeters)

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace VRime.App.Native
 {
     /// <summary>
-    /// エラーを示すメッセージボックス。ビルドで、起動の処理の失敗を利用者に示すために使う（SPEC 3.1）。
+    /// エラーを示すメッセージボックス。ビルドで、起動の処理の失敗を利用者に示すために使う（docs/spec/lifecycle.md「起動」）。
     /// オーナーのウィンドウは持たせない。Unity のプレイヤーのウィンドウを探す処理（<see cref="PlayerWindow"/>）自体が失敗の原因になりうるため。
     /// </summary>
     public static class ErrorDialog

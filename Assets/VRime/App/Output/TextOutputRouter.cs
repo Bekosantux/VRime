@@ -3,7 +3,7 @@ using System;
 namespace VRime.App.Output
 {
     /// <summary>
-    /// 送信先（<see cref="OutputTarget"/>）に応じて送る（SPEC 7.2）。
+    /// 送信先（<see cref="OutputTarget"/>）に応じて送る（docs/spec/output.md「送信先」）。
     /// VRChat なら OSC、それ以外ならデスクトップへ送る。前面が本アプリ自身のときは送らない。
     /// 失敗の通知に送信内容は含めない。
     /// </summary>

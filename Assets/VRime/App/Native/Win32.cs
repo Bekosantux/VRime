@@ -142,7 +142,7 @@ namespace VRime.App.Native
             public uint lPrivate;
         }
 
-        /// <summary>NOTIFYICONDATAW。uVersion は uTimeout との共用体。</summary>
+        /// <summary>NOTIFYICONDATAW（x64 で 976 バイト）。uVersion は uTimeout との共用体。</summary>
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct NOTIFYICONDATA
         {

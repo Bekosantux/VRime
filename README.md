@@ -28,6 +28,15 @@ VRime（ブイライム）は、SteamVR 上で動作する日本語入力用の�
 
 変換には Google CGI API for Japanese Input を使用し、「変換」を押したときに入力中の読み（ひらがな）を Google に送信します。変換は、設定画面で注意事項に同意してオンにしたときだけ使えます。
 
+## 開発の始め方
+
+1. Unity 6000.3.19f1 でプロジェクトを開きます。
+2. シーン `Assets/VRime/Scenes/Main.unity` を開いて再生します。既定では、PC のキーボードで両手のコントローラーを模すため、VR 機器は不要です。操作キーは Game ビューに表示されます。SteamVR に接続して確かめるときは、`KeyboardApp` の `Editor Device` を `OpenVR` にします。
+3. テストは Test Runner の EditMode で実行します。
+4. ビルドはメニューの `VRime/Build/Development` または `VRime/Build/Release` で行います（出力先は `Builds/`）。
+
+設計は [ARCHITECTURE.md](ARCHITECTURE.md)、作業の手順は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、仕様は [docs/SPEC.md](docs/SPEC.md)、未実装の機能は [docs/ROADMAP.md](docs/ROADMAP.md) を参照してください。
+
 ## ライセンス
 
 このリポジトリは [PolyForm Strict License 1.0.0](LICENSE) で公開しています。非商用の目的での利用は許可しますが、改変と再配布は許可しません。

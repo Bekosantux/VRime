@@ -1,6 +1,6 @@
 namespace VRime.App.Settings
 {
-    /// <summary>VRChat に関わる設定（SPEC 8.1）。</summary>
+    /// <summary>VRChat に関わる設定（docs/spec/output.md「VRChat」）。</summary>
     public sealed class VRChatSettings
     {
         public static readonly VRChatSettings Default = new VRChatSettings(focusOnStartup: true, showTypingText: true);

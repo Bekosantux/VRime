@@ -16,7 +16,7 @@ namespace VRime.App.Settings
             Key = key;
         }
 
-        /// <summary>項目を識別するキー。設定ファイルに保存する項目では、設定ファイルの値の名前（SPEC 8.1）と同じ。</summary>
+        /// <summary>項目を識別するキー。設定ファイルに保存する項目では、設定ファイルの値の名前（docs/spec/settings.md「設定ファイル」）と同じ。</summary>
         public string Key { get; }
     }
 
@@ -250,10 +250,10 @@ namespace VRime.App.Settings
         }
     }
 
-    /// <summary>設定画面に並べるカテゴリと項目（SPEC 8章）。</summary>
+    /// <summary>設定画面に並べるカテゴリと項目（docs/spec/settings.md「項目」）。</summary>
     public static class SettingsCatalog
     {
-        /// <summary>SteamVR の起動時に自動で起動するか（SPEC 9）。値は SteamVR が持つ。</summary>
+        /// <summary>SteamVR の起動時に自動で起動するか（docs/spec/lifecycle.md「SteamVR への登録と自動起動」）。値は SteamVR が持つ。</summary>
         public static readonly ExternalToggleSettingItem AutoLaunch = new ExternalToggleSettingItem("autoLaunch", defaultValue: false);
 
         // AutoLaunch より後に初期化する（静的フィールドは宣言の順に初期化される）。

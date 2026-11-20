@@ -9,14 +9,14 @@ using VRime.Core.Conversion;
 namespace VRime.App.Conversion
 {
     /// <summary>
-    /// Google CGI API for Japanese Input（SPEC 6.1）への変換リクエスト。メインスレッドから呼ぶ。
+    /// Google CGI API for Japanese Input（docs/spec/conversion.md「変換エンジン」）への変換リクエスト。メインスレッドから呼ぶ。
     /// URL の組み立てと応答の解析は Core の <see cref="TransliterateApi"/> が行い、ここは通信だけを担う。
     /// 失敗は <see cref="ConversionFailedException"/>、キャンセルは <see cref="OperationCanceledException"/>。
-    /// 例外のメッセージに読みや URL を含めない（SPEC 6.2）。
+    /// 例外のメッセージに読みや URL を含めない（docs/spec/conversion.md「プライバシーと同意」）。
     /// </summary>
     public sealed class GoogleTransliterateClient
     {
-        /// <summary>SPEC 6.4 のタイムアウト。</summary>
+        /// <summary>docs/spec/conversion.md「エラー時の扱い」のタイムアウト。</summary>
         public const float DefaultTimeoutSeconds = 2f;
 
         readonly float _timeoutSeconds;

@@ -1,6 +1,31 @@
 # アーキテクチャ
 
-外部仕様は [docs/SPEC.md](docs/SPEC.md) を参照。本書は設計（クラス責務・ディレクトリ構成・依存の方向）を扱う。
+複数のクラスにまたがる構造と、設計上の判断・制約を扱う。クラスごとの責務は各クラスのドキュメントコメントに書く。外部仕様は [docs/SPEC.md](docs/SPEC.md)、作業の手順と規則は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) を参照。
+
+## 開発環境
+
+| 項目 | 内容 |
+|---|---|
+| Unity | 6000.3.19f1（Unity 6.3 LTS） |
+| レンダリングパイプライン | URP。Render Graph で描く。URP Global Settings の互換モード（Compatibility Mode）はオフ（Unity 6.3 では、オンのままだとビルドが失敗する） |
+| UI | uGUI ＋ TextMeshPro（Noto Sans JP, Dynamic SDF） |
+| C# | 9 |
+| 追加のパッケージ | `com.unity.nuget.newtonsoft-json`: Google API の応答は入れ子の配列であるため、`JsonUtility` では読めない |
+
+- **XR 関連のパッケージ（XR Plug-in Management、OpenVR XR Plugin、SteamVR Unity Plugin）は導入禁止。** 入れると Unity がシーンアプリとして起動し、VRChat の描画を奪う。Valve 配布の `openvr_api.cs` を直接使い、`VRApplication_Overlay` で初期化する。
+
+### Player Settings
+
+| 項目 | 設定 | 理由 |
+|---|---|---|
+| Graphics APIs | Direct3D11 のみ | `GetNativeTexturePtr` を `ETextureType.DirectX` でそのまま `SetOverlayTexture` に渡すため |
+| Color Space | Linear（URP 既定） | オーバーレイには RenderTexture を sRGB のバイト列として渡す（[描画](#描画)） |
+| Run In Background | オン | ウィンドウを隠しても動く |
+| フレームレート | `KeyboardApp` が `vSyncCount = 0`・`targetFrameRate = 90` にする | 隠したウィンドウがモニターの VSync に縛られず、スティック入力を取りこぼさないようにする |
+| スクリプトバックエンド | Mono。Managed Stripping Level は Medium | [DEVELOPMENT.md](docs/DEVELOPMENT.md#ビルド) を参照 |
+| スプラッシュ画面 | オフ | ウィンドウを隠すまでの時間を短くする |
+| 解像度 | ウィンドウモード・640×480 | 起動処理中にウィンドウが画面を覆わないようにする |
+| Default Icon | `Assets/VRime/Icon/vrime-icon-1024.png` | exe のアイコン。トレイとダッシュボードのアイコンは StreamingAssets のファイルを使用 |
 
 ## アセンブリと依存の方向
 
@@ -12,12 +37,42 @@ VRime.Editor  ──→  VRime.App  ──→  VRime.Core
 
 | アセンブリ | 場所 | 責務 |
 |---|---|---|
-| `VRime.Core` | `Assets/VRime/Core/` | Unity・OpenVR・Win32 に依存しない純粋なロジック（`noEngineReferences`）。入力方式の状態機械、入力バッファ、変換候補の選択状態、OSC エンコードなど。EditMode テストで仕様を検証する |
-| `VRime.App` | `Assets/VRime/App/` | MonoBehaviour、OpenVR、描画、通信、Win32 の呼び出し。Core の状態機械に入力を渡し、その結果を各部へ振り分ける |
+| `VRime.Core` | `Assets/VRime/Core/` | Unity・OpenVR・Win32 に依存しない純粋なロジック（`noEngineReferences`）。入力方式の状態機械、入力バッファ、変換候補の選択状態、OSC エンコードなど |
+| `VRime.App` | `Assets/VRime/App/` | MonoBehaviour、OpenVR、描画、通信、Win32 の呼び出し。Core の状態機械に入力を渡し、その結果を各部へ振り分ける。asmdef は Editor と Windows 64bit に限定する |
 | `Valve.OpenVR` | `Assets/VRime/ThirdParty/OpenVR/` | Valve 配布の `openvr_api.cs` をそのまま置く |
-| `VRime.Editor` | `Assets/VRime/Editor/` | エディター専用の開発用ツール。テーマのアセットのインスペクター（`KeyboardThemeEditor`）の「シーンに反映」で、`ThemeScenePainter` がそのテーマの色をアクティブなシーンの uGUI に塗る（Undo に記録し、保存はしない）。`Build/` はビルド用（後述の「ビルド」） |
+| `VRime.Editor` | `Assets/VRime/Editor/` | エディター専用の開発用ツールとビルド |
 
-- Core は App を参照しない。Core から外部への作用（振動・変換の要求・送信）は、戻り値またはイベントとして App に返す。
+- Core は App を参照しない。Core から外部への作用（開閉・振動・変換の要求・送信の要求）は、`IKeyboardEffects` で App に通知
+- Core は時刻・スティックの傾き・押下状態をすべて引数で受け取り、時計や入力の API に依存しない。そのため、テストでは時間の経過と操作の列を決め打ちで再現できる
+- App は Win32 や OpenVR に触れる処理を境界（`IKeyboardPlatform`・`IControllerSource`・`IForegroundWindowSource` など）の裏に置き、振り分けや判定の規則を、境界を差し替えてテストできるようにする
+
+## ディレクトリ
+
+`Assets/VRime/` の下の構成。
+
+| 場所 | 内容 |
+|---|---|
+| `Core/` | `KeyboardSession`（全体の状態機械）・`IKeyboardEffects`（App への通知）・`KeyboardSettings`（動作設定） |
+| `Core/Input/` | 1フレーム分の両手の状態・押下エッジ・長押しの時刻管理 |
+| `Core/Control/` | 開閉の同時押しの検出 |
+| `Core/Grip/` | グリップ入力の状態機械・文字の配置の表・スティックの分類・描画用の状態 |
+| `Core/Text/` | 入力バッファ・直前の文字の切り替え・全角化・カタカナ |
+| `Core/Conversion/` | Google API の URL の組み立てと応答の解析・候補の選択状態・変換中の操作 |
+| `Core/Output/` | OSC のエンコード・チャットボックスへ送る順序と間隔 |
+| `App/` | `KeyboardApp`（起動の根）・`AppInfo`（表示名・データの置き場所） |
+| `App/Platform/` | 実行環境の境界 `IKeyboardPlatform` と、PC のキーボードによる開発用の環境 |
+| `App/Input/` | 入力元・振動の出力先の境界と、開発用の実装 |
+| `App/SteamVR/` | OpenVR の環境・接続・アプリの登録・アクション・オーバーレイ・テクスチャの受け渡し。名前空間と場所を `OpenVR` にしないのは、`Valve.VR.OpenVR` 型を隠さないため |
+| `App/View/` | 描画先・キーボードと設定画面のビュー・色のテーマ・デスクトップの設定ウィンドウ・エディターの確認表示 |
+| `App/Settings/` | 設定値・設定ファイル・設定画面の項目の定義・状態と当たり判定 |
+| `App/Conversion/` | 変換の通信 |
+| `App/Output/` | 前面のウィンドウの監視・送信の振り分け・OSC の送信・クリップボード |
+| `App/Native/` | Win32 の宣言・メッセージボックス・プレイヤーのウィンドウ・多重起動の防止・タスクトレイ |
+| `Editor/` | テーマのシーンへの反映（`KeyboardThemeEditor`・`ThemeScenePainter`）、`Build/` にビルド |
+| `Tests/EditMode/` | Core のテスト（`VRime.Core.Tests`） |
+| `Tests/EditModeApp/` | App のテスト（`VRime.App.Tests`） |
+| `UI/` | プレハブ・スプライト・テーマのアセット |
+| `Scenes/Main.unity` | 唯一のシーン。`KeyboardApp` と、2つの描画先（キーボード・設定画面）を置く |
 
 ## 外部由来のアセット
 
@@ -30,9 +85,7 @@ VRime.Editor  ──→  VRime.App  ──→  VRime.Core
 | `Images/Icons/` | アイコンの原版（`vrime-icon.svg`）と 1024px の PNG | 上の 3つのアイコンはここから作る。色や形を変えたら 3つとも作り直す |
 | `Assets/VRime/Fonts/` | Noto Sans JP（Regular・Bold の静的 OTF）と `OFL.txt`、編集用の TMP フォントアセット（`NotoSansJP-* SDF.asset`） | ライセンス文は再配布に必要なため同梱する。OTF は Include Font Data を有効にしておく（実行用のフォントアセットの元になる）。編集用のフォントアセットは Dynamic・atlas 512・Clear Dynamic Data On Build。エディターでシーンを開くと表示した文字が atlas に追加され、アセットに差分が出る（Play 中は実行用のアセットに差し替えるため出ない） |
 
-## VRime.Core の構成
-
-`Assets/VRime/Core/` のクラスと責務。テストは `Assets/VRime/Tests/EditMode/`（`VRime.Core.Tests`）にあり、`KeyboardSession` に操作を与える `Rig`（`TestSupport.cs`）で実際の操作と同じ入力列を再現する。
+## Core の構造
 
 ```
 App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboardEffects──→ App
@@ -45,136 +98,100 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
                                └─ InputBuffer ←── Text/*（CharacterModifier・CharacterWidth・Katakana）
 ```
 
-| 種別 | クラス | 責務 |
-|---|---|---|
-| 状態機械 | `KeyboardSession` | 全体の状態機械。開閉・ダッシュボードによる一時停止・モード（入力 / 応答待ち / 変換中）を持ち、操作を `GripInputMethod` と `ConversionController` に振り分ける。しきい値・連続入力の時間・変換を使えるかの変更は `ApplySettings` で次のフレームから反映する（子音の手・同時押しの判定時間の変更は `NotSupportedException`）。文字数の上限は送信先に合わせて App が `SetLengthLimit` で毎フレーム渡し、上限を超えている間は確定キーで送信を要求しない。パネルの切り替えの押下エッジは常に追跡し、開いた直後・変換の開始・取り消しの直後に押していたパネルの切り替えは離すまで無視する。両手の展開・収納を押している間はトリガーを受け付けない。変換結果は `CompleteConversion` / `FailConversion` で受け取り、リクエスト ID が古いものは捨てる |
-| | `IKeyboardEffects` | Core から App への通知（開閉・振動・変換の要求・送信の要求）。Core は結果をここへ出すだけで、通信や描画の処理は持たない。送信の要求（`OnSendRequested`）だけは成否を `bool` で同期的に返し、`true` のときだけ Core が入力バッファを空にする（失敗時は内容を残して `Invalid` の振動を出す） |
-| | `KeyboardSettings` | 設定値（子音の手・スティックとトリガーのしきい値・連続入力の開始までの時間と間隔・同時押しの窓・変換を使えるか）。変換を使えない間、`GripInputMethod` は「変換」を無効のセルにし、押されても要求を出さずに `Invalid` の振動を返す。しきい値は 1 つで、倒した・押したと中央に戻った・離したの両方の判定に使う。不正な値は例外 |
-| 入力 | `ControllerFrame` / `HandState` / `StickValue` | 1フレーム分の両手の状態。SteamVR のアクション（SPEC 5.6）ごとに、キーの選択（スティック）・キーの入力（トリガーの引き量 0〜1）・展開・収納・パネルの切り替えを持つ。物理的なボタンの情報は持たない（既定のバインドではグリップが展開・収納とパネルの切り替えの両方を押す） |
-| | `EdgeTracker` / `FrameEdges` | 前フレームとの差から、トリガーとパネルの切り替えの押下エッジを出す。トリガーは引き量がしきい値以上なら押したとみなす |
-| | `KeyRepeater` | 長押しによる連続入力の時刻管理（どの手のトリガーか・次に繰り返す時刻）。1回の `Poll` で繰り返すのは1回までで、遅れた分は捨てる |
-| 開閉 | `DoubleChordDetector` | 両手の展開・収納の2回続けての同時押しを検出する（時刻は引数で受け取り、時計に依存しない） |
-| グリップ入力 | `GripInputMethod` | セル・方向の選択、機能ページ、トリガーによる入力と直前の文字の切り替え（手ごとの役割は SPEC 5.2）、長押しによる連続入力。連続入力は `KeyRepeater` で時刻を管理し、繰り返すときは同じセルをもう一度押したものとして処理する。止める条件（選択の変化・別のトリガー・引き量がしきい値未満・`Reset`）はここで判定する。バッファを更新し、変換・確定は要求（`GripRequest`）として返す。ページは言語と数字ページの有無から導出する |
-| | `GripLayout` / `GripCell` | SPEC 5.2 の表をデータとして持つ |
-| | `StickClassifier` / `StickDirectionTracker` | スティックの 8方向（3×3 のセル）・4方向への分類（倒し量がしきい値未満なら中央。直前の状態によらない）と、中央から倒した瞬間の検出。候補欄のスティック操作でも使う |
-| | `GripViewState` | 描画用のスナップショット（ラベル・無効・点灯・選択位置と、通常のページに重ねる機能ページのヒント）。文字のセルの方向のヒントはセルの内容なので `GripCellView` に持たせ、位置で決まる機能ページのヒントはパネルの位置ごとの配列で持つ。App はこれを描くだけにする |
-| テキスト | `InputBuffer` | 確定済みと未確定の文字列とそれぞれのカーソル、長さの上限の検査。上限は途中で変えられ（null は上限なし）、変えても内容は切り詰めないため、上限を超えた状態がありうる（`IsOverLengthLimit`）。操作の結果は `EditResult` で返す |
-| | `CharacterModifier` / `CharacterWidth` / `Katakana` | 直前の文字の切り替え（かなの小゛゜の巡回・英字の大文字/小文字）・全角化・ひらがな→カタカナの変換表 |
-| 変換 | `TransliterateApi` | Google CGI API のリクエスト URL の組み立てと応答 JSON の解析（通信は App が行う） |
-| | `ConversionSession` / `ConversionSegment` | 文節ごとの候補と選択状態。失敗時の代わりの候補（`CreateFallback`）も作る |
-| | `ConversionController` | 変換中のスティック・トリガー・グリップ操作を、移動・確定・取り消しに変換する |
-| 出力 | `OscCodec` / `ChatboxOutbox` | OSC メッセージのバイト列化（送信のみ）と、チャットボックスへ出すメッセージの順序と間隔の制御。送信は順にすべて、入力中の文字は最新の 1 件だけを出し、送信を優先して間隔を共有する。送信を積むと、入力中の文字は出したものも含めて取り下げる（送信した文字列に置き換わるため） |
+- `KeyboardSession` がモード（入力 / 応答待ち / 変換中）を持ち、入力中は `GripInputMethod`、変換中は `ConversionController` に操作を振り分ける。
+- 変換・送信のようにバッファだけでは完結しない操作は、`GripInputMethod` が要求（`GripRequest`）として返し、`KeyboardSession` が `IKeyboardEffects` で App に依頼する。変換の結果は、リクエスト ID を付けて `CompleteConversion` / `FailConversion` で戻る
+- 表示用の状態は、`KeyboardSession.ViewVersion` と各クラスの `Version` で変化を検出できる。App は変化したときだけ描き直す。描画用の状態（`GripViewState`）は Core が作り、App はそれを描画するだけ
 
-- 表示用の状態は `ViewVersion`（セッション全体）と各クラスの `Version` で変化を検出できる。App は変化したときだけ描き直す。
-- 時刻・スティックの傾き・押下状態はすべて引数で受け取るため、Core のテストでは時間の経過を決め打ちで再現できる。
+## 起動・毎フレーム・終了
 
-## VRime.App の構成
+`KeyboardApp` が起動の根の MonoBehaviour で、部品を組み立てて毎フレームの処理を順に呼ぶ。`IKeyboardEffects` を実装し、Core からの通知を各部へ振り分ける。
 
-`Assets/VRime/App/`。asmdef は Editor と Windows 64bit に限定する。テストは `Assets/VRime/Tests/EditModeApp/`（`VRime.App.Tests`）にある。
+### 実行環境の選択
 
-| 場所 | クラス | 責務 |
-|---|---|---|
-| 直下 | `KeyboardApp` | 起動の根（MonoBehaviour）。部品を組み立て、毎フレーム「環境のイベント（`BeginFrame`）→ トレイの操作（`TrayIcon.TryTakeCommand`）→ 前面のウィンドウの監視と文字数の上限 → ダッシュボードの状態を渡す → 入力を読む → `Tick` → 変換の中止判定 → 位置の確認用の表示（`SetPlacementPreviewVisible`。設定タブかデスクトップの設定ウィンドウの表示中で、選んでいるカテゴリが `ShowsKeyboardPreview` のとき）→ 表示の更新 → `/chatbox/typing` と入力中の文字の表示（どちらも送信先が VRChat の間だけ）→ チャットボックスの送信」を行う。送信は失敗したときだけ通知を入力欄に出す。ビルドでは組み立て（`Awake`）の最後に `TrayIcon` と `DesktopSettingsWindow` を作る。ビルドでは `Awake` の最初に `SingleInstanceLock` を取り、取れなければ（起動済みのプロセスがあれば）何も作らずに `enabled = false` にして終了する。`Start` で、設定に従って `VRChatWindow.Focus` を呼び、ビルドでは `PlayerWindow.Hide` でウィンドウを隠す（Unity は最初のシーンの `Awake` の後、`Start` の前にウィンドウを表示するため、`Awake` で隠しても表示し直される。前面を持っているうちに VRChat へ切り替えるため、`Focus` より後に行う。隠した後も操作できるよう、トレイのアイコンは `Awake` で先に置く）。`Awake` と `Start` は `RunStartupStep` を通し、例外で終われば `enabled = false` にする。ビルドではその例外をログに残して `ErrorDialog` で示し、閉じたら終了する（`Awake` で失敗したときは `Start` は呼ばれない）。エディターでは例外をそのまま送出する。`Application.wantsToQuit` で、設定ウィンドウの表示中にウィンドウを閉じる操作を取り消して設定ウィンドウを隠す（`_quitting` が立っていれば通す）。終了は `IKeyboardPlatform.QuitRequested`・`SettingsForm.QuitRequested`・`TrayCommand.Quit` で受け、終了時はチャットボックスの入力中の文字を消す。`IKeyboardEffects` を実装し、振動・変換の要求・送信の要求を各部へ振り分ける。入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない。値を SteamVR が持つ設定項目（自動で起動するか）は、環境を作った直後と設定画面の表示中の毎フレームに `IKeyboardPlatform.AutoLaunch` を読んで `SettingsForm.SetExternalValue` で渡し、`SettingsForm.ExternalChangeRequested` を受けたら `SetAutoLaunch` で変えてから読み直す。設定のテーマから `ActiveTheme` を作ってビューと `DesktopSettingsWindow` に渡し、`SettingsForm.Changed` でテーマが変われば差し替える。編集用のフォントアセット・`ThemeCatalog`・2つの描画先とビューはシリアライズフィールドで受け取り、起動時に `ValidateScene()` でシーンの構成を検証する（誤りは場所を示す例外） |
-| `Input/` | `IControllerSource` / `IHapticOutput` | 入力元（1フレーム分の `ControllerFrame` を返す）と振動の出力先の境界。OpenVR 実装はこの境界に差す |
-| | `DebugKeyboardControllerSource` / `DebugHapticOutput` | PC のキーボード（旧 Input Manager）で両手を模す開発用の入力元と、直近の振動を保持して表示に渡す出力先。**キー割り当ては `DebugKeyboardControllerSource.Read` が唯一の定義**（画面への表示は `KeyboardPreview`）。グリップのキーは既定のバインドと同じく、展開・収納とパネルの切り替えの両方を押す |
-| `Platform/` | `IKeyboardPlatform` | 実行環境の境界。`Controller`・`Haptics`・`IsDashboardHoldingInput`・`IsSettingsVisible`・`QuitRequested`、毎フレームの `BeginFrame()`（環境のイベントの処理）、開閉の通知 `OnOpenChanged(bool)`、位置の確認用にキーボードを表示するか `SetPlacementPreviewVisible(bool)`、キーボードの位置の変更 `SetPlacement`、入力を読むのに本アプリのウィンドウが前面である必要があるか（`RequiresOwnWindowFocus`。true の環境では起動時に VRChat を前面にしない）、SteamVR の起動時に自動で起動するか（`AutoLaunch` / `SetAutoLaunch`。本アプリを SteamVR に登録しない環境では null で、変えると例外）を持つ。実装は `OpenVRPlatform` と `DebugKeyboardPlatform` |
-| | `DebugKeyboardPlatform` | `DebugKeyboardControllerSource` と `DebugHapticOutput` をまとめた開発用の環境。Tab キーで「ダッシュボードの設定タブを表示している状態」（`IsDashboardHoldingInput` と `IsSettingsVisible` が両方 true）を切り替える。終了通知・開閉の通知・位置の確認用の表示・位置の変更は何もしない。`AutoLaunch` は null。`KeyboardPreview` へ振動の表示用に `DebugHaptics` を渡す |
-| `SteamVR/` | `OpenVRPlatform` | OpenVR の環境。接続・入力・振動・オーバーレイ（キーボードと設定タブ）を作る。キーボードのオーバーレイは「開いている、または位置の確認用に表示する（`SetPlacementPreviewVisible`）」間に表示し、入力の占有（優先度）は開いている間だけにする。`IsDashboardHoldingInput` はダッシュボードの表示中に加え、閉じた後に `IsInputAvailable` が true に戻るまでの間も true にする（入力が戻る前に優先度を上げると占有が有効にならないため。SPEC 4.4）。`registerApplication` が true（ビルド）なら、接続の前に `OpenVRApplicationManifest` を書き出し、そのパスを `OpenVRRuntime.Initialize` に渡して登録する。作成の途中で失敗したら、それまでのものを破棄して例外にする。名前空間と場所を `OpenVR` にしないのは、`Valve.VR.OpenVR` 型を隠さないため |
-| | `OpenVRRuntime` | `VRApplication_Overlay` での初期化（SteamVR を起動しない）、アプリの登録（`AddApplicationManifest`。初めての登録では自動で起動しない状態にする）とこのプロセスとの結び付け（`IdentifyApplication`。SteamVR が起動した場合は結び付き済みのため呼ばない）、アクションマニフェストの登録、毎フレームのイベント処理。アクションとバインドは登録の時点でプロセスに結び付いている app key に属するため、アプリの登録はアクションマニフェストより先に行う。自動で起動するかの読み書き（`GetAutoLaunch` / `SetAutoLaunch`）は、アプリを登録した接続でだけ使える。`VREvent_Quit` は `AcknowledgeQuit_Exiting` を呼んで `QuitRequested` を出す。破棄で `VR_Shutdown`。プロセス内で同時に 1接続だけ許す |
-| | `OpenVRApplicationManifest` | SteamVR に登録する `.vrmanifest` の内容（app key・exe・アクションマニフェスト・アイコンの絶対パス。ダッシュボードのオーバーレイ）の作成と、`%AppData%\VRime\` への書き出し（同じ内容なら書かない）。app key を変えると、自動で起動するかどうかと利用者のバインドが引き継がれない |
-| | `OpenVRActions` | アクションセットと各アクション（展開・収納・パネルの切り替え・キーの選択・キーの入力・振動）の名前とハンドルの取得。無効なハンドルは例外。名前の一覧（`Names`）はマニフェストの `actions` と過不足なく一致させ、`ActionManifestTests` が既定のバインドとあわせて検査する |
-| | `OpenVRControllerSource` | `IControllerSource` の OpenVR 実装。`UpdateActionState` でアクションセット 1つ（優先度は閉じている間 0、開いている間 `k_nActionSetOverlayGlobalPriorityMin`）を有効にして読む。`IsExclusive` を開いている間に下げることはしない。非アクティブ（`NoData`）は中立値、それ以外のエラーは例外 |
-| | `OpenVRHapticOutput` | `IHapticOutput` の OpenVR 実装。種類ごとの値は `GetPattern`（値は SPEC 5.1） |
-| | `KeyboardOverlay` | オーバーレイの作成・幅と HMD 相対の配置（`SetPlacement` で表示中も変えられる）・表示と破棄。テクスチャは `Rendered` ごとに `OverlayTextureSubmitter` へ渡す依頼を出す。毎フレームの `Update` でレンダースレッドでの失敗を確認する。破棄では、先に `OverlayTextureSubmitter` を解除してから `DestroyOverlay` を呼ぶ。色空間は Gamma（RenderTexture は sRGB 形式で、バイト列が符号化済み） |
-| | `OverlayTextureSubmitter` | `SetOverlayTexture` を Unity のレンダースレッドで呼ぶ。`SetOverlayTexture` は呼び出したスレッドで、テクスチャの D3D11 デバイスのイミディエイトコンテキストを使ってコピーする。このコンテキストは Unity のレンダースレッドも使うため、メインスレッドから呼ぶと同時使用になり、GPU ドライバー内でクラッシュした。`GL.IssuePluginEvent` で描画コマンドの直後に実行を依頼するため、渡すテクスチャには描画が完了した内容が入る。コールバックは静的な登録簿（id → インスタンス）を引き、未登録なら何もしない。`Dispose` は同じロックの下で登録を解除するため、戻った後は `DestroyOverlay` と `VR_Shutdown` を安全に呼べる。コールバックは例外を出さず、最初の失敗を記録して、メインスレッドの `ThrowIfFailed` で送出する |
-| | `SettingsDashboardOverlay` | 設定画面のダッシュボードオーバーレイ（タブ）とアイコン。入力方式はマウスで、マウスの座標の範囲をテクスチャのピクセル数にする。毎フレームの `Update` でオーバーレイのイベントを読み、マウスの移動・左ボタンを `ISettingsPointer` へ渡す（座標は `OverlayTextures.ToTexturePosition` で設定画面の座標にする）。フォーカスを失う・隠れる・ダッシュボードが閉じるときは `PointerLeave` を呼ぶ。表示の状態は `IsOverlayVisible` で読む。テクスチャは `KeyboardOverlay` と同じく `OverlayTextureSubmitter` で渡す |
-| | `OverlayTextures` | RenderTexture をオーバーレイに渡すための共通の処理（ネイティブテクスチャの取得、乗算済みアルファ、D3D11 の上下反転のためのテクスチャの範囲 `vMin=1, vMax=0`、マウスの座標の変換）。マウスの座標はテクスチャの範囲を通して求められるため、v を反転したオーバーレイでは上が 0 の座標で届き、そのまま設定画面の座標になる |
-| | `OverlayPlacement` | `KeyboardPlacement`（SPEC 4.1）を 3×4 の行列にする。基準は盤面の中心（テクスチャの中心ではない）で、そのずれは `KeyboardView.BoardCenterOffset`（シーンの盤面の位置から求める）を受け取る |
-| | `OpenVRErrors` | `EVRInputError` / `EVROverlayError` の検査。失敗は操作名とエラー名を含む例外にする |
-| `View/` | `KeyboardView` | キーボードの表示の根（キャンバスに置く）。`RefreshIfChanged()` で `ViewVersion`・`ForegroundWindowMonitor.Version`・`ActiveTheme.Version` のどれかが変わったときだけ各部を更新する（テーマが変わったときは `ThemeColor.ApplyAll` で状態によらない色も塗り直す）。`BoardCenterOffset` は盤面（`_board`）の中心のテクスチャの中心からのずれ |
-| | `GripPanelView` / `GripPanelCell` / `GripPanelChip` / `GripPanelCaption` | グリップのパネル（左右 3×3 のセル・見出し・ページ・全半角・大小の札）。子音を担当する手に応じて、左右のどちらを子音側にするかを決める。見出し（`GripPanelCaption`）は役割（子音・母音・機能）を示し、機能ページの間は役割の色を変える。セル（`GripPanelCell`）は主の文字に、上下左右の辺の方向のヒントと右下の機能ページのヒントを重ねる。ヒントの色は選択の状態で変わるため、`ThemeColor` ではなくセルが塗る |
-| | `InputAreaView` | 入力欄（確定・未確定・キャレット）と状態行（通知・送信先・文字数）。キャレットは文字の配置から位置と高さを決め、行が溢れたら文字をずらす。状態行は表示を更新するたびにコードで並べる（通知の札は文字に合わせた幅で、通知が空なら隠す。続けて「送信先」のラベルと名前、右端に文字数）。通知と名前は残りの幅に収まるよう `TextFitting` で切る |
-| | `CandidateAreaView` / `CandidateColumn` / `CandidateLabel` | 候補欄（応答待ち・文節と候補・失敗の帯）。文節の列と候補の行はシーンの雛形を複製し、雛形は起動時に非表示にする。文節の並び（`_row`）は左下を基準にし、下端を入力欄の直上にそろえる（候補の数で上端が動く）。シーンでの位置がずらしていないときの位置で、左の余白と同じ幅を右にも空ける。失敗の帯は配置を確定させた後、文節の並びの上に置く。列のカードの地と影は `LayoutElement.ignoreLayout` の子として列の先頭に置く（子は親より後に描かれるため、影を列自身の `Image` にはできない）。見出しと候補の間の区切りは候補を表示している列だけに出す |
-| | `TextFitting` | 1行の文字を幅に収め、収まらなければ切って省略記号を付ける（候補欄・失敗の帯・通知・送信先の名前で使う） |
-| | `SettingsView` / `SettingsPage` / `SettingsTab` | 設定画面（キャンバスに置く）。`SettingsView` はページを `SettingsCatalog.Categories` と同じ順に持ち、`CreateLayout` でシーンの矩形から `SettingsLayout` を作る。`SettingsPage` は `_key` でカテゴリと対応し、行を子に持つ。選んでいるページだけを `SetActive(true)` にし、ページどうしは同じ場所に重ねる。タブはページを隠しても見えるよう、ページの外（キャンバスの直下）に置く。`SettingsForm.Version` か `ActiveTheme.Version` が変わったときだけ更新する（テーマが変わったときは状態によらない色も塗り直す）。操作は持たない |
-| | `SettingsConsentDialog` | 同意が必要な項目の同意の画面（注意事項の文章・同意と取り消しの `SettingsButton`・背景）。`_key` で項目と対応し、`SettingsForm.ConsentItem` がその項目の間だけ表示する。ページの上に描くため、キャンバスの直下でページより後に置く |
-| | `SettingsDropdownRow` / `SettingsDropdownOption` | 選択肢の項目の行（いまの値を示すボタンと、押すと開く選択肢の一覧）。一覧はほかの行の上に描くため、行の外の、ページの直下の末尾に置く（`SettingsPage` が検証する）。`SettingsForm.OpenDropdown` がその項目の間だけ一覧を表示し、選択肢の文字は項目の表示名（`ChoiceSettingItem.Labels`）に置き換える。選択肢の数は項目と同じにする |
-| | `SettingsRow` / `SettingsToggleRow` / `SettingsButton` | 数値の項目の行（［−］・スライダー・［＋］・値）と、オン・オフの項目の行（スイッチ・値。行の矩形全体が当たり判定。値は `SettingsForm.IsOn` で読み、外の値を利用できなければ「利用不可」と表示する）。「既定に戻す」（`SettingsView._reset`）と「アプリを終了」（`SettingsView._quit`）は `SettingsButton` で、キャンバスの直下に置く。「アプリを終了」は `KeyboardTheme` の終了用の色（`SettingsQuit*`）を使う。`_key` で `SettingsCatalog` の項目と対応させる |
-| | `OverlayRenderTarget` | 描画先の根（MonoBehaviour）。子に無効な正投影のカメラと World Space のキャンバスを持つ。`Initialize` でキャンバスと同じピクセル数の透明な RenderTexture を作り、カメラをキャンバスの正面に合わせる。`Render()` を呼んだときだけ 1回描き、`Rendered` イベントで通知する。テクスチャの破棄（`Release`）はオーバーレイの破棄の後に `KeyboardApp` が呼ぶ |
-| | `KeyboardFonts` | 編集用のフォントアセットの元のフォントから、実行用の Dynamic SDF フォントアセット（atlas 2048・multi atlas）を作り、描画先の下のすべての文字のフォントを差し替える（保存しない）。最初の描画より前に差し替えるため、編集用のアセットは書き換わらない |
-| | `KeyboardTheme` / `ThemeCatalog` | 1 つの色のテーマの色と文字の大きさ（ScriptableObject。`Assets/VRime/UI/Themes/KeyboardTheme_Dark.asset`・`KeyboardTheme_Lime.asset`）と、テーマごとのアセットの一覧（`ThemeCatalog.asset`。どの `ColorTheme` にもちょうど 1 つずつ）。状態によって切り替わる色は各ビューが読み、状態によらない色は役割（`ThemeColorRole`）として持つ。テーマを足すときは、`ColorTheme` の値・アセット・一覧・設定の選択肢・設定ファイルの名前（`SettingsSerializer`）を揃えて加える |
-| | `ThemeColor` / `ThemeColorRole` | 状態によらない色の uGUI に付け、テーマの役割の色で塗る。色をビューが設定する部品には付けない（テーマを変えたときにビューの色を上書きするため）。シーンには役割が数値で保存されるため、`ThemeColorRole` は末尾にだけ足す |
-| | `ActiveTheme` | 表示に使っているテーマ。ビューが共有して保持し、描くたびに `Current` を読む。差し替えると `Version` が増え、ビューが描き直す |
-| | `UiRects` / `SceneChecks` | 左上を原点・下向きを正とする矩形の配置と読み取り（当たり判定と盤面の位置に使う）。シーンの参照の検証（どのオブジェクトのどの欄かを示す例外） |
-| | `KeyboardPreview` | エディター専用。メインカメラを使わず OnGUI で、テクスチャ・振動・操作キーを表示する。設定画面の表示中は設定画面のテクスチャを表示し、開発用の環境ではマウスの操作を `SettingsMouseInput` で `ISettingsPointer` へ渡す。ビルドではプレイヤーのウィンドウを隠し、表示するときは設定ウィンドウとして使うため、開発ビルドでも作らない |
-| | `DesktopSettingsWindow` | ビルド専用のデスクトップの設定ウィンドウ。`PlayerWindow` でプレイヤーのウィンドウを表示・非表示にし、表示中は OnGUI で設定画面のテクスチャを描いて、`SettingsMouseInput` でマウスの操作を `SettingsForm` へ渡す（ダッシュボードのレーザーと同じ入口）。大きさとタイトルは最初に開いたときだけ決める（`Screen.SetResolution`）。設定画面の周りの余白はテーマの色（`SettingsWindowMargin`）で埋める |
-| | `SettingsMouseInput` | OnGUI のマウスの左ボタンの操作を設定画面のテクスチャの座標に変換し、`ISettingsPointer` へ渡す。ボタンを押していない間の移動は描画のイベントで渡す |
-| `Settings/` | `UserSettings` / `KeyboardPlacement` / `VRChatSettings` / `PrivacySettings` / `SettingRange` | 設定画面で変える値（色のテーマ `ColorTheme`・表示位置・2つのしきい値・長押しの時間・VRChat 関連の2つのオン・オフ・変換に Google API を使うか）。不変で、範囲外と未知のテーマは例外。`SettingRange` は範囲と刻みを持ち、刻みに丸める。しきい値と長押しの時間の既定値は Core の `KeyboardSettings` の既定値から取る。`ToKeyboardSettings` で Core の設定にする |
-| | `SettingsSerializer` / `SettingsStore` / `SettingsLoadResult` | 設定ファイルの JSON（形式は SPEC 8.1）への変換と読み書き。内容が正しくないファイルは別名に移し、既定値と通知を返す。読み書きの IO の失敗は例外のまま上げる。保存は一時ファイルに書いてから置き換える |
-| | `SettingsCatalog` / `SettingsCategory` / `SettingItem` | 設定画面のカテゴリ（タブ）と項目の定義。項目は数値（`NumberSettingItem`。範囲・表示の形式）とオン・オフ（`SwitchSettingItem`）と選択肢（`ChoiceSettingItem`。値と表示名の対を `Create` で渡し、操作は選択肢の位置で行う）。カテゴリは、表示中に位置の確認用のキーボードを出すか（`ShowsKeyboardPreview`）を持つ。オン・オフには、設定ファイルに保存する `ToggleSettingItem`（オンにする前に同意が必要か `RequiresConsentToEnable`）と、値をアプリの外（SteamVR）が持つ `ExternalToggleSettingItem`（`SettingsCatalog.AutoLaunch`。既定値 `DefaultValue` を持ち、カテゴリの `ResetToDefault` では戻さない）がある。保存する項目のキーは設定ファイルの項目名と同じ。項目を足すときは、ここに加え、シーンの該当するページに同じキーの `SettingsRow` / `SettingsToggleRow`（同名のプレハブを置き、`_key` と項目名を設定する）か `SettingsDropdownRow` を置く。カテゴリを足すときは、`SettingsPage` とタブ（`SettingsTab` のプレハブ）を置き、`SettingsView._pages` に同じ順で加える。同意が必要な項目を足すときは、`SettingsConsentDialog` を置き、`SettingsView._consents` に項目の順で加える |
-| | `SettingsLayout` / `SettingsPageLayout` / `SettingsRowLayout` / `SettingsToggleLayout` / `SettingsDropdownLayout` / `SettingsConsentLayout` / `SettingsHit` | 設定画面の操作の対象の配置（テクスチャのピクセル、左上が原点）と当たり判定。シーンの矩形から作り（`SettingsView.CreateLayout`）、表示と操作（`SettingsForm`）が同じ配置を使う。当たり判定は、タブ・「既定に戻す」・「アプリを終了」に加え、選んでいるページの対象だけを使う。同意の画面を開いている間は、その画面のボタンだけを使う（ページの上に重ねるため、ページの対象と重なってよい）。選択肢の一覧を開いている間は、その選択肢だけを使い、ほかの場所はすべて一覧を閉じる対象（`DropdownDismiss`）にする（一覧もページの対象と重なってよい。選択肢どうしの重なりと画面外は例外）。同時に表示される対象どうしの重なり・画面外・大きさが正でないもの・カテゴリの項目の行の過不足・同意が必要な項目と同意の画面の過不足は例外 |
-| | `SettingsForm` / `ISettingsPointer` | 設定画面の状態（値・表示しているカテゴリ・開いている同意の画面・開いている選択肢の一覧・指している対象・つまんでいるスライダー・押しているボタン・通知・版）とポインターの操作。同意が必要なスイッチをオフから押すと、値を変えずに同意の画面を開き（`ConsentItem`）、同意で値をオンにして確定、取り消しで閉じるだけにする。選択肢の項目のボタンは一覧を開き（`OpenDropdown`）、選択肢で値を変えて確定して閉じ、選択肢以外の場所とポインターが離れたときは何も変えずに閉じる。ボタン・スイッチ・タブは押したときと離したときの対象が同じなら実行する。タブは表示を切り替えるだけで値を確定しない。「アプリを終了」は確認せずに `QuitRequested` を出す。外が値を持つ項目の値（利用できなければ null）は `SetExternalValue` で受け取って保持し、押す・「既定に戻す」（既定値と異なるときだけ）では値を変えずに `ExternalChangeRequested` で変更を求める。値が null の間は押しても求めない。値が変わるたびに `Changed`、スライダーを離す・ボタンを実行するなどで値が確定し、前回の確定から変わっていれば `Committed` を出す |
-| `Conversion/` | `ConversionRunner` | 変換の要求を `GoogleTransliterateClient` に渡し、結果を `CompleteConversion` / `FailConversion` で返す。通信は同時に 1件で、新しい要求・応答待ちの終了・破棄のときは前の通信を中止する |
-| | `GoogleTransliterateClient` | `TransliterateApi` の URL に `UnityWebRequest` で GET し、文節の一覧を返す（`Awaitable`・メインスレッド専用）。制限時間は 2秒で、自前の時計で測る。ログや例外に読みを含めない |
-| | `ConversionFailedException` | 失敗の種類（接続・タイムアウト・HTTP エラー・応答の形式）と、入力欄に出す短い日本語（`UserMessage`）を持つ。キャンセルは `OperationCanceledException` |
-| `Output/` | `ForegroundWindowMonitor` / `OutputTarget` | 前面のウィンドウを毎フレーム調べ、送信先（なし・本アプリ自身・VRChat・デスクトップ）を保つ。ウィンドウの詳細（`ForegroundWindowInfo`）はハンドルかプロセスが変わったときだけ調べ直す。送信・状態行の表示・文字数の上限・入力中の文字の表示が同じ送信先に従うよう、`KeyboardApp` はフレームの入力の処理の前に `Update` を呼ぶ。取得元は `IForegroundWindowSource` で差し替えられる |
-| | `TextOutputRouter` | `OutputTarget` に従って送る。前面なし・自プロセスは送らず、VRChat は `VRChatChatbox`、それ以外は `DesktopTextSender`。結果は `OutputResult`（成否・失敗の種類・失敗の通知文）で返す。成功には通知文がなく、読むと例外 |
-| | `VRChatChatbox` | OSC（UDP）の送信。`Send`（送信）と `SetPreview`（入力中の文字。144文字を超える分は切る）は `ChatboxOutbox` に予約するだけで、毎フレームの `Update(now)` で間隔を守って送る。`ClearPreviewNow` は終了前に間隔を待たずに入力中の文字を消す。`SetTyping` は値が変わったときだけ送る。接続しないソケットを使う（接続済みだと宛先未起動の ICMP が次の送信の例外になる） |
-| | `DesktopTextSender` | クリップボードに文字列を置き、`SendInput` で Ctrl+V（設定により続けて Enter）を送る。送信前に `ProcessElevation` で対象の昇格状態を調べ、届かない相手には送らない。元の内容は退避し、毎フレームの `Update` で戻す時刻・書き換えの有無を `ClipboardRestoreSchedule` に問い合わせて戻す。終了前に `RestoreNow` で時刻を待たずに戻す |
-| | `ClipboardRestoreSchedule` | 退避した内容を戻す時刻と、戻すかどうかの判定（Win32 に依存しない）。書き換えの検出は、送信で書き込んだ直後のクリップボードの通番との比較。続けて送るときは、通番が変わっていなければ退避を引き継ぐ |
-| | `ClipboardAccess` / `ClipboardSnapshot` | クリップボードの開閉・送信用の文字列の書き込み・履歴に残さない印の付与と、内容の全形式の退避・復元。所有者なしで開くと空にした後の `SetClipboardData` が失敗するため、メッセージ専用のウィンドウを所有者にする |
-| | `ProcessElevation` | トークンの昇格状態の照会 |
-| | `ForegroundWindowInfo` | 前面ウィンドウのハンドル・プロセス ID・プロセス名・表示名・タイトル。タイトルは内容を含みうるため、ログに出さない |
-| | `ProcessImage` | プロセスの実行ファイルのパスと名前を、制限付きの照会権限（`PROCESS_QUERY_LIMITED_INFORMATION`）で調べる。Mono の `System.Diagnostics.Process` は VRChat（保護されたプロセス）の名前を読めないため、プロセス名はすべてこれで調べる |
-| | `VRChatWindow` | 所有者のない表示中のトップレベルウィンドウを列挙し、プロセス名が VRChat のもの（判定は `OutputTarget.IsVRChatProcess`）を前面にする。Windows が前面の切り替えを拒んだときは、Alt キーを押している間に切り替えを試す（Alt の押下中は切り替えが許されるため） |
-| | `AppSettings` | App 層の設定値（通知音・Enter・OSC の宛先）。不正な値は例外。設定画面と設定ファイルにはまだ含めていない |
-| `Native/` | `Win32` | Win32 API の宣言（`INPUT` は x64 の 40 バイト、`NOTIFYICONDATA` は 976 バイト前提） |
-| | `ErrorDialog` | エラーのメッセージボックス（`MessageBoxW`。最前面に表示し、閉じるまで呼び出したスレッドを止める）。プレイヤーのウィンドウを探す処理自体が失敗の原因になりうるため、オーナーのウィンドウを持たせない。表示できなければ例外 |
-| | `PlayerWindow` | Unity のプレイヤーのウィンドウ（自プロセスのクラス名 `UnityWndClass` のトップレベルウィンドウ）を隠す（`SW_HIDE`）・表示して前面にする・タイトルを変える。ちょうど 1 つ見つからない、隠した後も表示されている、表示した後も表示されていない場合は例外。エディターでは呼ばない |
-| | `SingleInstanceLock` | 名前付きミューテックス（`Local\VRime.SingleInstance`。Win32 の `CreateMutex`）で、本アプリのプロセスをログオンのセッションごとに 1つに限る。2つ目のプロセスは SteamVR のオーバーレイのキーが重なって起動の途中で失敗するため |
-| | `TrayIcon` / `TrayCommand` | タスクトレイのアイコンとメニュー。専用のスレッドで、表示しないトップレベルのウィンドウとメッセージループを持つ（メニューは閉じるまでスレッドを止めるため、メインスレッドでは出さない。メッセージ専用のウィンドウには `TaskbarCreated` が届かないため、トップレベルにする）。選ばれた操作とスレッドで起きた失敗はキューに積み、メインスレッドの `TryTakeCommand` が取り出す（失敗は 1 件ずつ例外にする）。終了は独自のメッセージで依頼し、外部からの `WM_CLOSE` では閉じない。メニューを開いている間に終了を依頼されたら `EndMenu` で閉じてから破棄する。ウィンドウのクラスを登録するため、プロセスに同時に 1 つだけ |
+- 環境の選択は `KeyboardApp.CreatePlatform` だけで行う。ビルドは常に `OpenVRPlatform`。エディターは `_editorDevice`（`DebugKeyboard` が既定 / `OpenVR`）に従う
+- OpenVR の初期化に失敗したときは例外にし、別の環境へは切り替えない
+- 入力元・振動・オーバーレイの表示・終了通知は `IKeyboardPlatform` に任せ、`KeyboardApp` に OpenVR の分岐を持たせない
 
-- 出力の `TextOutputRouter` は送信先・チャットボックス・デスクトップ送信を、`ForegroundWindowMonitor` はウィンドウの取得元を差し替えられるため、振り分けと監視の規則は Win32 なしでテストできる。クリップボードの復元の規則も `ClipboardRestoreSchedule` に分けてテストする（実際のクリップボードはテストで触らない）。
+### 起動
 
-**描画の流れと構成**
+- `Awake` と `Start` は `RunStartupStep` を通し、例外で終われば `enabled = false` にする（毎フレームの例外を防ぐ）。ビルドではその例外をログに残して `ErrorDialog` で示し、閉じたら終了する。エディターでは例外をそのまま送出する
+- `Awake` の順序:
+  1. ビルドでは `SingleInstanceLock` を取る。取れなければ（起動済みのプロセスがあれば）何も作らずに終了する。
+  2. 設定を読み（`SettingsStore.Load`）、Core の設定・オーバーレイの最初の位置・表示のテーマ（`ActiveTheme`）を作る。
+  3. シーンの構成を `ValidateScene()` で検証し（誤りは場所を示す例外）、環境・ビュー・出力などの部品を組み立てる。
+  4. ビルドでは `TrayIcon` と `DesktopSettingsWindow` を作る。ウィンドウを隠した後も設定を開けて終了できるよう、トレイのアイコンは隠す前に置く。
+- `Start`: 設定に従って `VRChatWindow.Focus` を呼び、ビルドでは `PlayerWindow.Hide` でウィンドウを隠す。
+  - Unity は最初のシーンの `Awake` の後、`Start` の前にウィンドウを表示するため、`Awake` で隠しても表示し直される。
+  - 前面を持っているうちに VRChat へ切り替えるため、隠すのは `Focus` より後に行う。
 
-- 描画は `KeyboardApp.Update` が `KeyboardView.RefreshIfChanged()` で `ViewVersion` の変化を検出したときだけ `OverlayRenderTarget.Render()` を呼ぶ。キーボードは開いている間と位置の確認用に表示している間（設定タブか設定ウィンドウで「表示」のカテゴリを選んでいる間）だけ描き、表示し始めたフレームでは版が変わっていなくても描く。設定画面は `SettingsView.RefreshIfChanged()` が true のときに描く。
-- `Render()` は `Canvas.ForceUpdateCanvases()` でレイアウトと TMP のメッシュを確定してから、`RenderPipeline.SubmitRenderRequest`（URP の `SingleCameraRequest`）で無効なカメラを 1回描く。`Camera.Render()` と違い、出力先を要求に含められ、対応していないパイプラインでは例外にできる。
-- 描画先ごとのレイヤー `VRimeKeyboard`（キーボード）と `VRimeSettings`（設定画面）を Tags and Layers に登録している。各カメラは自分のレイヤーだけを映す（同じ位置にある別の描画先の uGUI を映さないため）。TMP の `Mobile/Distance Field` シェーダーは Always Included Shaders に登録している（ビルドで除外されないため）。
+### 毎フレーム
+
+`KeyboardApp.Update` は次の順で処理する。送信・状態行の表示・文字数の上限・入力中の文字の表示が同じ送信先に従うよう、前面のウィンドウの監視は入力の処理より前に行う。
+
+1. `IKeyboardPlatform.BeginFrame()`: 環境のイベントの処理と、設定タブの操作。終了を求められたら、以降の API を呼ばない。
+2. `TrayIcon.TryTakeCommand`: トレイの操作。
+3. `ForegroundWindowMonitor.Update` と `KeyboardSession.SetLengthLimit`: 送信先と文字数の上限。
+4. `KeyboardSession.SetDashboardVisible(IsDashboardHoldingInput)`: ダッシュボードによる一時停止。
+5. `IControllerSource.Read` → `KeyboardSession.Tick`。
+6. 変換の中止の判定。
+7. `SetPlacementPreviewVisible`: 設定タブかデスクトップの設定ウィンドウの表示中で、選んでいるカテゴリが `ShowsKeyboardPreview` のとき、位置の確認用にキーボードを表示する。
+8. 表示の更新（[描画](#描画)）。
+9. `/chatbox/typing` と入力中の文字の表示。どちらも送信先が VRChat の間だけ送り、送信先が変われば次のフレームで取り下げる。
+10. チャットボックスの送信（`VRChatChatbox.Update`）。送信は失敗したときだけ通知を入力欄に出す。
+
+- 値を SteamVR が持つ設定項目（自動で起動するか）は、環境を作った直後と設定画面の表示中の毎フレームに `IKeyboardPlatform.AutoLaunch` を読んで `SettingsForm.SetExternalValue` で渡す。`SettingsForm.ExternalChangeRequested` を受けたら `SetAutoLaunch` で変えてから読み直す。
+
+### 開閉
+
+- 開閉は Core の `IKeyboardEffects.OnOpenChanged` → `KeyboardApp` → `IKeyboardPlatform.OnOpenChanged` と流れ、OpenVR では `OpenVRControllerSource.IsExclusive` とオーバーレイの `Show` / `Hide` が切り替わる。位置の確認用に表示している間は、閉じていてもオーバーレイを表示したままにする。
+- ダッシュボードによる一時停止は、手動で閉じるのと同じ経路で閉じる（[入力の横取り](#入力の横取り)の制約を守るため）。
+
+### 終了
+
+- 終了は `IKeyboardPlatform.QuitRequested`・`SettingsForm.QuitRequested`・`TrayCommand.Quit` で受ける。終了時はチャットボックスの入力中の文字を消し（`VRChatChatbox.ClearPreviewNow`）、クリップボードを戻す（`DesktopTextSender.RestoreNow`）。
+- `Application.wantsToQuit` で、設定ウィンドウの表示中にウィンドウを閉じる操作を取り消し、設定ウィンドウを隠す（`_quitting` が立っていれば通す）。
+- オーバーレイを破棄してから `VR_Shutdown` を呼び、その後に描画先のテクスチャを解放する（`OverlayRenderTarget.Release`）。`OpenVR.Init` が管理側のインターフェースを作り直すため、エディターで再生を繰り返しても再初期化できる。ハンドルとマニフェストは接続ごとに取得・登録し直す。
+
+## 入力の横取り
+
+キーボードを開いている間にゲームへコントローラー入力を渡さないための制御。次の制約は、守らないと実機で入力が壊れる。
+
+- アクションセットは **1つだけ** 使う。閉じている間は優先度 `0`（ゲームと入力を共有し、開閉の操作だけを監視する）、開いている間は `k_nActionSetOverlayGlobalPriorityMin`（ゲームへの入力を止める）。アクションセットはアプリ側で固定のため、利用者がバインドを変えてもこの制約は守られる。
+- **同じボタンを、優先度の違う2つのアクションセットに割り当てない。** 低い方が「押されたまま」の古い値を返し続けた。
+- **開いたまま優先度だけを下げない**（`OpenVRControllerSource.IsExclusive` を開いている間に false にしない）。再起動するまで入力が取得できなくなった。そのため、ダッシュボードによる一時停止も手動で閉じるのと同じ経路で閉じる。
+- ダッシュボードが閉じてから入力がアプリへ戻るのは、数フレーム後（`IVRSystem::IsInputAvailable` が true に戻ったとき）になる。それより前に優先度を上げると優先度が有効にならず、開き直すまでゲームにも入力が渡り続けた。そのため `OpenVRPlatform.IsDashboardHoldingInput` は、入力が戻るまで true を返し続ける。
+
+## 描画
+
+- キーボードと設定画面は、それぞれの描画先（`OverlayRenderTarget`）で、uGUI を専用のカメラで RenderTexture に描き、OpenVR のオーバーレイに渡す。
+- 描くのは表示が変わったときだけ。`KeyboardView.RefreshIfChanged()` が `ViewVersion` などの変化を検出したときに `OverlayRenderTarget.Render()` を呼ぶ。キーボードは開いている間と位置の確認用に表示している間だけ描き、表示し始めたフレームでは版が変わっていなくても描く。設定画面は `SettingsView.RefreshIfChanged()` が true のときに描く。
+- `Render()` は `Canvas.ForceUpdateCanvases()` でレイアウトと TMP のメッシュを確定してから、`RenderPipeline.SubmitRenderRequest`（URP の `SingleCameraRequest`）で、常に無効にしてあるカメラを 1回描く。`Camera.Render()` と違い、出力先を要求に含められ、対応していないパイプラインでは例外にできる。
+- 背景を透明にするため、カメラは Solid Color (0,0,0,0) で塗りつぶし、ポストプロセス・HDR・MSAA を切る。
+- 描画先ごとのレイヤー `VRimeKeyboard`（キーボード）と `VRimeSettings`（設定画面）を Tags and Layers に登録し、各カメラは自分のレイヤーだけを映す（同じ位置にある別の描画先の uGUI を映さないため）。
+- TMP の `Mobile/Distance Field` シェーダーを Always Included Shaders に登録している（ビルドで除外されないため）。
+- 文字は起動時に、実行用の Dynamic SDF フォントアセットへ差し替える（`KeyboardFonts`）。最初の描画より前に差し替えるため、編集用のアセットは書き換わらない。
 - TMP の `Ellipsis` は、レイアウトで幅が決まる文字では描かれなくなるため、幅に収める文字は `TextFitting` で切って省略記号を付ける。
-- シーン `Assets/VRime/Scenes/Main.unity` を Build Settings の先頭に登録している。
 
-**シーンの uGUI**
+### オーバーレイへの受け渡し
 
-- `Main.unity` は `KeyboardApp` と、2つの描画先 `KeyboardOverlay`（キャンバス 1024×1024）・`SettingsOverlay`（1280×872）で構成する。キャンバスの大きさがテクスチャのピクセル数になり、拡大率は 1 のままにする。2つの描画先は互いに離して置く（エディターで重ならないようにするため。描画はレイヤーで分かれる）。
-- 描画先の下のオブジェクトはすべて描画先のレイヤーに置く。部品を足すときもレイヤーを合わせる（違えば起動時の検証で例外）。
-- 繰り返す部品は `Assets/VRime/UI/Prefabs/` のプレハブのインスタンスとして置く。キーボードは `GripPanelCell`・`GripPanel`（セル 9 個を入れ子に持ち、左右のパネルに使う）・`GripPanelChip`、設定画面は `SettingsButton`・`SettingsRow`（［−］［＋］は `SettingsButton` の入れ子）・`SettingsToggleRow`・`SettingsTab`・`SettingsDropdownOption`。構造・大きさ・フォントなど共通のものはプレハブで変え、位置・`_key`・項目名などの個別の値はインスタンスのオーバーライドに持つ。プレハブの `_key` は空で、キーを設定しないインスタンスは起動時の検証で例外になる。プレハブの文字と色は仮のもの。「シーンに反映」はシーンだけを塗るため、塗った色はインスタンスのオーバーライドになる。
-- 配置・大きさ・項目名などのラベルはシーンで調整する。色はすべて `KeyboardTheme` から入る（状態で変わる色はビューが、状態によらない色は `ThemeColor` が塗る）。シーンに保存した色は編集用の見本で、描くときに上書きされる。部品を足すときは、色をビューが設定しない部品に `ThemeColor` を付ける。エディターで別のテーマの見た目を確かめるときは、テーマのアセットのインスペクターの「シーンに反映」で塗り替える。状態で変わる部品は操作していない状態の色で塗る。`ThemeScenePainter` はビューの色の対象をシリアライズフィールドの名前で探すため、ビューのフィールドや状態ごとの色を変えたら合わせて直す（対象が見つからなければ、何も塗らずに例外にする）。文字の内容は各ビューが書き換える。シーンの文字には仮の文字を入れてある。
-- キーボードの角丸と影は `Assets/VRime/UI/Sprites/` の 9 スライスのスプライト（自作）を `Image`（Sliced）に使う。スプライトは白（影も白）で作り、色は `Image.color` で付ける（`KeyboardTheme` から入る）。Pixels Per Unit 100・Full Rect で、キャンバスの `referencePixelsPerUnit` も 100 のため、スプライトの 1px がテクスチャの 1px になる。`ui_round_32`（盤面）・`ui_ring_32`（盤面の縁）・`ui_round_20`（入力欄・候補のカード）・`ui_round_16`（セル・札の地）・`ui_round_12`（札・見出し・候補・帯・点灯の帯）・`ui_shadow_20`（浮いた部品の影。矩形は部品より各辺 24 大きく、下へ 6 ずらす）。境界より低い矩形（点灯の帯の高さ 6）では Unity が境界を縮めるため、両端が半円になる。
-- プロジェクトの色空間は Linear のため、半透明の色は線形空間で混ざる。不透明度の低い明るい色はガンマ空間で混ぜる場合（デザインの CSS）より大きく明るくなる（白 6% の縁で約 2 倍）。下地が決まっている部品（盤面の縁・通知の札・候補の区切り）は、混ぜた後の色を不透明で指定する。
-- 文字のフォントは2つの編集用のフォントアセットのどちらかにする。リッチテキストは入力欄の文字だけが使う。
-- エディターで描いた文字のグリフが動的なアトラスの 2 枚目に入ると、TMP はその文字の子に `TMP SubMeshUI` を作る。シーンには保存しない（プレハブのインスタンスでは子の追加のオーバーライドになる）。
-- `KeyboardApp.ValidateScene()` は EditMode テスト（`MainSceneTests`）でも実行する。シーンを変えたらテストで確かめる。
+- `SetOverlayTexture` は Unity のレンダースレッドで呼ぶ（`OverlayTextureSubmitter`）。呼び出したスレッドで D3D11 のイミディエイトコンテキストを使ってコピーするため、メインスレッドから呼ぶとレンダースレッドとの同時使用になり、GPU ドライバー内でクラッシュした。
+- D3D11 の RenderTexture は上下が逆になるため、`SetOverlayTextureBounds` で `vMin=1, vMax=0` を指定する（`OverlayTextures`）。ダッシュボードのマウスの座標もこの範囲を通して求められるため、上が 0・下向きが正で届き、そのまま設定画面の座標になる。
+- 色空間は Gamma を指定する。リニア色空間のプロジェクトの RenderTexture は sRGB 形式で、バイト列が符号化済みのため。
+- キーボードの位置の基準は盤面の中心で、テクスチャの中心とのずれはシーンの盤面の配置から求める（`KeyboardView.BoardCenterOffset` → `OverlayPlacement`）。
 
-**入力元の選択と開閉の流れ**
+## 色のテーマ
 
-- 環境の選択は `KeyboardApp.CreatePlatform` だけで行う。ビルドは常に `OpenVRPlatform`。エディターは `_editorDevice`（`DebugKeyboard` が既定 / `OpenVR`）に従う。OpenVR の初期化に失敗したときは例外にし、`Awake` で `enabled = false` にして毎フレームの例外を防ぐ（別の環境へ切り替えない）。
-- 開閉は Core の `IKeyboardEffects.OnOpenChanged` → `KeyboardApp` → `IKeyboardPlatform.OnOpenChanged` と流れ、OpenVR では `OpenVRControllerSource.IsExclusive` とオーバーレイの `Show` / `Hide` が切り替わる（位置の確認用に表示している間は閉じていてもオーバーレイを表示したままにする）。ダッシュボードの状態は毎フレーム `IsDashboardHoldingInput` を `KeyboardSession.SetDashboardVisible` へ渡し、手動で閉じるのと同じ経路で閉じる（SPEC 4.4）。
-- 毎フレームの順序は `BeginFrame`（イベント処理と設定タブの操作。終了を求められたら以降の API を呼ばない）→ `ForegroundWindowMonitor.Update` と `SetLengthLimit` → `SetDashboardVisible` → `Read` → `Tick` → 描画（`Rendered` でテクスチャをオーバーレイへ渡す）。
-- エディターで再生を繰り返しても接続できるよう、終了時はオーバーレイを破棄してから `VR_Shutdown` を呼ぶ。`OpenVR.Init` が管理側のインターフェースを作り直すため、次の再生で再初期化できる。ハンドルとマニフェストは接続ごとに取得・登録し直す。
+- 色はすべてテーマのアセット（`KeyboardTheme`。一覧は `ThemeCatalog`）から入る。シーンに保存した色は編集用の見本で、描くときに上書きされる。
+- 状態で変わる色（選択・押下・無効など）はビューが塗り、状態によらない色は uGUI に付けた `ThemeColor` が役割（`ThemeColorRole`）に従って塗る。
+- ビューは表示中のテーマ（`ActiveTheme`）を共有し、`Version` が変われば描き直す。`KeyboardApp` は設定のテーマが変わったときに差し替える。
 
-**設定の流れ**
+## 設定
 
+- 設定画面の状態と操作は `SettingsForm` が持ち、表示（`SettingsView`）は状態を描くだけにする。操作の対象の配置（`SettingsLayout`）はシーンの uGUI の矩形から作り、表示と当たり判定が同じ配置を使う。
+- ポインターの入力は 3つの入口から同じ `ISettingsPointer` に入る。
+  - ダッシュボードのタブのレーザー: `SettingsDashboardOverlay.Update`（`BeginFrame` の中）
+  - デスクトップの設定ウィンドウのマウス（ビルド）: `DesktopSettingsWindow`（`OnGUI` の中）
+  - エディターの確認表示のマウス（開発用の環境）: `KeyboardPreview`（`OnGUI` の中）
+- `SettingsForm.Changed` で `KeyboardSession.ApplySettings` と `IKeyboardPlatform.SetPlacement` を呼び（入力中の文字の表示は毎フレーム `SettingsForm.Settings` を読む）、`Committed` で保存する。
+- 保存の失敗（`IOException` / `UnauthorizedAccessException`）は `SettingsForm.SetNotice` で画面に出し、次に保存できたら読み込み時の通知に戻す。
 - データの置き場所（`%AppData%\VRime`）は `AppInfo.DataDirectory` で揃える。
-- 起動時に `SettingsStore.Load` で `%AppData%\VRime\settings.json` を読み、`UserSettings` から Core の `KeyboardSettings` とオーバーレイの最初の位置を作る。
-- 設定タブのレーザー操作は `SettingsDashboardOverlay.Update`（`BeginFrame` の中）→ `SettingsForm` と流れる。ビルドでは `DesktopSettingsWindow`、エディターの開発用の環境では `KeyboardPreview` のマウス操作が同じ `ISettingsPointer` に入る（どちらも `OnGUI` の中）。
-- `SettingsForm.Changed` で `KeyboardSession.ApplySettings` と `IKeyboardPlatform.SetPlacement` を呼び（入力中の文字の表示は毎フレーム `SettingsForm.Settings` を読む）、`Committed` で保存する。保存の失敗（`IOException` / `UnauthorizedAccessException`）は `SettingsForm.SetNotice` で画面に出し、次に保存できたら読み込み時の通知に戻す。
-
-**ビルド**
-
-- ビルドはメニューの `VRime/Build/Development` と `VRime/Build/Release`（`PlayerBuilder`）で行う。Build Profile（`Assets/Settings/Build Profiles/` の `Windows Development` と `Windows Release`）を指定してビルドし、出力先はプロファイルに保存されないため `PlayerBuilder` が決める。出力先はプロジェクト直下の `Builds/Development/` と `Builds/Release/` で、`.gitignore` により管理対象外。ビルドの前に出力先を空にする。
-- 2つのプロファイルの違いは Development Build の有無だけで、Player Settings は上書きしない。スクリプトのバックエンド（Mono）と Managed Stripping Level（Medium）はプロジェクト共通の設定にし、ストリッピングによる欠落を開発用のビルドでも再現させる。IL2CPP は、このプロジェクトでは `GameAssembly.dll` が Mono のランタイムと IL の合計より大きくなり、配布物が Mono より約 7MB（zip で）大きくなるため使っていない。
-- `VRime/Build/Release` は、ビルドの後に `Builds/<製品名>-v<Version>-win64.zip` を作る。中身は製品名のフォルダーにまとめ、ライセンス文（`LICENSE` と、同梱するサードパーティのもの）を加え、配布してはいけないフォルダー（`*_BurstDebugInformation_DoNotShip` など）を除く。Version は Player Settings の Version（`bundleVersion`）。
-- `openvr_api.dll` が `<名前>_Data/Plugins/x86_64/` に、アクションマニフェストが `<名前>_Data/StreamingAssets/SteamVR/` に入る。
-- 開発用のツールが置く DLL（MCP for Unity が `Assets/Plugins/Roslyn/` に置く Roslyn。git の管理外）は、`EditorOnlyPlugins` がインポートのたびにエディター専用へ直す。ツールは全プラットフォーム向けの設定で置くため、そのままでは Player に約 12MB が入る。ビルドの前にも検査し、Player に含まれる設定ならビルドを止める。対象のフォルダーを増やすときは `EditorOnlyPlugins.Folders` に加える。
-- `Assets/VRime/link.xml` で、自前のアセンブリ（`VRime.Core`・`VRime.App`）と `Valve.OpenVR`・`Newtonsoft.Json` をストリッピングから丸ごと保護する。リフレクションを使う処理や、ネイティブ側から呼ばれる処理を加えても、これらのアセンブリの中なら削られない。それ以外のアセンブリ（パッケージなど）でリフレクションを使うときは、ここに加える。

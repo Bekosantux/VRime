@@ -3,7 +3,10 @@ using VRime.Core.Input;
 
 namespace VRime.Core.Grip
 {
-    /// <summary>スティックの傾きの分類。倒し量がしきい値以上で方向を決め、未満なら中央とする。</summary>
+    /// <summary>
+    /// スティックの傾きの分類。倒し量がしきい値以上で方向を決め、未満なら中央とする。
+    /// 分類はその時点の傾きだけで決まり、直前の状態によらない（倒す・戻す判定に同じしきい値を使う）。
+    /// </summary>
     public static class StickClassifier
     {
         /// <summary>3×3 のセル数。0..8 は行優先で左上が 0、中央が 4。</summary>

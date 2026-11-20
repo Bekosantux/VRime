@@ -6,7 +6,7 @@ using VRime.App.Settings;
 namespace VRime.App.View
 {
     /// <summary>
-    /// デスクトップの設定ウィンドウ（SPEC 8.1）。隠している Unity のプレイヤーのウィンドウを表示し、設定画面のテクスチャを OnGUI で描いて、マウスで操作させる。
+    /// デスクトップの設定ウィンドウ（docs/spec/settings.md「デスクトップの設定ウィンドウ」）。隠している Unity のプレイヤーのウィンドウを表示し、設定画面のテクスチャを OnGUI で描いて、マウスで操作させる。
     /// 設定画面の状態と描画は、ダッシュボードの設定タブと共有する（同じテクスチャと <see cref="ISettingsPointer"/>）。
     /// メインカメラは使わない。ビルドでだけ使う（<see cref="PlayerWindow"/> はエディターでは使えないため）。
     /// </summary>

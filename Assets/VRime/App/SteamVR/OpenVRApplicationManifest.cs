@@ -8,7 +8,7 @@ namespace VRime.App.SteamVR
 {
     /// <summary>
     /// SteamVR にアプリとして登録するためのマニフェスト（<c>.vrmanifest</c>）の内容と書き出し。
-    /// SteamVR は登録した app key（<see cref="AppKey"/>）でアプリを識別し、ダッシュボードのオーバーレイとして、SteamVR の起動時に自動で起動する対象にする（SPEC 9）。
+    /// SteamVR は登録した app key（<see cref="AppKey"/>）でアプリを識別し、ダッシュボードのオーバーレイとして、SteamVR の起動時に自動で起動する対象にする（docs/spec/lifecycle.md「SteamVR への登録と自動起動」）。
     /// パスはすべて絶対パスで書く。起動のたびに書き直して登録し直すため、フォルダを移動しても次の起動で登録が追従する。
     /// 複数の場所に置いた VRime を起動すると、最後に起動したものが登録される。
     /// </summary>

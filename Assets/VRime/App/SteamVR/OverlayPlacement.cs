@@ -4,7 +4,7 @@ using VRime.App.Settings;
 namespace VRime.App.SteamVR
 {
     /// <summary>
-    /// キーボードのオーバーレイの、HMD に対する相対位置（頭部固定。SPEC 4.1）。値は <see cref="KeyboardPlacement"/>（設定画面で変更できる）。
+    /// キーボードのオーバーレイの、HMD に対する相対位置（頭部固定。docs/spec/keyboard.md「表示位置」）。値は <see cref="KeyboardPlacement"/>（設定画面で変更できる）。
     /// 位置は「キーボード本体（盤面）の中心」の位置として指定する。テクスチャの上部は候補欄の透明な領域のため、
     /// OpenVR が基準にするテクスチャの中心は盤面の中心よりも上にある。その差はシーンの盤面の配置から受け取る（<see cref="View.KeyboardView.BoardCenterOffset"/>）。
     /// </summary>

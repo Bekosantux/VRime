@@ -5,7 +5,7 @@ using VRime.Core;
 namespace VRime.App.Settings
 {
     /// <summary>
-    /// 設定画面で変更し、設定ファイルに保存する値（SPEC 8章）。値は生成時に範囲を検査し、範囲外は例外にする。
+    /// 設定画面で変更し、設定ファイルに保存する値（docs/spec/settings.md「項目」）。値は生成時に範囲を検査し、範囲外は例外にする。
     /// キーボードの動作に関わる値は <see cref="ToKeyboardSettings"/> で Core の設定にする。
     /// </summary>
     public sealed class UserSettings

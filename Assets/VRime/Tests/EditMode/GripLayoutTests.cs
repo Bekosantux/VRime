@@ -4,7 +4,7 @@ using VRime.Core.Grip;
 
 namespace VRime.Core.Tests
 {
-    /// <summary>SPEC 5.2 の表との一致を確認する。表は SPEC の文字を \u 表記でも照合できるよう、そのまま書き写している。</summary>
+    /// <summary>docs/spec/grip-input.md の文字の配置の表との一致を確認する。表は仕様書の文字を \u 表記でも照合できるよう、そのまま書き写している。</summary>
     public class GripLayoutTests
     {
         static readonly StickDirection[] Directions =

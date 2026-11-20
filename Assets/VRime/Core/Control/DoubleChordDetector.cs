@@ -3,7 +3,7 @@ using System;
 namespace VRime.Core.Control
 {
     /// <summary>
-    /// 両手の展開・収納のボタンの「2回続けての同時押し」を検出する（SPEC 4.2）。
+    /// 両手の展開・収納のボタンの「2回続けての同時押し」を検出する（docs/spec/keyboard.md「開閉」）。
     /// 同時押し = 後から押した側の押下時に、もう一方が押されたままで、押下時刻の差が chordWindow 以内。
     /// </summary>
     public sealed class DoubleChordDetector

@@ -7,7 +7,7 @@ using VRime.App.Native;
 namespace VRime.App.Output
 {
     /// <summary>
-    /// クリップボードの開閉と、送信用の文字列の書き込み（SPEC 7.2）。メインスレッド専用。
+    /// クリップボードの開閉と、送信用の文字列の書き込み（docs/spec/output.md「クリップボードの扱い」）。メインスレッド専用。
     /// 所有者のウィンドウなしで開くと、空にした後の SetClipboardData が失敗するため、メッセージ専用のウィンドウを所有者にする。
     /// </summary>
     internal sealed class ClipboardAccess : IDisposable

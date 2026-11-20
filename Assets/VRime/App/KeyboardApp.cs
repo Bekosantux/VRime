@@ -122,7 +122,7 @@ namespace VRime.App
         }
 
         // 起動の処理（Awake・Start）を実行する。失敗したら、組み立てに失敗した状態で Update が回り続け、同じ例外が毎フレーム出るのを防ぐ。
-        // ビルドでは、例外の内容をメッセージボックスで示してから終了する（SPEC 3.1）。エディターでは例外をそのまま送出し、コンソールに出す。
+        // ビルドでは、例外の内容をメッセージボックスで示してから終了する（docs/spec/lifecycle.md「起動」）。エディターでは例外をそのまま送出し、コンソールに出す。
         void RunStartupStep(Action step)
         {
             try
@@ -209,7 +209,7 @@ namespace VRime.App
         {
             ValidateScene();
 
-            // 非表示のウィンドウでも入力を取りこぼさないよう、VSync を切って一定のフレームレートで回す（SPEC 3.3）。
+            // 非表示のウィンドウでも入力を取りこぼさないよう、VSync を切って一定のフレームレートで回す（ARCHITECTURE.md「Player Settings」）。
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = TargetFrameRate;
             // OnGUI では GUILayout を使わない。使わなければ、レイアウトのためのイベントを省ける。
@@ -262,7 +262,7 @@ namespace VRime.App
             _settingsForm.QuitRequested += OnQuitRequested;
 
 #if !UNITY_EDITOR
-            // ウィンドウを隠した後も設定を開けて終了できるよう、隠す（Start）前にトレイのアイコンを置く（SPEC 9）。
+            // ウィンドウを隠した後も設定を開けて終了できるよう、隠す（Start）前にトレイのアイコンを置く（docs/spec/lifecycle.md「システムトレイ」）。
             _desktopSettings = new DesktopSettingsWindow(_settingsTarget.Texture, _settingsForm, _theme, AppInfo.DisplayName + " の設定");
             _tray = new TrayIcon(Path.Combine(Application.streamingAssetsPath, TrayIconRelativePath), AppInfo.DisplayName);
             Application.wantsToQuit += OnWantsToQuit;
@@ -270,7 +270,7 @@ namespace VRime.App
         }
 
         // Unity は最初のシーンの Awake の後、Start の前にプレイヤーのウィンドウを表示する。Awake で隠しても表示し直されるため、
-        // VRChat を前面にする処理とウィンドウを隠す処理は Start で行う（SPEC 3.1）。
+        // VRChat を前面にする処理とウィンドウを隠す処理は Start で行う（docs/spec/lifecycle.md「起動」）。
         // Awake が例外で終わったときは enabled が false になり、Start は呼ばれない。
         void Start() => RunStartupStep(StartCore);
 
@@ -338,7 +338,7 @@ namespace VRime.App
             _monitor.Update();
             _session.SetLengthLimit(_monitor.Target.Kind == OutputTargetKind.VRChat ? VRChatChatbox.MaxLength : (int?)null);
 
-            // ダッシュボードが入力を持っている間は、手動で閉じるのと同じ処理でキーボードを閉じる（SPEC 4.4）。
+            // ダッシュボードが入力を持っている間は、手動で閉じるのと同じ処理でキーボードを閉じる（ARCHITECTURE.md「入力の横取り」）。
             _session.SetDashboardVisible(_platform.IsDashboardHoldingInput);
 
             _session.Tick(_platform.Controller.Read(), now);
@@ -383,7 +383,7 @@ namespace VRime.App
 
         void UpdateChatbox(double now)
         {
-            // 入力中であることの表示は、送信先が VRChat の間だけ送る（SPEC 7.3）。送信先が変われば次のフレームで取り下げる。
+            // 入力中であることの表示は、送信先が VRChat の間だけ送る（docs/spec/output.md「VRChat」）。送信先が変われば次のフレームで取り下げる。
             bool typing = _session.IsOpen && _session.Length > 0 && _monitor.Target.Kind == OutputTargetKind.VRChat;
             _chatbox.SetTyping(typing);
             bool showText = typing && _settingsForm.Settings.VRChat.ShowTypingText;

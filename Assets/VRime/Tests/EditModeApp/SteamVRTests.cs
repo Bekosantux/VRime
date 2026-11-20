@@ -134,7 +134,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 試作2の値を保つ()
+        public void MoveとOpenCloseは実機で確かめた値を保つ()
         {
             OpenVRHapticOutput.Pattern move = OpenVRHapticOutput.GetPattern(HapticKind.Move);
             Assert.AreEqual(0.01f, move.Seconds);
@@ -154,7 +154,7 @@ namespace VRime.App.Tests
         }
     }
 
-    /// <summary>アクションマニフェストと同梱の既定のバインド（SPEC 5.6）。</summary>
+    /// <summary>アクションマニフェストと同梱の既定のバインド（docs/spec/grip-input.md「コントローラーの割り当て」）。</summary>
     public sealed class ActionManifestTests
     {
         static readonly string ManifestPath = Path.Combine(Application.streamingAssetsPath, OpenVRPlatform.ActionManifestRelativePath);

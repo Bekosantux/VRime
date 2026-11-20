@@ -81,7 +81,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 既定の位置は試作2の値()
+        public void 既定の位置は仕様の値()
         {
             KeyboardPlacement p = KeyboardPlacement.Default;
             Assert.AreEqual(0.26f, p.DownMeters);

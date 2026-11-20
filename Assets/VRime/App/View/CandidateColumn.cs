@@ -7,7 +7,8 @@ namespace VRime.App.View
 {
     /// <summary>
     /// 候補欄の1文節の列（カード）。見出しの下に、候補を表示しているときだけ区切りの線を置き、候補を縦に並べる（<see cref="VerticalLayoutGroup"/>）。
-    /// カードの地と影は、配置から外した（LayoutElement.ignoreLayout）子としてシーンに置く。
+    /// カードの地と影は、配置から外した（LayoutElement.ignoreLayout）子として列の先頭に置く。
+    /// 子は親より後に描かれるため、影を列自身の Image にはできない。
     /// 候補の行は、シーンに置いた雛形（<see cref="_candidateTemplate"/>）を必要な数だけ複製する。雛形自身は表示しない。
     /// </summary>
     public sealed class CandidateColumn : MonoBehaviour

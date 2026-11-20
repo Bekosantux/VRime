@@ -24,7 +24,7 @@ namespace VRime.App.SteamVR
         /// <summary>
         /// 入力値・振動の取得に対する検査。<see cref="EVRInputError.NoData"/> は、そのアクションに今データがない
         /// （バインドされていない、他のアプリが入力を占有しているなど）ことを表し、故障ではない。
-        /// その場合は false を返す。呼び出し側は <c>bActive</c> が false のときと同じに扱う（SPEC 4.3）。
+        /// その場合は false を返す。呼び出し側は <c>bActive</c> が false のときと同じに扱う（ARCHITECTURE.md「入力の横取り」）。
         /// それ以外のエラーは例外にする。
         /// </summary>
         public static bool CheckAllowingNoData(EVRInputError error, string operation)

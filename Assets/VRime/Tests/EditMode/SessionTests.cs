@@ -591,7 +591,7 @@ namespace VRime.Core.Tests
         }
     }
 
-    /// <summary>変換の流れ（SPEC 6.3）。</summary>
+    /// <summary>変換の流れ（docs/spec/conversion.md「候補欄」）。</summary>
     public class ConversionFlowTests
     {
         const int Convert = 7;
@@ -1123,7 +1123,7 @@ namespace VRime.Core.Tests
         }
     }
 
-    /// <summary>展開・収納とパネルの切り替えを別のボタンに割り当てたとき（SPEC 5.6）。</summary>
+    /// <summary>展開・収納とパネルの切り替えを別のボタンに割り当てたとき（docs/spec/grip-input.md「コントローラーの割り当て」）。</summary>
     public class SeparatedBindingTests
     {
         const int Convert = 7;

@@ -114,7 +114,7 @@ namespace VRime.App.SteamVR
 
         /// <summary>
         /// 開いたらオーバーレイを表示して入力を占有し、閉じたら隠して入力の占有をやめる（位置の確認用に表示している間は隠さない）。
-        /// ダッシュボードによる一時停止・再開もここを通る（手動の開閉と同じ経路にするため。SPEC 4.4）。
+        /// ダッシュボードによる一時停止・再開もここを通る（手動の開閉と同じ経路にするため。ARCHITECTURE.md「入力の横取り」）。
         /// </summary>
         public void OnOpenChanged(bool isOpen)
         {

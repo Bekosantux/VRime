@@ -22,7 +22,7 @@ namespace VRime.App.Platform
 
         /// <summary>
         /// SteamVR のダッシュボードが入力を持っているか（表示中と、閉じた後に入力がまだアプリへ戻っていない間）。
-        /// true の間、キーボードは一時停止する（SPEC 4.4）。<see cref="BeginFrame"/> で更新される。
+        /// true の間、キーボードは一時停止する（docs/spec/keyboard.md「SteamVR ダッシュボードとの共存」）。<see cref="BeginFrame"/> で更新される。
         /// </summary>
         bool IsDashboardHoldingInput { get; }
 
@@ -31,12 +31,12 @@ namespace VRime.App.Platform
 
         /// <summary>
         /// 入力を読むのに、本アプリのウィンドウが前面である必要があるか（PC のキーボードで入力する開発用の環境）。
-        /// true のときは、起動時に VRChat を前面にしない（SPEC 8.1）。
+        /// true のときは、起動時に VRChat を前面にしない（docs/spec/output.md「VRChat」）。
         /// </summary>
         bool RequiresOwnWindowFocus { get; }
 
         /// <summary>
-        /// SteamVR の起動時に本アプリを自動で起動するか（SPEC 9）。値は SteamVR が持ち、本アプリの外でも変わるため、読むたびに問い合わせる。
+        /// SteamVR の起動時に本アプリを自動で起動するか（docs/spec/lifecycle.md「SteamVR への登録と自動起動」）。値は SteamVR が持ち、本アプリの外でも変わるため、読むたびに問い合わせる。
         /// 本アプリを SteamVR に登録しない環境（エディター・開発用の環境）では null。
         /// </summary>
         bool? AutoLaunch { get; }

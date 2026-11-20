@@ -24,8 +24,8 @@ namespace VRime.App.SteamVR
             public float Amplitude { get; }
         }
 
-        // Move と OpenClose は試作2の値（実機で確認済み）。Input と Invalid は試作になかったため、
-        // 他の種類と区別できるように決めた暫定値（SPEC 5.1）。Input は Move より少し長く強い。
+        // Move と OpenClose は実機で確かめた値。Input と Invalid は他の種類と区別できるように決めた値で、
+        // 実機での調整を経ていない（docs/spec/grip-input.md「振動」、docs/ROADMAP.md「見直し候補」）。Input は Move より少し長く強い。
         // Invalid は低い周波数で長くし、操作が受け付けられなかったことが触覚で分かるようにしている。
         static readonly Pattern MovePattern = new Pattern(0.01f, 160f, 0.6f);
         static readonly Pattern InputPattern = new Pattern(0.03f, 160f, 0.8f);
