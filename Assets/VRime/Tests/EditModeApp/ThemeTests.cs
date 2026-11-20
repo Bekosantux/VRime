@@ -75,7 +75,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 違うテーマに差し替えると版が増え_同じテーマでは増えない()
+        public void 違うテーマに差し替えるとバージョンが増え_同じテーマでは増えない()
         {
             var active = new ActiveTheme(_dark);
             Assert.AreSame(_dark, active.Current);

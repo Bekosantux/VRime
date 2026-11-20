@@ -5,7 +5,7 @@ using VRime.Core;
 namespace VRime.App.Settings
 {
     /// <summary>
-    /// 設定画面で変更し、設定ファイルに保存する値（SPEC 8章）。値は生成時に範囲を検査し、範囲外は例外にする。
+    /// 設定画面で変更し、設定ファイルに保存する値（docs/spec/settings.md「項目」）。値は生成時に範囲を検査し、範囲外は例外にする。
     /// キーボードの動作に関わる値は <see cref="ToKeyboardSettings"/> で Core の設定にする。
     /// </summary>
     public sealed class UserSettings
@@ -73,7 +73,8 @@ namespace VRime.App.Settings
                 stickThreshold: StickThreshold,
                 triggerThreshold: TriggerThreshold,
                 repeatDelaySeconds: ToDouble(RepeatDelaySeconds),
-                conversionEnabled: Privacy.UseGoogleConversion);
+                conversionEnabled: Privacy.UseGoogleConversion,
+                resetPasteModeAfterSend: VRChat.ResetPasteModeAfterSend);
         }
 
         public bool Equals(UserSettings other)
@@ -112,7 +113,7 @@ namespace VRime.App.Settings
                 VRChatSettings.Default, PrivacySettings.Default);
         }
 
-        // float を double に広げると 0.35 が 0.34999999403953552 になるため、float として最短の 10進表記を経由する。
+        // float を double に変換すると 0.35 が 0.34999999403953552 になるため、float として最短の 10進表記を経由する。
         static double ToDouble(float value)
         {
             return double.Parse(value.ToString("R", CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);

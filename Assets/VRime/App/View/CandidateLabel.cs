@@ -49,7 +49,7 @@ namespace VRime.App.View
             _background.color = selected ? _theme.Current.CandidateSelected : _theme.Current.Candidate;
         }
 
-        // 幅は文字の長さに合わせる。上限を超えるときは、収まる長さまで切って省略記号を付ける。
+        // 幅は文字の長さに合わせる。上限を超えるときは、収まる長さまで切り詰めて省略記号を付ける。
         void Fit(string text)
         {
             float padding = _layout.padding.horizontal;

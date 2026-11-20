@@ -1,0 +1,10 @@
+<!--
+  Managed Code Stripping から丸ごと保護するアセンブリ。
+  ネイティブ側（Win32・OpenVR・描画スレッド）から呼ばれるコールバックやマーシャリングされる構造体、
+  ライブラリの内部でリフレクションを使う処理は、静的な解析では使われていると判定できないことがあるため、削らせない。-->
+<linker>
+  <assembly fullname="VRime.Core" preserve="all"/>
+  <assembly fullname="VRime.App" preserve="all"/>
+  <assembly fullname="Valve.OpenVR" preserve="all"/>
+  <assembly fullname="Newtonsoft.Json" preserve="all"/>
+</linker>

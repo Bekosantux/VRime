@@ -37,7 +37,7 @@ namespace VRime.Core.Grip
     }
 
     /// <summary>
-    /// 入力中のグリップ入力（SPEC 5.2）。毎フレームの手の状態から、セル・方向の選択、
+    /// 入力中のグリップ入力（docs/spec/grip-input.md）。毎フレームの手の状態から、セル・方向の選択、
     /// 機能ページの切り替え、トリガーによる入力（長押しによる連続入力を含む）を処理し、入力バッファを更新する。
     /// 変換・確定はバッファだけでは完結しないため、要求として返す。
     /// </summary>
@@ -51,6 +51,8 @@ namespace VRime.Core.Grip
         bool _numberPage;
         bool _fullWidth;
         bool _upperCase;
+        bool _pasteMode;
+        bool _pasteModeAvailable;
 
         int _cell = StickClassifier.NeutralCell;
         StickDirection _direction = StickDirection.Center;
@@ -75,6 +77,11 @@ namespace VRime.Core.Grip
 
         /// <summary>大文字で入力するか。英字ページでのみ作用する。</summary>
         public bool IsUpperCase => _upperCase;
+
+        /// <summary>
+        /// 貼り付けモード（docs/spec/output.md「貼り付けモード」）がオンか。使えない間（<see cref="SetPasteModeAvailable"/>）もオンのまま保つ。
+        /// </summary>
+        public bool IsPasteMode => _pasteMode;
 
         /// <summary>
         /// 現在のページ。数字ページを閉じると言語に応じたページに戻るため、開く前のページを別に保持する必要はない。
@@ -119,8 +126,28 @@ namespace VRime.Core.Grip
         }
 
         /// <summary>
+        /// 貼り付けモードを使えるか（送信先が VRChat か）を渡す。使えない間、「貼付」のセルは空きセルとして扱う。
+        /// </summary>
+        internal void SetPasteModeAvailable(bool available)
+        {
+            if (available == _pasteModeAvailable) return;
+            _pasteModeAvailable = available;
+            Version++;
+        }
+
+        /// <summary>
+        /// 送信に成功したときに呼ぶ。貼り付けモードで送った場合、設定に従ってオフに戻す。
+        /// </summary>
+        internal void OnSent()
+        {
+            if (!_pasteMode || !_pasteModeAvailable || !_settings.ResetPasteModeAfterSend) return;
+            _pasteMode = false;
+            Version++;
+        }
+
+        /// <summary>
         /// 入力を受け付けていなかった後（開いたとき・変換から戻ったとき）に呼び、
-        /// スティックの分類を現在の傾きに合わせる。振動は出さない。
+        /// スティックの分類を現在の傾きに合わせる。振動させない。
         /// </summary>
         public void Reset(ControllerFrame frame)
         {
@@ -242,7 +269,7 @@ namespace VRime.Core.Grip
             GripCell cell;
             if (_vowelFunction)
             {
-                cell = GripLayout.GetVowelFunctionCell(_vowelCell);
+                cell = ResolveVowelFunctionCell(_vowelCell);
             }
             else
             {
@@ -341,6 +368,11 @@ namespace VRime.Core.Grip
                     return new GripRequest(GripRequestKind.Convert, pressedHand);
                 case GripAction.Commit:
                     return new GripRequest(GripRequestKind.Commit, pressedHand);
+                case GripAction.TogglePasteMode:
+                    // 使えない間は空きセルになるため、ここには来ない。
+                    _pasteMode = !_pasteMode;
+                    Done(pressedHand, haptics);
+                    break;
                 default:
                     throw new InvalidOperationException("未知の動作: " + action);
             }
@@ -369,7 +401,7 @@ namespace VRime.Core.Grip
             return character;
         }
 
-        /// <summary>結果に応じた振動を出し、実行できたかを返す。</summary>
+        /// <summary>結果に応じて振動させ、実行できたかを返す。</summary>
         bool Report(EditResult result, Hand hand, List<HapticEvent> haptics)
         {
             if (result == EditResult.Done)
@@ -408,7 +440,7 @@ namespace VRime.Core.Grip
                 vowelCells = new GripCellView[GripLayout.CellCount];
                 for (int i = 0; i < vowelCells.Length; i++)
                 {
-                    GripCell cell = GripLayout.GetVowelFunctionCell(i);
+                    GripCell cell = ResolveVowelFunctionCell(i);
                     vowelCells[i] = new GripCellView(cell.Label, IsDisabled(cell), IsLit(cell));
                 }
                 vowelSelected = _vowelCell;
@@ -432,11 +464,22 @@ namespace VRime.Core.Grip
             for (int i = 0; i < GripLayout.CellCount; i++)
             {
                 consonantHints[i] = _consonantFunction ? string.Empty : ToHint(GripLayout.GetConsonantCell(page, true, i));
-                vowelHints[i] = _vowelFunction ? string.Empty : ToHint(GripLayout.GetVowelFunctionCell(i));
+                vowelHints[i] = _vowelFunction ? string.Empty : ToHint(ResolveVowelFunctionCell(i));
             }
 
             return new GripViewState(page, _consonantFunction, _vowelFunction,
                 consonantCells, _cell, vowelCells, vowelSelected, consonantHints, vowelHints);
+        }
+
+        /// <summary>
+        /// 母音側の機能ページのセル。「貼付」は、貼り付けモードを使えない間は空きセルにする（表示・ヒント・実行のすべてで同じ扱い）。
+        /// </summary>
+        GripCell ResolveVowelFunctionCell(int cell)
+        {
+            GripCell layoutCell = GripLayout.GetVowelFunctionCell(cell);
+            bool unavailablePaste = layoutCell.Kind == GripCellKind.Action
+                && layoutCell.Action == GripAction.TogglePasteMode && !_pasteModeAvailable;
+            return unavailablePaste ? GripCell.Empty : layoutCell;
         }
 
         /// <summary>通常のページに重ねて示す、機能ページのセルの表示名の頭文字（1文字）。空きセルには示さない。</summary>
@@ -494,6 +537,7 @@ namespace VRime.Core.Grip
                 case GripAction.ToggleWidth: return _fullWidth && Page != GripPage.Kana;
                 case GripAction.ToggleCase: return _upperCase && Page == GripPage.Alpha;
                 case GripAction.NumberPage: return _numberPage;
+                case GripAction.TogglePasteMode: return _pasteMode;
                 default: return false;
             }
         }

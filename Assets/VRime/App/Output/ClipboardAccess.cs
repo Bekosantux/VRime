@@ -7,12 +7,12 @@ using VRime.App.Native;
 namespace VRime.App.Output
 {
     /// <summary>
-    /// クリップボードの開閉と、送信用の文字列の書き込み（SPEC 7.2）。メインスレッド専用。
+    /// クリップボードの開閉と、送信用の文字列の書き込み（docs/spec/output.md「クリップボードの扱い」）。メインスレッド専用。
     /// 所有者のウィンドウなしで開くと、空にした後の SetClipboardData が失敗するため、メッセージ専用のウィンドウを所有者にする。
     /// </summary>
     internal sealed class ClipboardAccess : IDisposable
     {
-        // 他のアプリが開いている間は開けない。開いている時間は通常ごく短いため、少し待って試し直す。
+        // 他のアプリが開いている間は開けない。開いている時間は通常ごく短いため、少し待って再試行する。
         const int OpenAttempts = 5;
         const int OpenRetryIntervalMilliseconds = 10;
 
@@ -31,11 +31,11 @@ namespace VRime.App.Output
             if (_owner == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error(), "クリップボードの所有者のウィンドウを作れません。");
         }
 
-        /// <summary>クリップボードの通番。内容が変わるたびに増える。</summary>
+        /// <summary>クリップボードのシーケンス番号。内容が変わるたびに増える。</summary>
         public static uint SequenceNumber => Win32.GetClipboardSequenceNumber();
 
         /// <summary>
-        /// クリップボードを開く。<paramref name="retry"/> が true なら、他のアプリが開いている間は少し待って試し直す。
+        /// クリップボードを開く。<paramref name="retry"/> が true なら、他のアプリが開いている間は少し待って再試行する。
         /// 開けなければ false。開けたら必ず <see cref="Close"/> を呼ぶ。
         /// </summary>
         public bool TryOpen(bool retry)

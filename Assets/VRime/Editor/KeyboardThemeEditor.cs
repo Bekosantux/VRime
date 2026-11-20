@@ -8,7 +8,7 @@ namespace VRime.Editor
 {
     /// <summary>
     /// テーマのアセットのインスペクターに、そのテーマの色をアクティブなシーンに反映するボタンを加える。
-    /// 実行中は設定のテーマで描くため、反映できない。
+    /// 実行中は設定のテーマで描画するため、反映できない。
     /// </summary>
     [CustomEditor(typeof(KeyboardTheme))]
     public sealed class KeyboardThemeEditor : UnityEditor.Editor
@@ -20,7 +20,7 @@ namespace VRime.Editor
             {
                 if (GUILayout.Button("シーンに反映")) Apply((KeyboardTheme)target);
             }
-            if (playing) EditorGUILayout.HelpBox("実行中は設定のテーマで描くため、反映できません。", MessageType.Info);
+            if (playing) EditorGUILayout.HelpBox("実行中は設定のテーマで描画するため、反映できません。", MessageType.Info);
             EditorGUILayout.Space();
             DrawDefaultInspector();
         }

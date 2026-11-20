@@ -37,7 +37,7 @@ namespace VRime.App.SteamVR
         /// true の間は、ゲームなど他のアプリへコントローラー入力を渡さない（優先度 <c>k_nActionSetOverlayGlobalPriorityMin</c>）。
         /// false の間は優先度 0 で、他のアプリと入力を共有する（開閉の操作だけを監視する）。
         /// キーボードを開くとき true、閉じるとき false にする。開いたまま false に戻してはならない
-        /// （試作で、優先度だけを下げると再起動するまで入力が取得できなくなった。SPEC 4.3）。
+        /// （優先度だけを下げると、再起動するまで入力が取得できなくなる。ARCHITECTURE.md「入力の横取り」）。
         /// </summary>
         public bool IsExclusive
         {

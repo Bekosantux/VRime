@@ -10,12 +10,12 @@ namespace VRime.App.View
     /// <see cref="KeyboardSession"/> の状態と送信先を uGUI に反映する。表示の内容はこれらの状態だけで決まり、入力の判断は持たない。
     /// 毎フレーム <see cref="RefreshIfChanged"/> を呼ぶと、<see cref="KeyboardSession.ViewVersion"/>・
     /// <see cref="ForegroundWindowMonitor.Version"/>・<see cref="ActiveTheme.Version"/> のどれかが変わったときだけ uGUI を更新する。
-    /// テーマが変わったときは、状態によらない色（<see cref="ThemeColor"/>）も塗り直す。
-    /// キーボードのキャンバスに置く。部品の配置はシーンで決め、盤面（<see cref="_board"/>）の外側は透明にする。
+    /// テーマが変わったときは、状態によらない色（<see cref="ThemeColor"/>）も再設定する。
+    /// キーボードのキャンバスに置く。部品の配置はシーンで決め、ボード（<see cref="_board"/>）の外側は透明にする。
     /// </summary>
     public sealed class KeyboardView : MonoBehaviour
     {
-        [Tooltip("キーボード本体（盤面）。オーバーレイの位置はこの中心を基準にする。")]
+        [Tooltip("キーボード本体（ボード）。オーバーレイの位置はこの中心を基準にする。")]
         [SerializeField] RectTransform _board;
 
         [SerializeField] InputAreaView _input;
@@ -30,8 +30,8 @@ namespace VRime.App.View
         int _renderedThemeVersion = -1;
 
         /// <summary>
-        /// テクスチャの中心から盤面の中心までの下向きの距離を、テクスチャの幅で割った値。
-        /// オーバーレイの位置を盤面の中心に合わせるのに使う（<see cref="SteamVR.OverlayPlacement"/>）。
+        /// テクスチャの中心からボードの中心までの下向きの距離を、テクスチャの幅で割った値。
+        /// オーバーレイの位置をボードの中心に合わせるのに使う（<see cref="SteamVR.OverlayPlacement"/>）。
         /// </summary>
         public float BoardCenterOffset
         {

@@ -13,11 +13,14 @@ namespace VRime.App.Output
         /// <summary>前面が VRChat。チャットボックスへ送る。</summary>
         VRChat,
 
-        /// <summary>前面がそれ以外のアプリ。キー入力として送る。</summary>
+        /// <summary>前面が VRChat で、貼り付けモードがオン。デスクトップのアプリと同じく貼り付けで送る。</summary>
+        VRChatPaste,
+
+        /// <summary>前面がそれ以外のアプリ。貼り付けで送る。</summary>
         Desktop,
     }
 
-    /// <summary>前面のウィンドウから決まる送信先（SPEC 7.2）。</summary>
+    /// <summary>前面のウィンドウから決まる送信先（docs/spec/output.md「送信先」）。</summary>
     public sealed class OutputTarget
     {
         const string VRChatProcessName = "VRChat";
@@ -35,7 +38,10 @@ namespace VRime.App.Output
         /// <summary>前面のウィンドウ。<see cref="OutputTargetKind.None"/> のときは null。</summary>
         public ForegroundWindowInfo Window { get; }
 
-        /// <summary>利用者に見せる送信先の名前。</summary>
+        /// <summary>前面のウィンドウが VRChat か（送り方を問わない）。</summary>
+        public bool IsVRChat => Kind == OutputTargetKind.VRChat || Kind == OutputTargetKind.VRChatPaste;
+
+        /// <summary>利用者向けの送信先の名前。</summary>
         public string Name
         {
             get
@@ -45,6 +51,7 @@ namespace VRime.App.Output
                     case OutputTargetKind.None: return "なし";
                     case OutputTargetKind.OwnWindow: return "このアプリ";
                     case OutputTargetKind.VRChat: return "VRChat";
+                    case OutputTargetKind.VRChatPaste: return "VRChat（貼り付け）";
                     case OutputTargetKind.Desktop:
                         if (!string.IsNullOrEmpty(Window.DisplayName)) return Window.DisplayName;
                         if (!string.IsNullOrEmpty(Window.ProcessName)) return Window.ProcessName;
@@ -54,12 +61,13 @@ namespace VRime.App.Output
             }
         }
 
-        /// <summary>前面のウィンドウ（なければ null）から送信先を決める。</summary>
-        public static OutputTarget Classify(ForegroundWindowInfo window, int ownProcessId)
+        /// <summary>前面のウィンドウ（なければ null）と貼り付けモードから送信先を決める。</summary>
+        public static OutputTarget Classify(ForegroundWindowInfo window, int ownProcessId, bool pasteMode)
         {
             if (window == null) return None;
             if (window.ProcessId == ownProcessId) return new OutputTarget(OutputTargetKind.OwnWindow, window);
-            if (IsVRChatProcess(window.ProcessName)) return new OutputTarget(OutputTargetKind.VRChat, window);
+            if (IsVRChatProcess(window.ProcessName))
+                return new OutputTarget(pasteMode ? OutputTargetKind.VRChatPaste : OutputTargetKind.VRChat, window);
             return new OutputTarget(OutputTargetKind.Desktop, window);
         }
 

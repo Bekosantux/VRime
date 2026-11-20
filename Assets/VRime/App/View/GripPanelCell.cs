@@ -7,7 +7,7 @@ using VRime.Core.Grip;
 namespace VRime.App.View
 {
     /// <summary>
-    /// グリップのパネルの1マス。背景・点灯のバー・文字と、文字に重ねる2種類のヒントを持つ。
+    /// グリップのパネルのセル。背景・点灯のバー・文字と、文字に重ねる2種類のヒントを持つ。
     /// ヒントは、上下左右の辺に置く方向の文字と、右下に置く機能ページのキーの頭文字。
     /// </summary>
     public sealed class GripPanelCell : MonoBehaviour
@@ -16,7 +16,7 @@ namespace VRime.App.View
         [SerializeField] GameObject _litBar;
         [SerializeField] TextMeshProUGUI _label;
 
-        [Tooltip("機能ページのキーの頭文字。主の文字を妨げないよう、小さく薄く示す。")]
+        [Tooltip("機能ページのキーの頭文字。メインの文字を妨げないよう、小さく薄く示す。")]
         [SerializeField] TextMeshProUGUI _hint;
 
         [Tooltip("方向のヒント。左・上・右・下の順で、それぞれセルの同じ側の辺に置く。")]

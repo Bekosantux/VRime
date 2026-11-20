@@ -4,10 +4,10 @@ using VRime.Core.Input;
 
 namespace VRime.Core.Tests
 {
-    /// <summary>グリップ入力（SPEC 5.2）の振る舞い。Rig を通して、実際の操作と同じ入力列で確認する。</summary>
+    /// <summary>グリップ入力（docs/spec/grip-input.md）の振る舞い。Rig を通して、実際の操作と同じ入力列で確認する。</summary>
     public class GripInputTests
     {
-        // 機能ページのセル番号（SPEC 5.2）
+        // 機能ページのセル番号（docs/spec/grip-input.md）
         const int Erase = 2;
         const int Modifier = 3;
         const int Wa = 4;
@@ -20,7 +20,7 @@ namespace VRime.Core.Tests
         const int CursorLeft = 3;
         const int ToggleCase = 4;
         const int CursorRight = 5;
-        const int Language = 6;
+        const int Language = 1;
 
         static readonly string[] NoHints = { "", "", "", "", "", "", "", "", "" };
 
@@ -620,7 +620,8 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             GripViewState view = rig.Session.GripView;
             string[] consonant = { "", "", "消", "小", "わ", "記", "", "", "空" };
-            string[] vowel = { "全", "", "数", "←", "↑", "→", "言", "変", "確" };
+            // 貼り付けモードを使えない間（既定）は、「貼付」のヒントを示さない。
+            string[] vowel = { "全", "言", "数", "←", "↑", "→", "", "変", "確" };
             CollectionAssert.AreEqual(consonant, view.ConsonantHints);
             CollectionAssert.AreEqual(vowel, view.VowelHints);
         }
@@ -906,7 +907,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 消去は連続入力され_消すものがなくなると1回だけ無効の振動を出して止まる()
+        public void 消去は連続入力され_消すものがなくなると1回だけ無効の振動で知らせて止まる()
         {
             var rig = RepeatRig();
             rig.Type(0, StickDirection.Center);

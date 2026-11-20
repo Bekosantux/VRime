@@ -99,9 +99,10 @@ namespace VRime.App.Tests
             return new ForegroundWindowInfo(new IntPtr(1), pid, name, display);
         }
 
-        static TextOutputRouter Router(AppSettings settings, FakeChatbox chatbox, FakeDesktop desktop, ForegroundWindowInfo window)
+        static TextOutputRouter Router(AppSettings settings, FakeChatbox chatbox, FakeDesktop desktop, ForegroundWindowInfo window,
+            bool pasteMode = false)
         {
-            OutputTarget target = OutputTarget.Classify(window, OwnPid);
+            OutputTarget target = OutputTarget.Classify(window, OwnPid, pasteMode);
             return new TextOutputRouter(settings, chatbox, desktop, () => target);
         }
 
@@ -114,6 +115,26 @@ namespace VRime.App.Tests
             Assert.IsTrue(result.Success);
             CollectionAssert.AreEqual(new[] { "こんにちは" }, chatbox.Sent);
             Assert.AreEqual(0, desktop.Sent.Count);
+        }
+
+        [Test]
+        public void 貼り付けモードのVRChatには貼り付けで送る()
+        {
+            var chatbox = new FakeChatbox();
+            var desktop = new FakeDesktop();
+            OutputResult result = Router(new AppSettings(), chatbox, desktop, Window(200, "vrchat"), pasteMode: true).Send("ワールド");
+            Assert.IsTrue(result.Success);
+            CollectionAssert.AreEqual(new[] { "ワールド" }, desktop.Sent);
+            Assert.AreEqual(0, chatbox.Sent.Count);
+        }
+
+        [Test]
+        public void 貼り付けモードのVRChatでも管理者権限のウィンドウは失敗として通知する()
+        {
+            var desktop = new FakeDesktop { Result = DesktopSendResult.TargetElevated };
+            OutputResult result = Router(new AppSettings(), new FakeChatbox(), desktop, Window(200, "vrchat"), pasteMode: true).Send("a");
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(OutputFailure.ElevatedWindow, result.Failure);
         }
 
         [Test]
@@ -268,7 +289,7 @@ namespace VRime.App.Tests
             Assert.AreEqual("元の内容", snapshot);
             Assert.IsFalse(schedule.HasPending);
 
-            // 引き継いだ退避で書き込み直すと、戻す時刻は新しい書き込みから数える。
+            // 引き継いだ退避で再度書き込むと、戻す時刻は新しい書き込みから数える。
             schedule.Arm(snapshot, 12, 100.8);
             Assert.AreEqual(ClipboardRestoreAction.None, schedule.Poll(101.0, 12));
             Assert.AreEqual(ClipboardRestoreAction.Restore, schedule.Poll(101.8, 12));
@@ -292,7 +313,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 通番が書き込んだときのままかを調べられる()
+        public void シーケンス番号が書き込んだときのままかを調べられる()
         {
             ClipboardRestoreSchedule<string> schedule = Armed();
             Assert.IsTrue(schedule.IsUnchanged(10));
@@ -324,27 +345,46 @@ namespace VRime.App.Tests
         [Test]
         public void 前面のウィンドウから送信先を決める()
         {
-            Assert.AreEqual(OutputTargetKind.None, OutputTarget.Classify(null, OwnPid).Kind);
-            Assert.AreEqual(OutputTargetKind.OwnWindow, OutputTarget.Classify(Window(OwnPid, "VRime"), OwnPid).Kind);
-            Assert.AreEqual(OutputTargetKind.VRChat, OutputTarget.Classify(Window(200, "VRChat"), OwnPid).Kind);
-            Assert.AreEqual(OutputTargetKind.VRChat, OutputTarget.Classify(Window(200, "vrchat"), OwnPid).Kind);
-            Assert.AreEqual(OutputTargetKind.Desktop, OutputTarget.Classify(Window(200, "notepad"), OwnPid).Kind);
-            Assert.AreEqual(OutputTargetKind.Desktop, OutputTarget.Classify(Window(200, null), OwnPid).Kind);
+            Assert.AreEqual(OutputTargetKind.None, OutputTarget.Classify(null, OwnPid, false).Kind);
+            Assert.AreEqual(OutputTargetKind.OwnWindow, OutputTarget.Classify(Window(OwnPid, "VRime"), OwnPid, false).Kind);
+            Assert.AreEqual(OutputTargetKind.VRChat, OutputTarget.Classify(Window(200, "VRChat"), OwnPid, false).Kind);
+            Assert.AreEqual(OutputTargetKind.VRChat, OutputTarget.Classify(Window(200, "vrchat"), OwnPid, false).Kind);
+            Assert.AreEqual(OutputTargetKind.Desktop, OutputTarget.Classify(Window(200, "notepad"), OwnPid, false).Kind);
+            Assert.AreEqual(OutputTargetKind.Desktop, OutputTarget.Classify(Window(200, null), OwnPid, false).Kind);
+        }
+
+        [Test]
+        public void 貼り付けモードはVRChatの送信先だけを変える()
+        {
+            Assert.AreEqual(OutputTargetKind.VRChatPaste, OutputTarget.Classify(Window(200, "VRChat"), OwnPid, true).Kind);
+            Assert.AreEqual(OutputTargetKind.Desktop, OutputTarget.Classify(Window(200, "notepad"), OwnPid, true).Kind);
+            Assert.AreEqual(OutputTargetKind.OwnWindow, OutputTarget.Classify(Window(OwnPid, "VRime"), OwnPid, true).Kind);
+            Assert.AreEqual(OutputTargetKind.None, OutputTarget.Classify(null, OwnPid, true).Kind);
+        }
+
+        [Test]
+        public void 送り方を問わずVRChatかを判定できる()
+        {
+            Assert.IsTrue(OutputTarget.Classify(Window(200, "VRChat"), OwnPid, false).IsVRChat);
+            Assert.IsTrue(OutputTarget.Classify(Window(200, "VRChat"), OwnPid, true).IsVRChat);
+            Assert.IsFalse(OutputTarget.Classify(Window(200, "notepad"), OwnPid, true).IsVRChat);
+            Assert.IsFalse(OutputTarget.None.IsVRChat);
         }
 
         [Test]
         public void 名前はアプリ名_プロセス名の順に使う()
         {
-            Assert.AreEqual("メモ帳", OutputTarget.Classify(Window(200, "notepad", "メモ帳"), OwnPid).Name);
-            Assert.AreEqual("notepad", OutputTarget.Classify(Window(200, "notepad"), OwnPid).Name);
-            Assert.IsNotEmpty(OutputTarget.Classify(Window(200, null), OwnPid).Name);
+            Assert.AreEqual("メモ帳", OutputTarget.Classify(Window(200, "notepad", "メモ帳"), OwnPid, false).Name);
+            Assert.AreEqual("notepad", OutputTarget.Classify(Window(200, "notepad"), OwnPid, false).Name);
+            Assert.IsNotEmpty(OutputTarget.Classify(Window(200, null), OwnPid, false).Name);
         }
 
         [Test]
         public void VRChatと本アプリとなしは決まった名前を使う()
         {
-            Assert.AreEqual("VRChat", OutputTarget.Classify(Window(200, "vrchat", "VRChat Client"), OwnPid).Name);
-            Assert.IsNotEmpty(OutputTarget.Classify(Window(OwnPid, "VRime"), OwnPid).Name);
+            Assert.AreEqual("VRChat", OutputTarget.Classify(Window(200, "vrchat", "VRChat Client"), OwnPid, false).Name);
+            Assert.AreEqual("VRChat（貼り付け）", OutputTarget.Classify(Window(200, "vrchat", "VRChat Client"), OwnPid, true).Name);
+            Assert.IsNotEmpty(OutputTarget.Classify(Window(OwnPid, "VRime"), OwnPid, false).Name);
             Assert.IsNotEmpty(OutputTarget.None.Name);
         }
     }
@@ -408,38 +448,75 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 前面が変わったときだけ調べ直してVersionを増やす()
+        public void 前面が変わったときだけ再取得してVersionを増やす()
         {
             var source = new FakeSource { Handle = new IntPtr(1), ProcessId = 200 };
             var monitor = new ForegroundWindowMonitor(source, OwnPid);
             int version = monitor.Version;
 
-            monitor.Update();
+            monitor.Update(false);
             Assert.AreEqual(version, monitor.Version);
             Assert.AreEqual(1, source.DescribeCount);
 
             source.Handle = new IntPtr(2);
             source.ProcessId = 300;
             source.ProcessName = "VRChat";
-            monitor.Update();
+            monitor.Update(false);
             Assert.AreEqual(version + 1, monitor.Version);
             Assert.AreEqual(OutputTargetKind.VRChat, monitor.Target.Kind);
             Assert.AreEqual(2, source.DescribeCount);
 
             source.Handle = IntPtr.Zero;
-            monitor.Update();
+            monitor.Update(false);
             Assert.AreEqual(version + 2, monitor.Version);
             Assert.AreEqual(OutputTargetKind.None, monitor.Target.Kind);
             Assert.AreEqual(2, source.DescribeCount);
         }
 
         [Test]
-        public void 同じハンドルでもプロセスが変われば調べ直す()
+        public void 貼り付けモードが変わると再取得せずに送信先を決め直す()
+        {
+            var source = new FakeSource { Handle = new IntPtr(1), ProcessId = 200, ProcessName = "VRChat" };
+            var monitor = new ForegroundWindowMonitor(source, OwnPid);
+            int version = monitor.Version;
+
+            monitor.Update(true);
+            Assert.AreEqual(OutputTargetKind.VRChatPaste, monitor.Target.Kind);
+            Assert.AreEqual(version + 1, monitor.Version);
+
+            monitor.Update(false);
+            Assert.AreEqual(OutputTargetKind.VRChat, monitor.Target.Kind);
+            Assert.AreEqual(version + 2, monitor.Version);
+            Assert.AreEqual(1, source.DescribeCount);
+        }
+
+        [Test]
+        public void VRChat以外では貼り付けモードが変わってもVersionは変わらない()
+        {
+            var source = new FakeSource { Handle = new IntPtr(1), ProcessId = 200 };
+            var monitor = new ForegroundWindowMonitor(source, OwnPid);
+            int version = monitor.Version;
+
+            monitor.Update(true);
+            Assert.AreEqual(OutputTargetKind.Desktop, monitor.Target.Kind);
+            Assert.AreEqual(version, monitor.Version);
+
+            // 貼り付けモードのまま VRChat が前面になれば、貼り付けで送る。
+            source.Handle = new IntPtr(2);
+            source.ProcessId = 300;
+            source.ProcessName = "VRChat";
+            monitor.Update(true);
+            Assert.AreEqual(OutputTargetKind.VRChatPaste, monitor.Target.Kind);
+            Assert.AreEqual(version + 1, monitor.Version);
+        }
+
+        [Test]
+        public void 同じハンドルでもプロセスが変われば再取得する()
         {
             var source = new FakeSource { Handle = new IntPtr(1), ProcessId = 200 };
             var monitor = new ForegroundWindowMonitor(source, OwnPid);
             source.ProcessId = OwnPid;
-            monitor.Update();
+            monitor.Update(false);
             Assert.AreEqual(OutputTargetKind.OwnWindow, monitor.Target.Kind);
         }
     }

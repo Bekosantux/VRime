@@ -12,7 +12,7 @@ namespace VRime.App.View
         Inactive,
     }
 
-    /// <summary>ページ行の札（ページ・全角/半角・大文字/小文字）。</summary>
+    /// <summary>ページ行のチップ（ページ・全角/半角・大文字/小文字）。</summary>
     public sealed class GripPanelChip : MonoBehaviour
     {
         [SerializeField] Image _background;

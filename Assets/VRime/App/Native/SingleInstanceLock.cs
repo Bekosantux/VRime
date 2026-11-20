@@ -21,7 +21,7 @@ namespace VRime.App.Native
         }
 
         /// <summary>
-        /// ほかに本アプリのプロセスがなければ、ロックを取って true を返す。あれば false（lockHandle は null）。
+        /// ほかに本アプリのプロセスがなければ、ロックを取得して true を返す。あれば false（lockHandle は null）。
         /// ミューテックスを作れないときは例外。
         /// </summary>
         public static bool TryAcquire(out SingleInstanceLock lockHandle)

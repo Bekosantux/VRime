@@ -9,7 +9,7 @@ namespace VRime.App.View
     /// 設定画面の 1 カテゴリのページ。カテゴリの項目の行を子に持ち、選んでいるカテゴリのページだけを表示する（GameObject を切り替える）。
     /// どのカテゴリのページかは <see cref="_key"/>（<see cref="SettingsCatalog"/> のカテゴリのキー）で決める。
     /// タブは表示を切り替えても見えている必要があるため、ページの外に置く。
-    /// 選択肢の一覧（<see cref="SettingsDropdownRow.List"/>）は、ほかの行の上に描くため、ページの直下の末尾に置く。
+    /// 選択肢の一覧（<see cref="SettingsDropdownRow.List"/>）は、ほかの行の上に描画するため、ページの直下の末尾に置く。
     /// </summary>
     public sealed class SettingsPage : MonoBehaviour
     {
@@ -60,7 +60,7 @@ namespace VRime.App.View
                 SettingsDropdownRow dropdown = _dropdowns[i];
                 SceneChecks.RequireUnder(dropdown, this, this, nameof(_dropdowns) + "[" + i + "]");
                 dropdown.Validate();
-                // 選択肢の一覧を末尾にまとめて置き、ページのほかの子より後に描く。
+                // 選択肢の一覧を末尾にまとめて置き、ページのほかの子より後に描画する。
                 Transform list = dropdown.List;
                 if (list.parent != transform || list.GetSiblingIndex() < transform.childCount - _dropdowns.Length)
                     throw new InvalidOperationException(SceneChecks.PathOf(list) + " は " + SceneChecks.PathOf(transform) + " の直下の末尾に置く必要があります。");

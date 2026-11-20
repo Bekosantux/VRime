@@ -34,8 +34,8 @@ namespace VRime.App.SteamVR
         bool _disposed;
         bool _quitRequested;
 
-        /// <param name="renderTarget">キーボードの描画先。描かれるたびに、そのテクスチャをオーバーレイへ渡す。</param>
-        /// <param name="settingsRenderTarget">設定画面の描画先。描かれるたびに、そのテクスチャをダッシュボードのタブへ渡す。</param>
+        /// <param name="renderTarget">キーボードの描画先。描画されるたびに、そのテクスチャをオーバーレイへ渡す。</param>
+        /// <param name="settingsRenderTarget">設定画面の描画先。描画されるたびに、そのテクスチャをダッシュボードのタブへ渡す。</param>
         /// <param name="settingsPointer">設定画面へのレーザーの操作の渡し先。</param>
         /// <param name="overlayPlacement">キーボードの位置からオーバーレイの変換を求めるもの。</param>
         /// <param name="placement">キーボードのオーバーレイの最初の位置。</param>
@@ -114,7 +114,7 @@ namespace VRime.App.SteamVR
 
         /// <summary>
         /// 開いたらオーバーレイを表示して入力を占有し、閉じたら隠して入力の占有をやめる（位置の確認用に表示している間は隠さない）。
-        /// ダッシュボードによる一時停止・再開もここを通る（手動の開閉と同じ経路にするため。SPEC 4.4）。
+        /// ダッシュボードによる一時停止・再開もここを通る（手動の開閉と同じ経路にするため。ARCHITECTURE.md「入力の横取り」）。
         /// </summary>
         public void OnOpenChanged(bool isOpen)
         {

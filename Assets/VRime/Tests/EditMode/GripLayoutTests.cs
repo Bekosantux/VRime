@@ -4,7 +4,7 @@ using VRime.Core.Grip;
 
 namespace VRime.Core.Tests
 {
-    /// <summary>SPEC 5.2 の表との一致を確認する。表は SPEC の文字を \u 表記でも照合できるよう、そのまま書き写している。</summary>
+    /// <summary>docs/spec/grip-input.md の文字の配置の表との一致を確認する。表は仕様書の文字を \u 表記でも照合できるよう、そのまま書き写している。</summary>
     public class GripLayoutTests
     {
         static readonly StickDirection[] Directions =
@@ -88,7 +88,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void かなの機能ページの中段3マス()
+        public void かなの機能ページの中段の3つのセル()
         {
             GripCell modifier = GripLayout.GetConsonantCell(GripPage.Kana, true, 3);
             Assert.AreEqual(GripCellKind.Action, modifier.Kind);
@@ -105,7 +105,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 英字の機能ページの中段3マス()
+        public void 英字の機能ページの中段の3つのセル()
         {
             Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 3).Kind);
             Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 4).Kind);
@@ -113,7 +113,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 数字の機能ページの中段3マス()
+        public void 数字の機能ページの中段の3つのセル()
         {
             AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 3), "-+*/~");
             AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 4), "0(=)&");
@@ -125,11 +125,11 @@ namespace VRime.Core.Tests
         {
             GripAction?[] expected =
             {
-                GripAction.ToggleWidth, null, GripAction.NumberPage,
+                GripAction.ToggleWidth, GripAction.Language, GripAction.NumberPage,
                 GripAction.CursorLeft, GripAction.ToggleCase, GripAction.CursorRight,
-                GripAction.Language, GripAction.Convert, GripAction.Commit,
+                GripAction.TogglePasteMode, GripAction.Convert, GripAction.Commit,
             };
-            string[] labels = { "全/半", "・", "数字", "←", "↑", "→", "言語", "変換", "確定" };
+            string[] labels = { "全/半", "言語", "数字", "←", "↑", "→", "貼付", "変換", "確定" };
             for (int cell = 0; cell < 9; cell++)
             {
                 GripCell actual = GripLayout.GetVowelFunctionCell(cell);

@@ -33,7 +33,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void SPECの応答例を解析する()
+        public void 仕様の応答例を解析する()
         {
             var segments = TransliterateApi.ParseResponse(SampleJson);
             Assert.AreEqual(2, segments.Count);

@@ -17,7 +17,7 @@ namespace VRime.App.Output
         Refused,
     }
 
-    /// <summary>起動中の VRChat のウィンドウを前面にする（SPEC 8.1 の「起動時に VRChat にフォーカス」）。</summary>
+    /// <summary>起動中の VRChat のウィンドウを前面にする（設定「起動時にVRChatにフォーカス」。docs/spec/output.md「VRChat」）。</summary>
     public static class VRChatWindow
     {
         public static VRChatFocusResult Focus()

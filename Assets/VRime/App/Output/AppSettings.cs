@@ -2,7 +2,7 @@ using System;
 
 namespace VRime.App.Output
 {
-    /// <summary>App 層の設定値（SPEC 8章の「出力」）。不正な値は例外。保存は設定画面の段階で扱う。</summary>
+    /// <summary>App 層の設定値。不正な値は例外。設定画面と設定ファイルにはまだ含めていない（docs/ROADMAP.md「設定項目」）。</summary>
     public sealed class AppSettings
     {
         public const string DefaultOscHost = "127.0.0.1";

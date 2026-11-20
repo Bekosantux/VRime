@@ -25,7 +25,7 @@ namespace VRime.Core.Output
     }
 
     /// <summary>
-    /// VRChat のチャットボックスへ出すメッセージの順序と間隔の制御（SPEC 7.3）。
+    /// VRChat のチャットボックスへ出すメッセージの順序と間隔の制御（docs/spec/output.md「VRChat」）。
     /// 送信は順にすべて出し、入力中の表示は最新の 1 件だけを出す。送信を優先し、両者で最小間隔を共有する。
     /// 時刻は呼び出し側が渡す（秒）。
     /// </summary>

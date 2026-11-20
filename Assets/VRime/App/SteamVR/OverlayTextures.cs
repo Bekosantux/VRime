@@ -27,7 +27,7 @@ namespace VRime.App.SteamVR
             // SteamVR の既定は乗算済みでない前提のため、フラグで乗算済みであることを伝える。
             OpenVRErrors.Check(overlay.SetOverlayFlag(handle, VROverlayFlags.IsPremultiplied, true), "SetOverlayFlag(IsPremultiplied)");
 
-            // D3D11 の RenderTexture は上下が逆になるため、v を反転する（SPEC 3.3）。
+            // D3D11 の RenderTexture は上下が逆になるため、v を反転する。
             var bounds = new VRTextureBounds_t { uMin = 0f, uMax = 1f, vMin = 1f, vMax = 0f };
             OpenVRErrors.Check(overlay.SetOverlayTextureBounds(handle, ref bounds), "SetOverlayTextureBounds");
         }

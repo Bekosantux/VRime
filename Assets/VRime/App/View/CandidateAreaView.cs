@@ -9,21 +9,21 @@ using VRime.Core.Conversion;
 namespace VRime.App.View
 {
     /// <summary>
-    /// 候補欄（SPEC 6.3）。変換の応答待ち・変換中のみ表示する。
+    /// 候補欄（docs/spec/conversion.md「候補欄」）。変換の応答待ち・変換中のみ表示する。
     /// 文節を横に並べて選択中を強調し、選択中の文節の下にその候補を縦に並べる。文節の並びは下端を入力欄の直上にそろえる。
     /// 文節が表示の範囲の幅を超えるときは、選択中の文節が見える位置まで横にずらす。
-    /// 変換に失敗して代わりの候補を出しているときは、その理由を文節の並びのすぐ上の帯に表示する。
-    /// 文節の列は、シーンに置いた雛形（<see cref="_columnTemplate"/>）を必要な数だけ複製する。雛形自身は表示しない。
+    /// 変換に失敗して代わりの候補を出しているときは、その理由を文節の並びのすぐ上のバナーに表示する。
+    /// 文節の列は、シーンに置いたテンプレート（<see cref="_columnTemplate"/>）を必要な数だけ複製する。テンプレート自身は表示しない。
     /// </summary>
     public sealed class CandidateAreaView : MonoBehaviour
     {
         [Tooltip("変換の応答待ちに表示するもの。")]
         [SerializeField] GameObject _waiting;
 
-        [Tooltip("変換に失敗したときの帯。候補欄の直下に置く。位置と幅はこのビューが決める（高さはシーンの値を使う）。")]
+        [Tooltip("変換に失敗したときのバナー。候補欄の直下に置く。位置と幅はこのビューが決める（高さはシーンの値を使う）。")]
         [SerializeField] RectTransform _banner;
 
-        [Tooltip("帯の文字。_banner の子で、左右に余白を空けて帯いっぱいに広げる（その余白を帯の幅に足す）。")]
+        [Tooltip("バナーの文字。_banner の子で、左右に余白を空けてバナーいっぱいに広げる（その余白をバナーの幅に足す）。")]
         [SerializeField] TextMeshProUGUI _bannerText;
 
         [Tooltip("文節の並びを表示する範囲。候補欄いっぱいに広げ、はみ出した部分は隠す。")]
@@ -33,10 +33,10 @@ namespace VRime.App.View
                  "シーンでの位置が、ずらしていないときの位置になる。その左の余白と同じ幅を右にも空け、間を文節を表示する幅とする。")]
         [SerializeField] RectTransform _row;
 
-        [Tooltip("文節の列の雛形。_row の直下に置く。")]
+        [Tooltip("文節の列のテンプレート。_row の直下に置く。")]
         [SerializeField] CandidateColumn _columnTemplate;
 
-        [Tooltip("帯と文節の並びの間。")]
+        [Tooltip("バナーと文節の並びの間。")]
         [SerializeField] float _bannerGap = 8f;
 
         readonly List<CandidateColumn> _columns = new List<CandidateColumn>();
@@ -88,7 +88,7 @@ namespace VRime.App.View
                 throw new InvalidOperationException(SceneChecks.PathOf(bannerTextRect) + " は " + SceneChecks.PathOf(_banner) + " いっぱいに広げる（アンカーを 0〜1 にする）必要があります。");
             _bannerPadding = bannerTextRect.offsetMin.x - bannerTextRect.offsetMax.x;
             if (!(_visibleWidth > _bannerPadding))
-                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の文節を表示する幅が、帯の文字の左右の余白より狭いです。");
+                throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の文節を表示する幅が、バナーの文字の左右の余白より狭いです。");
             _columnTemplate.gameObject.SetActive(false);
         }
 
@@ -129,7 +129,7 @@ namespace VRime.App.View
             {
                 CandidateColumn column = Instantiate(_columnTemplate, _row);
                 column.name = _columnTemplate.name + " " + _columns.Count;
-                // 雛形は非表示のため、複製も非表示になる。文字の幅を測れるよう、一度も有効にしていない状態で使わない。
+                // テンプレートは非表示のため、複製も非表示になる。文字の幅を測れるよう、一度も有効にしていない状態で使わない。
                 column.gameObject.SetActive(true);
                 column.Initialize(_theme, _visibleWidth);
                 _columns.Add(column);
@@ -172,7 +172,7 @@ namespace VRime.App.View
             if (failed) PlaceBanner("変換に失敗しました: " + failureReason);
         }
 
-        // 帯は文節の並びの上端の _bannerGap 上に、文節の並びの左端（ずらしていないとき）にそろえて置く。
+        // バナーは文節の並びの上端の _bannerGap 上に、文節の並びの左端（ずらしていないとき）にそろえて置く。
         void PlaceBanner(string text)
         {
             var area = (RectTransform)transform;

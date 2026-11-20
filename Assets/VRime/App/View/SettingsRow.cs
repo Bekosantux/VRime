@@ -9,7 +9,8 @@ namespace VRime.App.View
     /// <summary>
     /// 設定画面の数値の項目の行。［−］・スライダー・［＋］と現在の値を表示する。
     /// どの項目の行かは <see cref="_key"/>（<see cref="SettingsCatalog"/> の項目のキー）で決める。項目名などのラベルはシーンに置いたまま変えない。
-    /// スライダーの塗りとつまみは、値の範囲（<see cref="_track"/>）に対する割合をアンカーの x に設定して置く。
+    /// スライダーのフィルとハンドルは、値の範囲（<see cref="_track"/>）に対する割合をアンカーの x に設定して置く。
+    /// ハンドルは外側の枠（<see cref="_thumb"/>）と内側（<see cref="_thumbFill"/>）の 2 枚の画像で描画し、内側がパネルと同じ明るさの色でも輪郭が見えるようにする。
     /// </summary>
     public sealed class SettingsRow : MonoBehaviour
     {
@@ -25,11 +26,14 @@ namespace VRime.App.View
         [Tooltip("値の範囲。左端が最小値、右端が最大値。")]
         [SerializeField] RectTransform _track;
 
-        [Tooltip("値までの塗り。_track の直下に置き、アンカーの x を 0 から値の割合までにする。")]
+        [Tooltip("値までのフィル。_track の直下に置き、アンカーの x を 0 から値の割合までにする。")]
         [SerializeField] RectTransform _fill;
 
-        [Tooltip("つまみ。_track の直下に置き、アンカーの x を値の割合にする。")]
+        [Tooltip("ハンドルの枠。_track の直下に置き、アンカーの x を値の割合にする。")]
         [SerializeField] Image _thumb;
+
+        [Tooltip("ハンドルの内側の画像。_thumb の直下に、枠の太さの分だけ小さくして置く。")]
+        [SerializeField] Image _thumbFill;
 
         [SerializeField] TextMeshProUGUI _value;
 
@@ -48,11 +52,14 @@ namespace VRime.App.View
             SceneChecks.Require(_track, this, nameof(_track));
             SceneChecks.Require(_fill, this, nameof(_fill));
             SceneChecks.Require(_thumb, this, nameof(_thumb));
+            SceneChecks.Require(_thumbFill, this, nameof(_thumbFill));
             SceneChecks.Require(_value, this, nameof(_value));
             if (_fill.parent != _track)
                 throw new InvalidOperationException(SceneChecks.PathOf(_fill) + " は " + SceneChecks.PathOf(_track) + " の直下に置く必要があります。");
             if (_thumb.transform.parent != _track)
                 throw new InvalidOperationException(SceneChecks.PathOf(_thumb.transform) + " は " + SceneChecks.PathOf(_track) + " の直下に置く必要があります。");
+            if (_thumbFill.transform.parent != _thumb.transform)
+                throw new InvalidOperationException(SceneChecks.PathOf(_thumbFill.transform) + " は " + SceneChecks.PathOf(_thumb.transform) + " の直下に置く必要があります。");
             _decrease.Validate();
             _increase.Validate();
         }
@@ -91,7 +98,9 @@ namespace VRime.App.View
             thumb.anchorMin = new Vector2(fraction, thumb.anchorMin.y);
             thumb.anchorMax = new Vector2(fraction, thumb.anchorMax.y);
             bool active = form.DraggingItem == _item || form.Hover == _sliderHit;
-            _thumb.color = active ? _theme.Current.SettingsThumbActive : _theme.Current.SettingsThumb;
+            KeyboardTheme theme = _theme.Current;
+            _thumb.color = active ? theme.SettingsThumbActive : theme.SettingsThumbRing;
+            _thumbFill.color = active ? theme.SettingsThumbActive : theme.SettingsThumb;
 
             string text = _item.Format(value);
             if (_value.text != text) _value.text = text;

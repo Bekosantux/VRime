@@ -16,7 +16,7 @@ namespace VRime.App.Settings
             Key = key;
         }
 
-        /// <summary>項目を識別するキー。設定ファイルに保存する項目では、設定ファイルの値の名前（SPEC 8.1）と同じ。</summary>
+        /// <summary>項目を識別するキー。設定ファイルに保存する項目では、設定ファイルの値の名前（docs/spec/settings.md「設定ファイル」）と同じ。</summary>
         public string Key { get; }
     }
 
@@ -91,7 +91,7 @@ namespace VRime.App.Settings
     /// <summary>
     /// 値をアプリの外（SteamVR など）が持つオン・オフの項目。設定ファイルには保存しない。
     /// 値の読み書きは <see cref="SettingsForm"/> を通してアプリが行う（<see cref="SettingsForm.SetExternalValue"/> / <see cref="SettingsForm.ExternalChangeRequested"/>）。
-    /// 外の値はアプリの外でも変わりうるため、アプリは表示の前に読み直して渡す。
+    /// 外の値はアプリの外でも変わりうるため、アプリは表示の前に再取得して渡す。
     /// </summary>
     public sealed class ExternalToggleSettingItem : SwitchSettingItem
     {
@@ -183,7 +183,7 @@ namespace VRime.App.Settings
         public UserSettings ResetToDefault(UserSettings settings) => SetIndex(settings, GetIndex(UserSettings.Default));
     }
 
-    /// <summary>設定画面のタブ 1 つ分の項目のまとまり。「既定に戻す」はカテゴリごとに働く。</summary>
+    /// <summary>設定画面のタブ 1 つ分の項目のまとまり。「既定に戻す」はカテゴリごとに作用する。</summary>
     public sealed class SettingsCategory
     {
         /// <param name="showsKeyboardPreview">このカテゴリを表示している間、位置の確認用にキーボードのオーバーレイを表示するか。</param>
@@ -250,10 +250,10 @@ namespace VRime.App.Settings
         }
     }
 
-    /// <summary>設定画面に並べるカテゴリと項目（SPEC 8章）。</summary>
+    /// <summary>設定画面に並べるカテゴリと項目（docs/spec/settings.md「項目」）。</summary>
     public static class SettingsCatalog
     {
-        /// <summary>SteamVR の起動時に自動で起動するか（SPEC 9）。値は SteamVR が持つ。</summary>
+        /// <summary>SteamVR の起動時に自動で起動するか（docs/spec/lifecycle.md「SteamVR への登録と自動起動」）。値は SteamVR が持つ。</summary>
         public static readonly ExternalToggleSettingItem AutoLaunch = new ExternalToggleSettingItem("autoLaunch", defaultValue: false);
 
         // AutoLaunch より後に初期化する（静的フィールドは宣言の順に初期化される）。
@@ -289,6 +289,8 @@ namespace VRime.App.Settings
                     s => s.VRChat.FocusOnStartup, (s, v) => s.WithVRChat(s.VRChat.WithFocusOnStartup(v))),
                 new ToggleSettingItem("showTypingText",
                     s => s.VRChat.ShowTypingText, (s, v) => s.WithVRChat(s.VRChat.WithShowTypingText(v))),
+                new ToggleSettingItem("resetPasteModeAfterSend",
+                    s => s.VRChat.ResetPasteModeAfterSend, (s, v) => s.WithVRChat(s.VRChat.WithResetPasteModeAfterSend(v))),
                 AutoLaunch,
             }),
             new SettingsCategory("privacy", new SettingItem[]

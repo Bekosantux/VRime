@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 namespace VRime.Core.Conversion
 {
-    /// <summary>Google CGI API for Japanese Input（SPEC 6.1）のリクエストの組み立てと応答の解析。</summary>
+    /// <summary>Google CGI API for Japanese Input（docs/spec/conversion.md「変換エンジン」）のリクエストの組み立てと応答の解析。</summary>
     public static class TransliterateApi
     {
         // langpair の「|」は URL として正しい %7C にしておく（サーバーは同じ値として解釈する）。

@@ -4,8 +4,8 @@ using TMPro;
 namespace VRime.App.View
 {
     /// <summary>
-    /// 1行の文字を幅に収める。収まらないときは、収まる長さまで切って省略記号を付ける。
-    /// TextMeshPro の省略記号（Ellipsis）は、レイアウトで幅が決まる文字では文字が描かれなくなる（Unity 6.3 で確認）ため使わない。
+    /// 1行の文字を幅に収める。収まらないときは、収まる長さまで切り詰めて省略記号を付ける。
+    /// TextMeshPro の省略記号（Ellipsis）は、レイアウトで幅が決まる文字では文字が描画されなくなる（Unity 6.3 で確認）ため使わない。
     /// </summary>
     public static class TextFitting
     {

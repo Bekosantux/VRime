@@ -81,7 +81,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 既定の位置は試作2の値()
+        public void 既定の位置は仕様の値()
         {
             KeyboardPlacement p = KeyboardPlacement.Default;
             Assert.AreEqual(0.26f, p.DownMeters);
@@ -140,8 +140,9 @@ namespace VRime.App.Tests
             Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
             Assert.AreNotEqual(a, UserSettings.Default);
             Assert.AreNotEqual(UserSettings.Default.WithRepeatDelaySeconds(0.6f), UserSettings.Default);
-            Assert.AreNotEqual(UserSettings.Default.WithVRChat(new VRChatSettings(true, false)), UserSettings.Default);
-            Assert.AreEqual(UserSettings.Default.WithVRChat(new VRChatSettings(true, true)), UserSettings.Default);
+            Assert.AreNotEqual(UserSettings.Default.WithVRChat(new VRChatSettings(true, false, true)), UserSettings.Default);
+            Assert.AreNotEqual(UserSettings.Default.WithVRChat(new VRChatSettings(true, true, false)), UserSettings.Default);
+            Assert.AreEqual(UserSettings.Default.WithVRChat(new VRChatSettings(true, true, true)), UserSettings.Default);
         }
 
         [Test]
@@ -185,7 +186,7 @@ namespace VRime.App.Tests
                 .WithTriggerThreshold(0.6f)
                 .WithStickThreshold(0.4f)
                 .WithRepeatDelaySeconds(0.7f)
-                .WithVRChat(new VRChatSettings(false, false));
+                .WithVRChat(new VRChatSettings(false, false, false));
             Assert.AreEqual(privacy, settings.Privacy);
             Assert.AreNotEqual(UserSettings.Default.WithPrivacy(privacy), UserSettings.Default);
             Assert.Throws<ArgumentNullException>(() => UserSettings.Default.WithPrivacy(null));
@@ -194,7 +195,7 @@ namespace VRime.App.Tests
         [Test]
         public void ほかの値を変えてもVRChatの設定は変わらない()
         {
-            var vrchat = new VRChatSettings(false, true);
+            var vrchat = new VRChatSettings(false, true, false);
             UserSettings settings = UserSettings.Default.WithVRChat(vrchat)
                 .WithPlacement(KeyboardPlacement.Default.WithTilt(30f))
                 .WithTriggerThreshold(0.6f)
@@ -216,7 +217,7 @@ namespace VRime.App.Tests
                 .WithTriggerThreshold(0.55f)
                 .WithStickThreshold(0.35f)
                 .WithRepeatDelaySeconds(0.65f)
-                .WithVRChat(new VRChatSettings(false, true))
+                .WithVRChat(new VRChatSettings(false, true, false))
                 .WithPrivacy(new PrivacySettings(true));
             Assert.AreEqual(settings, SettingsSerializer.Deserialize(SettingsSerializer.Serialize(settings)));
         }
@@ -231,6 +232,7 @@ namespace VRime.App.Tests
             StringAssert.Contains("\"repeatDelaySeconds\": 0.5", json);
             StringAssert.Contains("\"focusOnStartup\": true", json);
             StringAssert.Contains("\"showTypingText\": true", json);
+            StringAssert.Contains("\"resetPasteModeAfterSend\": true", json);
             StringAssert.Contains("\"useGoogleConversion\": false", json);
             StringAssert.Contains("\"theme\": \"lime\"", json);
             StringAssert.Contains("\"theme\": \"dark\"", SettingsSerializer.Serialize(UserSettings.Default.WithTheme(ColorTheme.Dark)));
@@ -247,8 +249,10 @@ namespace VRime.App.Tests
             Assert.AreEqual(VRChatSettings.Default, settings.VRChat);
             Assert.AreEqual(PrivacySettings.Default, settings.Privacy);
 
-            Assert.AreEqual(new VRChatSettings(true, false),
+            Assert.AreEqual(new VRChatSettings(true, false, true),
                 SettingsSerializer.Deserialize("{\"version\":1,\"vrchat\":{\"showTypingText\":false}}").VRChat);
+            Assert.AreEqual(new VRChatSettings(true, true, false),
+                SettingsSerializer.Deserialize("{\"version\":1,\"vrchat\":{\"resetPasteModeAfterSend\":false}}").VRChat);
 
             Assert.AreEqual(UserSettings.Default, SettingsSerializer.Deserialize("{\"version\":1}"));
             Assert.AreEqual(ColorTheme.Lime, settings.Theme);
@@ -271,6 +275,7 @@ namespace VRime.App.Tests
         [TestCase("{\"version\":1,\"vrchat\":{\"focusOnStartup\":\"true\"}}")]
         [TestCase("{\"version\":1,\"vrchat\":{\"showTypingText\":1}}")]
         [TestCase("{\"version\":1,\"vrchat\":{\"showTypingText\":null}}")]
+        [TestCase("{\"version\":1,\"vrchat\":{\"resetPasteModeAfterSend\":0}}")]
         [TestCase("{\"version\":1,\"privacy\":false}")]
         [TestCase("{\"version\":1,\"privacy\":{\"useGoogleConversion\":\"true\"}}")]
         [TestCase("{\"version\":1,\"display\":{\"theme\":\"blue\"}}")]
@@ -545,7 +550,8 @@ namespace VRime.App.Tests
             {
                 new SettingsToggleLayout(SettingsCatalog.FindToggle("focusOnStartup"), new Rect(200f, 144f, 900f, 72f)),
                 TestSettingsLayout.Toggle(SettingsCatalog.FindToggle("showTypingText"), 216f),
-                TestSettingsLayout.Toggle(SettingsCatalog.AutoLaunch, 288f),
+                TestSettingsLayout.Toggle(SettingsCatalog.FindToggle("resetPasteModeAfterSend"), 288f),
+                TestSettingsLayout.Toggle(SettingsCatalog.AutoLaunch, 360f),
             }, Array.Empty<SettingsDropdownLayout>());
             Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(page));
         }
@@ -808,9 +814,13 @@ namespace VRime.App.Tests
 
             ToggleSettingItem focus = SettingsCatalog.FindToggle("focusOnStartup");
             ToggleSettingItem typing = SettingsCatalog.FindToggle("showTypingText");
-            Assert.AreEqual(new VRChatSettings(false, true), focus.Set(s, false).VRChat);
-            Assert.AreEqual(new VRChatSettings(true, false), typing.Set(s, false).VRChat);
+            ToggleSettingItem resetPaste = SettingsCatalog.FindToggle("resetPasteModeAfterSend");
+            Assert.AreEqual(new VRChatSettings(false, true, true), focus.Set(s, false).VRChat);
+            Assert.AreEqual(new VRChatSettings(true, false, true), typing.Set(s, false).VRChat);
+            Assert.AreEqual(new VRChatSettings(true, true, false), resetPaste.Set(s, false).VRChat);
             Assert.IsFalse(typing.Get(typing.Set(s, false)));
+            Assert.IsFalse(resetPaste.Get(resetPaste.Set(s, false)));
+            Assert.IsFalse(resetPaste.Set(s, false).ToKeyboardSettings().ResetPasteModeAfterSend);
 
             ToggleSettingItem google = SettingsCatalog.FindToggle("useGoogleConversion");
             Assert.AreEqual(new PrivacySettings(true), google.Set(s, true).Privacy);
@@ -873,7 +883,7 @@ namespace VRime.App.Tests
                 Keys(SettingsCatalog.FindCategory("display").Items, i => i.Key));
             CollectionAssert.AreEqual(new[] { "triggerThreshold", "stickThreshold", "repeatDelaySeconds" },
                 Keys(SettingsCatalog.FindCategory("grip").Items, i => i.Key));
-            CollectionAssert.AreEqual(new[] { "focusOnStartup", "showTypingText", "autoLaunch" },
+            CollectionAssert.AreEqual(new[] { "focusOnStartup", "showTypingText", "resetPasteModeAfterSend", "autoLaunch" },
                 Keys(SettingsCatalog.FindCategory("integration").Items, i => i.Key));
             CollectionAssert.AreEqual(new[] { "useGoogleConversion" },
                 Keys(SettingsCatalog.FindCategory("privacy").Items, i => i.Key));
@@ -914,7 +924,7 @@ namespace VRime.App.Tests
                 .WithTheme(ColorTheme.Dark)
                 .WithStickThreshold(0.8f)
                 .WithRepeatDelaySeconds(0.7f)
-                .WithVRChat(new VRChatSettings(false, false))
+                .WithVRChat(new VRChatSettings(false, false, false))
                 .WithPrivacy(new PrivacySettings(true));
 
             UserSettings display = SettingsCatalog.FindCategory("display").ResetToDefault(changed);
@@ -1068,7 +1078,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void ボタンの外で離すと働かない()
+        public void ボタンの外で離すと動作しない()
         {
             SettingsRowLayout row = Row("tiltDegrees");
             _form.PointerDown(row.Increase.center);
@@ -1140,7 +1150,7 @@ namespace VRime.App.Tests
             Assert.AreEqual(1, requests.Count);
             Assert.AreSame(SettingsCatalog.AutoLaunch, requests[0].item);
             Assert.IsTrue(requests[0].value);
-            Assert.AreEqual(false, _form.GetExternalValue(SettingsCatalog.AutoLaunch), "読み直した値が渡されるまで変えない");
+            Assert.AreEqual(false, _form.GetExternalValue(SettingsCatalog.AutoLaunch), "再取得した値が渡されるまで変えない");
             Assert.AreEqual(0, _changed.Count);
             Assert.AreEqual(0, _committed.Count);
 
@@ -1179,7 +1189,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void スライダーはつまんでいる間随時変わり離したときに確定する()
+        public void スライダーはドラッグしている間随時変わり離したときに確定する()
         {
             SettingsRowLayout row = Row("rightMeters");
             float y = row.Slider.center.y;
@@ -1187,7 +1197,7 @@ namespace VRime.App.Tests
             Assert.AreEqual(-0.50f, _form.Settings.Placement.RightMeters);
             Assert.AreSame(row.Item, _form.DraggingItem);
 
-            // 行の外へ動かしても、つまんでいる間は追従する。
+            // 行の外へ動かしても、ドラッグしている間は追従する。
             _form.PointerMove(new Vector2(row.Track.xMax, y + 200f));
             Assert.AreEqual(0.50f, _form.Settings.Placement.RightMeters);
             Assert.AreEqual(2, _changed.Count);
@@ -1213,7 +1223,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void つまんだままポインターが外れると確定する()
+        public void ドラッグしたままポインターが外れると確定する()
         {
             SettingsRowLayout row = Row("widthMeters");
             _form.PointerDown(new Vector2(row.Track.xMin, row.Slider.center.y));
@@ -1256,7 +1266,7 @@ namespace VRime.App.Tests
             UserSettings initial = UserSettings.Default
                 .WithPlacement(KeyboardPlacement.Default.WithTilt(30f))
                 .WithStickThreshold(0.8f)
-                .WithVRChat(new VRChatSettings(false, false));
+                .WithVRChat(new VRChatSettings(false, false, false));
             var form = new SettingsForm(_layout, initial);
             UserSettings committed = null;
             form.Committed += s => committed = s;
@@ -1273,7 +1283,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 指しているものと押しているものが変わると版が増える()
+        public void 指しているものと押しているものが変わるとバージョンが増える()
         {
             SettingsRowLayout row = Row("tiltDegrees");
             int version = _form.Version;
@@ -1444,7 +1454,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 選択肢以外の場所を押して離すと何も変えずに一覧を閉じ_後ろの対象は働かない()
+        public void 選択肢以外の場所を押して離すと何も変えずに一覧を閉じ_後ろの対象は動作しない()
         {
             SettingsDropdownLayout dropdown = ThemeDropdown();
             Click(_form, dropdown.Button.center);
@@ -1492,7 +1502,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 通知を変えると版が増える()
+        public void 通知を変えるとバージョンが増える()
         {
             int version = _form.Version;
             _form.SetNotice("通知");

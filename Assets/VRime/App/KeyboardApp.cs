@@ -26,7 +26,7 @@ namespace VRime.App
     }
 
     /// <summary>
-    /// 起動の根。部品を組み立て、毎フレーム「環境のイベント → 入力を読む → Core を進める → 表示を更新する → 出力を進める」を行う。
+    /// コンポジションルート。部品を組み立て、毎フレーム「環境のイベント → 入力を読む → Core を進める → 表示を更新する → 出力を進める」を行う。
     /// Core からの通知（<see cref="IKeyboardEffects"/>）を、振動・変換の通信・送信・環境の切り替えへ振り分ける。
     /// 実行環境（OpenVR / 開発用のキーボード）は <see cref="IKeyboardPlatform"/> の差し替えで切り替える。
     /// 設定画面で変えた値は、キーボードの動作と表示位置へ随時反映し、確定したときに保存する。
@@ -121,8 +121,8 @@ namespace VRime.App
             Initialize();
         }
 
-        // 起動の処理（Awake・Start）を実行する。失敗したら、組み立てに失敗した状態で Update が回り続け、同じ例外が毎フレーム出るのを防ぐ。
-        // ビルドでは、例外の内容をメッセージボックスで示してから終了する（SPEC 3.1）。エディターでは例外をそのまま送出し、コンソールに出す。
+        // 起動の処理（Awake・Start）を実行する。失敗したら、組み立てに失敗した状態で Update が実行され続け、同じ例外が毎フレーム出るのを防ぐ。
+        // ビルドでは、例外の内容をメッセージボックスで示してから終了する（docs/spec/lifecycle.md「起動」）。エディターでは例外をそのまま送出し、コンソールに出す。
         void RunStartupStep(Action step)
         {
             try
@@ -209,7 +209,7 @@ namespace VRime.App
         {
             ValidateScene();
 
-            // 非表示のウィンドウでも入力を取りこぼさないよう、VSync を切って一定のフレームレートで回す（SPEC 3.3）。
+            // 非表示のウィンドウでも入力を取り逃さないよう、VSync を無効にして一定のフレームレートで実行する（ARCHITECTURE.md「Player Settings」）。
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = TargetFrameRate;
             // OnGUI では GUILayout を使わない。使わなければ、レイアウトのためのイベントを省ける。
@@ -224,7 +224,7 @@ namespace VRime.App
             KeyboardSettings settings = loaded.Settings.ToKeyboardSettings();
             _session = new KeyboardSession(settings, this);
 
-            // 文字を描く前にフォントを差し替える。編集用のアセットのアトラスに、実行中の文字が追加されないようにするため。
+            // 文字を描画する前にフォントを差し替える。編集用のアセットのアトラスに、実行中の文字が追加されないようにするため。
             _fonts = new KeyboardFonts(_regularFont, _boldFont);
             _fonts.Apply(_keyboardTarget.transform);
             _fonts.Apply(_settingsTarget.transform);
@@ -262,15 +262,15 @@ namespace VRime.App
             _settingsForm.QuitRequested += OnQuitRequested;
 
 #if !UNITY_EDITOR
-            // ウィンドウを隠した後も設定を開けて終了できるよう、隠す（Start）前にトレイのアイコンを置く（SPEC 9）。
+            // ウィンドウを隠した後も設定を開けて終了できるよう、隠す（Start）前にトレイのアイコンを置く（docs/spec/lifecycle.md「システムトレイ」）。
             _desktopSettings = new DesktopSettingsWindow(_settingsTarget.Texture, _settingsForm, _theme, AppInfo.DisplayName + " の設定");
             _tray = new TrayIcon(Path.Combine(Application.streamingAssetsPath, TrayIconRelativePath), AppInfo.DisplayName);
             Application.wantsToQuit += OnWantsToQuit;
 #endif
         }
 
-        // Unity は最初のシーンの Awake の後、Start の前にプレイヤーのウィンドウを表示する。Awake で隠しても表示し直されるため、
-        // VRChat を前面にする処理とウィンドウを隠す処理は Start で行う（SPEC 3.1）。
+        // Unity は最初のシーンの Awake の後、Start の前にプレイヤーのウィンドウを表示する。Awake で隠しても再表示されるため、
+        // VRChat を前面にする処理とウィンドウを隠す処理は Start で行う（docs/spec/lifecycle.md「起動」）。
         // Awake が例外で終わったときは enabled が false になり、Start は呼ばれない。
         void Start() => RunStartupStep(StartCore);
 
@@ -335,10 +335,13 @@ namespace VRime.App
             if (_quitting) return;
 
             // 送信先は、このフレームの入力を処理する前に決める。送信と文字数の上限が同じ送信先に従うようにするため。
-            _monitor.Update();
-            _session.SetLengthLimit(_monitor.Target.Kind == OutputTargetKind.VRChat ? VRChatChatbox.MaxLength : (int?)null);
+            // 貼り付けモードの切り替えは、次のフレームの送信先に反映する。
+            _monitor.Update(_session.IsPasteMode);
+            OutputTarget target = _monitor.Target;
+            _session.SetPasteModeAvailable(target.IsVRChat);
+            _session.SetLengthLimit(target.Kind == OutputTargetKind.VRChat ? VRChatChatbox.MaxLength : (int?)null);
 
-            // ダッシュボードが入力を持っている間は、手動で閉じるのと同じ処理でキーボードを閉じる（SPEC 4.4）。
+            // ダッシュボードが入力を持っている間は、手動で閉じるのと同じ処理でキーボードを閉じる（ARCHITECTURE.md「入力の横取り」）。
             _session.SetDashboardVisible(_platform.IsDashboardHoldingInput);
 
             _session.Tick(_platform.Controller.Read(), now);
@@ -349,12 +352,12 @@ namespace VRime.App
             bool placementPreview = settingsVisible && _settingsForm.Category.ShowsKeyboardPreview;
             _platform.SetPlacementPreviewVisible(placementPreview);
 
-            // キーボードは、開いている間と位置の確認用に表示している間だけ描く。
-            // 隠れている間に表示の版が変わっていることがあるため、表示し始めたときは必ず描く。
+            // キーボードは、開いている間と位置の確認用に表示している間だけ描画する。
+            // 隠れている間に表示のバージョンが変わっていることがあるため、表示し始めたときは必ず描画する。
             bool keyboardShown = _session.IsOpen || placementPreview;
             if (keyboardShown && (_keyboardView.RefreshIfChanged() || !_keyboardShown)) _keyboardTarget.Render();
             _keyboardShown = keyboardShown;
-            // SteamVR の設定画面でも変えられるため、設定画面の表示中は毎フレーム読み直す。
+            // SteamVR の設定画面でも変えられるため、設定画面の表示中は毎フレーム再取得する。
             if (settingsVisible) ReadExternalSettings();
             if (_settingsView.RefreshIfChanged()) _settingsTarget.Render();
 
@@ -383,7 +386,7 @@ namespace VRime.App
 
         void UpdateChatbox(double now)
         {
-            // 入力中であることの表示は、送信先が VRChat の間だけ送る（SPEC 7.3）。送信先が変われば次のフレームで取り下げる。
+            // 入力中であることの表示は、送信先が VRChat の間だけ送る（docs/spec/output.md「VRChat」）。送信先が変われば次のフレームで取り下げる。
             bool typing = _session.IsOpen && _session.Length > 0 && _monitor.Target.Kind == OutputTargetKind.VRChat;
             _chatbox.SetTyping(typing);
             bool showText = typing && _settingsForm.Settings.VRChat.ShowTypingText;
@@ -481,7 +484,7 @@ namespace VRime.App
         {
             _session.ApplySettings(settings.ToKeyboardSettings());
             _platform.SetPlacement(settings.Placement);
-            // 描き直しは、各ビューがテーマの版の変化を見て行う。
+            // 再描画は、各ビューがテーマのバージョンの変化を見て行う。
             _theme.Set(_themes.Get(settings.Theme));
         }
 
@@ -491,7 +494,7 @@ namespace VRime.App
             _settingsForm.SetExternalValue(SettingsCatalog.AutoLaunch, _platform.AutoLaunch);
         }
 
-        // 外の値を変えた後、読み直して設定画面に渡す（設定画面は自分では値を変えない）。
+        // 外の値を変えた後、再取得して設定画面に渡す（設定画面は自分では値を変えない）。
         void OnExternalChangeRequested(ExternalToggleSettingItem item, bool value)
         {
             if (item != SettingsCatalog.AutoLaunch) throw new ArgumentException("未知の項目です: " + item.Key, nameof(item));
@@ -517,7 +520,7 @@ namespace VRime.App
 
         void IKeyboardEffects.OnOpenChanged(bool isOpen)
         {
-            // 表示の描き直しはフレームの描画に任せる（開いた時点で表示の版が変わる）。
+            // 表示の再描画はフレームの描画に任せる（開いた時点で表示のバージョンが変わる）。
             // オーバーレイの表示切り替えと入力の優先度は、環境が行う。
             _platform.OnOpenChanged(isOpen);
         }

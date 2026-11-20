@@ -85,7 +85,7 @@ namespace VRime.App.Native
 
         /// <summary>
         /// INPUT 構造体（x64 で 40 バイト）。キーボード入力の部分だけを定義する。
-        /// 共用体の MOUSEINPUT が最大のため、x64 では型の後に 4 バイトの詰めが入り、本体は 8 バイト位置から始まる。
+        /// 共用体の MOUSEINPUT が最大のため、x64 では型の後に 4 バイトのパディングが入り、本体は 8 バイト位置から始まる。
         /// </summary>
         [StructLayout(LayoutKind.Explicit, Size = 40)]
         public struct INPUT
@@ -142,7 +142,7 @@ namespace VRime.App.Native
             public uint lPrivate;
         }
 
-        /// <summary>NOTIFYICONDATAW。uVersion は uTimeout との共用体。</summary>
+        /// <summary>NOTIFYICONDATAW（x64 で 976 バイト）。uVersion は uTimeout との共用体。</summary>
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct NOTIFYICONDATA
         {
