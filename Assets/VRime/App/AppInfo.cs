@@ -3,7 +3,7 @@ using System.IO;
 
 namespace VRime.App
 {
-    /// <summary>アプリ全体で揃える情報（利用者に見せる表示名と、データの置き場所）。</summary>
+    /// <summary>アプリ全体で揃える情報（利用者向けの表示名と、データの保存先）。</summary>
     public static class AppInfo
     {
         /// <summary>

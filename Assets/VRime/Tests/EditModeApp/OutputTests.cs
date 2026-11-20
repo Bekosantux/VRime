@@ -268,7 +268,7 @@ namespace VRime.App.Tests
             Assert.AreEqual("元の内容", snapshot);
             Assert.IsFalse(schedule.HasPending);
 
-            // 引き継いだ退避で書き込み直すと、戻す時刻は新しい書き込みから数える。
+            // 引き継いだ退避で再度書き込むと、戻す時刻は新しい書き込みから数える。
             schedule.Arm(snapshot, 12, 100.8);
             Assert.AreEqual(ClipboardRestoreAction.None, schedule.Poll(101.0, 12));
             Assert.AreEqual(ClipboardRestoreAction.Restore, schedule.Poll(101.8, 12));
@@ -292,7 +292,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 通番が書き込んだときのままかを調べられる()
+        public void シーケンス番号が書き込んだときのままかを調べられる()
         {
             ClipboardRestoreSchedule<string> schedule = Armed();
             Assert.IsTrue(schedule.IsUnchanged(10));
@@ -408,7 +408,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 前面が変わったときだけ調べ直してVersionを増やす()
+        public void 前面が変わったときだけ再取得してVersionを増やす()
         {
             var source = new FakeSource { Handle = new IntPtr(1), ProcessId = 200 };
             var monitor = new ForegroundWindowMonitor(source, OwnPid);
@@ -434,7 +434,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 同じハンドルでもプロセスが変われば調べ直す()
+        public void 同じハンドルでもプロセスが変われば再取得する()
         {
             var source = new FakeSource { Handle = new IntPtr(1), ProcessId = 200 };
             var monitor = new ForegroundWindowMonitor(source, OwnPid);

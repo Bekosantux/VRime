@@ -7,7 +7,7 @@ namespace VRime.App.SteamVR
     /// <summary>
     /// アクションマニフェスト（<c>actions.json</c>）のアクションセットとアクションのハンドル。
     /// アクションは物理的なボタンではなく役割ごとに定義し、ボタンとの対応は SteamVR のバインドに任せる（docs/spec/grip-input.md「コントローラーの割り当て」）。
-    /// ハンドルは接続（<see cref="OpenVRRuntime"/>）ごとに取り直す。
+    /// ハンドルは接続（<see cref="OpenVRRuntime"/>）ごとに再取得する。
     /// </summary>
     public sealed class OpenVRActions
     {

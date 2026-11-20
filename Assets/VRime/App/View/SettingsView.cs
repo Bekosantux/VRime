@@ -10,8 +10,8 @@ namespace VRime.App.View
     /// 設定画面（<see cref="SettingsForm"/>）の状態を uGUI に反映する。設定画面のキャンバスに置く。
     /// 操作の対象の配置（<see cref="SettingsLayout"/>）はシーンの uGUI の矩形から作るため、シーンで動かした位置がそのまま当たり判定になる。
     /// 毎フレーム <see cref="RefreshIfChanged"/> を呼ぶと、<see cref="SettingsForm.Version"/> か <see cref="ActiveTheme.Version"/> が変わったときだけ uGUI を更新する。
-    /// テーマが変わったときは、状態によらない色（<see cref="ThemeColor"/>）も塗り直す。
-    /// 題名・見出し・説明・項目名はシーンに置いたまま変えない。
+    /// テーマが変わったときは、状態によらない色（<see cref="ThemeColor"/>）も再設定する。
+    /// タイトル・見出し・説明・項目名はシーンに置いたまま変えない。
     /// </summary>
     public sealed class SettingsView : MonoBehaviour
     {

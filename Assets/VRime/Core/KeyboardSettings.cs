@@ -4,7 +4,7 @@ using VRime.Core.Input;
 namespace VRime.Core
 {
     /// <summary>
-    /// キーボードの動作設定。値は生成時に検証し、不正なら例外を投げる。
+    /// キーボードの動作設定。値は生成時に検証し、不正なら例外を送出する。
     /// </summary>
     public sealed class KeyboardSettings
     {
@@ -62,7 +62,7 @@ namespace VRime.Core
         /// <summary>連続入力の2回目以降の間隔。</summary>
         public double RepeatIntervalSeconds { get; }
 
-        /// <summary>変換を使えるか。false の間、「変換」は無効のセルになり、押すと無効の振動を返す（変換の要求を出さない）。</summary>
+        /// <summary>変換を使えるか。false の間、「変換」は無効のセルになり、押すと無効の振動で知らせる（変換の要求を出さない）。</summary>
         public bool ConversionEnabled { get; }
 
         // 傾き・引き量は 0..1 で表されるため、1 を超える値には到達できない。0 以下だと、触れていなくても倒した・押したとみなす。

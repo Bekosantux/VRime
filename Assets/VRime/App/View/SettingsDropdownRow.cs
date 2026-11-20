@@ -11,14 +11,14 @@ namespace VRime.App.View
     /// 設定画面の選択肢の項目の行。いまの値を示すボタンと、押すと開く選択肢の一覧を持つ。
     /// どの項目の行かは <see cref="_key"/>（<see cref="SettingsCatalog"/> の項目のキー）で決める。項目名などのラベルはシーンに置いたまま変えない。
     /// 一覧は <see cref="SettingsForm.OpenDropdown"/> がこの項目の間だけ表示する（GameObject を切り替える）。
-    /// ほかの行の上に描くため、一覧はこの行の外の、ページの直下の末尾に置く（<see cref="SettingsPage"/> が検証する）。
+    /// ほかの行の上に描画するため、一覧はこの行の外の、ページの直下の末尾に置く（<see cref="SettingsPage"/> が検証する）。
     /// </summary>
     public sealed class SettingsDropdownRow : MonoBehaviour
     {
         [Tooltip("項目のキー（設定ファイルの項目名と同じ）。theme。")]
         [SerializeField] string _key;
 
-        [Tooltip("いまの値を示し、押すと一覧を開くボタンの地。当たり判定はこの矩形を使う。")]
+        [Tooltip("いまの値を示し、押すと一覧を開くボタンの背景。当たり判定はこの矩形を使う。")]
         [SerializeField] Image _button;
 
         [Tooltip("いまの値の表示名。")]

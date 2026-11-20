@@ -112,7 +112,7 @@ namespace VRime.App.Settings
                 VRChatSettings.Default, PrivacySettings.Default);
         }
 
-        // float を double に広げると 0.35 が 0.34999999403953552 になるため、float として最短の 10進表記を経由する。
+        // float を double に変換すると 0.35 が 0.34999999403953552 になるため、float として最短の 10進表記を経由する。
         static double ToDouble(float value)
         {
             return double.Parse(value.ToString("R", CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);

@@ -76,7 +76,7 @@ namespace VRime.App.Output
             {
                 _clipboard.Close();
             }
-            // 通番は閉じた後に読む。開いている間の書き込みで増えた後の値を、書き込んだときの値とする。
+            // シーケンス番号は閉じた後に読む。開いている間の書き込みで増えた後の値を、書き込んだときの値とする。
             _restore.Arm(snapshot, ClipboardAccess.SequenceNumber, _clock());
 
             Win32.INPUT[] inputs = BuildPasteInputs(pressEnter);
@@ -84,7 +84,7 @@ namespace VRime.App.Output
             return sent == (uint)inputs.Length ? DesktopSendResult.Sent : DesktopSendResult.Failed;
         }
 
-        // 書き込みの途中で失敗すると、空にした後で利用者の内容が失われるため、退避した内容を戻してから例外を上げる。
+        // 書き込みの途中で失敗すると、空にした後で利用者の内容が失われるため、退避した内容を戻してから例外を送出する。
         void WriteOrRestore(string text, ClipboardSnapshot snapshot)
         {
             try
@@ -106,7 +106,7 @@ namespace VRime.App.Output
         {
             ClipboardRestoreAction action = _restore.Poll(_clock(), ClipboardAccess.SequenceNumber);
             if (action != ClipboardRestoreAction.Restore) return action;
-            // 開けなければ、次のフレームで試し直す。フレームを止めないよう、ここでは待たない。
+            // 開けなければ、次のフレームで再試行する。フレームを止めないよう、ここでは待たない。
             if (!_clipboard.TryOpen(retry: false)) return ClipboardRestoreAction.None;
             return RestoreWhileOpen();
         }
@@ -123,7 +123,7 @@ namespace VRime.App.Output
             return true;
         }
 
-        // 開いた後で通番を確かめ直す（開くまでの間に別のアプリが書き換えていることがあるため）。開いている間は他から書き換えられない。
+        // 開いた後でシーケンス番号を再確認する（開くまでの間に別のアプリが書き換えていることがあるため）。開いている間は他から書き換えられない。
         ClipboardRestoreAction RestoreWhileOpen()
         {
             try

@@ -32,8 +32,8 @@ namespace VRime.App.Output
     }
 
     /// <summary>
-    /// 前面のウィンドウを見張り、送信先（<see cref="OutputTarget"/>）を保つ。送信・表示・文字数の上限はこの送信先に従う。
-    /// <see cref="Update"/> を毎フレームの最初に呼ぶ。ハンドルかプロセスが変わったときだけ詳細を調べ直す。
+    /// 前面のウィンドウを監視し、送信先（<see cref="OutputTarget"/>）を保つ。送信・表示・文字数の上限はこの送信先に従う。
+    /// <see cref="Update"/> を毎フレームの最初に呼ぶ。ハンドルかプロセスが変わったときだけ詳細を再取得する。
     /// </summary>
     public sealed class ForegroundWindowMonitor
     {

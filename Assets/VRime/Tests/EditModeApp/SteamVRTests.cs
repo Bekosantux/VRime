@@ -15,18 +15,18 @@ namespace VRime.App.Tests
     {
         const float Epsilon = 1e-4f;
 
-        // 1024px 四方のテクスチャで、盤面の中心が中心から 172px 下にある配置（シーンの既定の配置と同じ）。
+        // 1024px 四方のテクスチャで、ボードの中心が中心から 172px 下にある配置（シーンの既定の配置と同じ）。
         const float BoardCenterOffset = 172f / 1024f;
 
         static readonly OverlayPlacement Overlay = new OverlayPlacement(BoardCenterOffset);
 
         [Test]
-        public void 盤面の中心がHMD基準の指定位置に来る()
+        public void ボードの中心がHMD基準の指定位置に来る()
         {
             KeyboardPlacement placement = KeyboardPlacement.Default;
             float[] matrix = Overlay.ComputeOverlayToHmd(placement);
 
-            // テクスチャの中心から盤面の中心までの、オーバーレイ面内の下向きの距離。
+            // テクスチャの中心からボードの中心までの、オーバーレイ面内の下向きの距離。
             float down = BoardCenterOffset * placement.WidthMeters;
             Assert.AreEqual(down, Overlay.BoardOffsetDownMeters(placement), Epsilon);
 
@@ -37,7 +37,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 左右の位置と傾きと幅を変えても盤面の中心が指定位置に来る()
+        public void 左右の位置と傾きと幅を変えてもボードの中心が指定位置に来る()
         {
             var placement = new KeyboardPlacement(0.40f, 0.60f, -0.20f, 35f, 0.70f);
             float[] matrix = Overlay.ComputeOverlayToHmd(placement);
@@ -50,7 +50,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 幅に比例して盤面の中心までの距離が変わる()
+        public void 幅に比例してボードの中心までの距離が変わる()
         {
             float narrow = Overlay.BoardOffsetDownMeters(KeyboardPlacement.Default.WithWidth(0.30f));
             float wide = Overlay.BoardOffsetDownMeters(KeyboardPlacement.Default.WithWidth(0.60f));
@@ -58,21 +58,21 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 既定の盤面の法線は盤面の中心からHMDの方を向く()
+        public void 既定のボードの法線はボードの中心からHMDの方を向く()
         {
             float angle = NormalToHmdAngle(KeyboardPlacement.Default);
             Assert.AreEqual(0f, angle, 0.5f, "法線は HMD の方を向く（傾き 17° は atan(0.26/0.85) にほぼ等しい）");
         }
 
         [Test]
-        public void 傾き0では盤面がHMDの正面に垂直に立つ()
+        public void 傾き0ではボードがHMDの正面に垂直に立つ()
         {
             float[] matrix = Overlay.ComputeOverlayToHmd(KeyboardPlacement.Default.WithTilt(0f));
             (float cx, float cy, float cz) = OverlayPlacement.Transform(matrix, 0f, 0f, 0f);
             (float nx, float ny, float nz) = OverlayPlacement.Transform(matrix, 0f, 0f, 1f);
             Assert.AreEqual(0f, nx - cx, Epsilon);
             Assert.AreEqual(0f, ny - cy, Epsilon);
-            Assert.AreEqual(1f, nz - cz, Epsilon, "法線は +Z（HMD の後ろ向き。盤面の表が HMD を向く）");
+            Assert.AreEqual(1f, nz - cz, Epsilon, "法線は +Z（HMD の後ろ向き。ボードの表が HMD を向く）");
         }
 
         static float NormalToHmdAngle(KeyboardPlacement placement)
@@ -82,7 +82,7 @@ namespace VRime.App.Tests
             (float cx, float cy, float cz) = OverlayPlacement.Transform(matrix, 0f, -down, 0f);
             (float nx, float ny, float nz) = OverlayPlacement.Transform(matrix, 0f, -down, 1f);
 
-            // 法線（オーバーレイの +Z の回転後の向き）と、盤面の中心から HMD（原点）への向きの角度。
+            // 法線（オーバーレイの +Z の回転後の向き）と、ボードの中心から HMD（原点）への向きの角度。
             float[] normal = { nx - cx, ny - cy, nz - cz };
             float[] toHmd = { -cx, -cy, -cz };
             float dot = normal[0] * toHmd[0] + normal[1] * toHmd[1] + normal[2] * toHmd[2];
@@ -110,7 +110,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 盤面の中心までの比が有限でないと例外()
+        public void ボードの中心までの比が有限でないと例外()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new OverlayPlacement(float.NaN));
             Assert.Throws<ArgumentOutOfRangeException>(() => new OverlayPlacement(float.PositiveInfinity));
@@ -273,7 +273,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void フォルダを作って書き_同じ内容なら書き直さない()
+        public void フォルダを作って書き_同じ内容なら書き換えない()
         {
             string path = Path.Combine(_directory, OpenVRApplicationManifest.FileName);
             string content = OpenVRApplicationManifest.Create(Binary, Actions, Image);

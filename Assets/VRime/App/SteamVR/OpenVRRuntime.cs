@@ -9,7 +9,7 @@ namespace VRime.App.SteamVR
 {
     /// <summary>
     /// OpenVR（SteamVR）との接続の寿命と、アプリ全体のイベント。
-    /// <see cref="Initialize"/> から <see cref="Dispose"/> までが 1回の接続で、同じプロセス内（エディタの Play の繰り返し）で何度でも作り直せる。
+    /// <see cref="Initialize"/> から <see cref="Dispose"/> までが 1回の接続で、同じプロセス内（エディタの Play の繰り返し）で何度でも再作成できる。
     /// </summary>
     public sealed class OpenVRRuntime : IDisposable
     {
@@ -18,7 +18,7 @@ namespace VRime.App.SteamVR
         // app key の読み取りに使うバッファの大きさ（OpenVR の k_unMaxApplicationKeyLength）。
         const uint AppKeyBufferLength = 128;
 
-        // 接続はプロセスに 1つ。破棄されないまま作り直すと OpenVR の状態が食い違うため、検出して例外にする。
+        // 接続はプロセスに 1つ。破棄されないまま再作成すると OpenVR の状態が不整合になるため、検出して例外にする。
         static bool s_connected;
 
         bool _disposed;
@@ -95,7 +95,7 @@ namespace VRime.App.SteamVR
 
         /// <summary>
         /// 毎フレーム呼ぶ。SteamVR のイベントを処理する。
-        /// <c>VREvent_Quit</c>（SteamVR の終了など）を受けたら <c>AcknowledgeQuit_Exiting</c> を返して <see cref="QuitRequested"/> を起こす。
+        /// <c>VREvent_Quit</c>（SteamVR の終了など）を受けたら <c>AcknowledgeQuit_Exiting</c> を返して <see cref="QuitRequested"/> を発生させる。
         /// </summary>
         public void PollEvents()
         {

@@ -6,7 +6,7 @@ using VRime.Core.Input;
 
 namespace VRime.App.SteamVR
 {
-    /// <summary>振動の出力先。<c>TriggerHapticVibrationAction</c> で、種類ごとの長さ・周波数・強さのパターンを鳴らす。</summary>
+    /// <summary>振動の出力先。<c>TriggerHapticVibrationAction</c> で、種類ごとの長さ・周波数・強さのパターンで振動させる。</summary>
     public sealed class OpenVRHapticOutput : IHapticOutput
     {
         /// <summary>振動の 1パターン。長さは秒、周波数は Hz、強さは 0〜1。</summary>

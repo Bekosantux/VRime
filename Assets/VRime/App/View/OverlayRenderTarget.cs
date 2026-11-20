@@ -6,10 +6,10 @@ using UnityEngine.Rendering.Universal;
 namespace VRime.App.View
 {
     /// <summary>
-    /// シーンに置いた World Space のキャンバスを、専用のカメラで透明な RenderTexture に描く。
-    /// カメラは常に無効にしておき、<see cref="Render"/> を呼んだときだけ 1回描く。描かれたテクスチャ（<see cref="Texture"/>）は OpenVR のオーバーレイへ渡す。
-    /// テクスチャの大きさはキャンバスの大きさ（ピクセル）と同じにする。カメラの向き・位置・映す範囲は、実行時にキャンバスに合わせる。
-    /// 描画先ごとに別のレイヤーを使う。カメラは自分のレイヤーだけを映すため、複数の描画先の uGUI が互いに映り込まない。
+    /// シーンに置いた World Space のキャンバスを、専用のカメラで透明な RenderTexture に描画する。
+    /// カメラは常に無効にしておき、<see cref="Render"/> を呼んだときだけ 1回描画する。描画されたテクスチャ（<see cref="Texture"/>）は OpenVR のオーバーレイへ渡す。
+    /// テクスチャの大きさはキャンバスの大きさ（ピクセル）と同じにする。カメラの向き・位置・描画する範囲は、実行時にキャンバスに合わせる。
+    /// 描画先ごとに別のレイヤーを使う。カメラは自分のレイヤーだけを描画するため、複数の描画先の uGUI が互いの描画に含まれない。
     /// テクスチャの破棄は <see cref="Release"/> で行う。OpenVR のオーバーレイが参照しているため、破棄の順序を呼び出し側が決める。
     /// </summary>
     public sealed class OverlayRenderTarget : MonoBehaviour
@@ -28,10 +28,10 @@ namespace VRime.App.View
         /// <summary>描画先。オーバーレイのテクスチャとして渡す。<see cref="Initialize"/> の前と <see cref="Release"/> の後は null。</summary>
         public RenderTexture Texture { get; private set; }
 
-        /// <summary>これまでに描いた回数。</summary>
+        /// <summary>これまでに描画した回数。</summary>
         public int RenderCount { get; private set; }
 
-        /// <summary>描き終わるたびに呼ばれる。OpenVR のオーバーレイへ反映するのに使う。</summary>
+        /// <summary>描画し終わるたびに呼ばれる。OpenVR のオーバーレイへ反映するのに使う。</summary>
         public event Action Rendered;
 
         /// <param name="layerName">この描画先の uGUI を置くレイヤー。他の描画先と重ならず、Project Settings の Tags and Layers に登録されている必要がある。</param>
@@ -106,7 +106,7 @@ namespace VRime.App.View
         }
 
         /// <summary>
-        /// uGUI を確定してから 1回描く。
+        /// uGUI を確定してから 1回描画する。
         /// カメラは無効のため、通常のフレームの描画に任せるとキャンバスの再構築が描画のタイミングに依存する。
         /// <see cref="Canvas.ForceUpdateCanvases"/> でレイアウト・メッシュの更新を先に済ませておく。
         /// 描画には <see cref="RenderPipeline.SubmitRenderRequest{RequestData}"/> を使う。Camera.Render() と違い、

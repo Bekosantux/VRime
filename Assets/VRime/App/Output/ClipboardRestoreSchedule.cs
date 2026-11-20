@@ -19,7 +19,7 @@ namespace VRime.App.Output
 
     /// <summary>
     /// 送信のためにクリップボードへ置いた内容を、退避しておいた元の内容へ戻す時期を決める（docs/spec/output.md「クリップボードの扱い」）。Win32 に依存しない。
-    /// 書き換えの検出にはクリップボードの通番（GetClipboardSequenceNumber）を使う。送信で書き込んだ直後の通番から変わっていれば、
+    /// 書き換えの検出にはクリップボードのシーケンス番号（GetClipboardSequenceNumber）を使う。送信で書き込んだ直後のシーケンス番号から変わっていれば、
     /// 利用者や別のアプリが新しい内容を置いたとみなし、戻さない。
     /// </summary>
     /// <typeparam name="T">退避した内容。</typeparam>
@@ -45,9 +45,9 @@ namespace VRime.App.Output
         public bool HasPending => _snapshot != null;
 
         /// <summary>
-        /// 送信の前に、引き継ぐべき退避を取り出す。復元待ちがあり、通番が書き込んだときのままなら、その退避を返す
+        /// 送信の前に、引き継ぐべき退避を取り出す。復元待ちがあり、シーケンス番号が書き込んだときのままなら、その退避を返す
         /// （続けて送ったときに、送信で置いた内容ではなく利用者の元の内容を退避し続けるため）。
-        /// 通番が変わっていれば、復元待ちを捨てて false を返す（呼び出し側は現在の内容を退避し直す）。
+        /// シーケンス番号が変わっていれば、復元待ちを捨てて false を返す（呼び出し側は現在の内容を再度退避する）。
         /// </summary>
         public bool TryTakePending(uint currentSequence, out T snapshot)
         {
@@ -58,7 +58,7 @@ namespace VRime.App.Output
             return carried;
         }
 
-        /// <summary>送信の内容を書き込んだ後に呼ぶ。<paramref name="writtenSequence"/> は書き込んだ直後の通番。</summary>
+        /// <summary>送信の内容を書き込んだ後に呼ぶ。<paramref name="writtenSequence"/> は書き込んだ直後のシーケンス番号。</summary>
         public void Arm(T snapshot, uint writtenSequence, double now)
         {
             _snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
@@ -87,7 +87,7 @@ namespace VRime.App.Output
         /// <summary>戻す内容。復元待ちがないときは例外。</summary>
         public T Pending => _snapshot ?? throw new InvalidOperationException("復元待ちの内容がありません。");
 
-        /// <summary>通番が書き込んだときのままか（時刻を問わず、いま戻してよいか）。復元待ちがないときは false。</summary>
+        /// <summary>シーケンス番号が書き込んだときのままか（時刻を問わず、いま戻してよいか）。復元待ちがないときは false。</summary>
         public bool IsUnchanged(uint currentSequence)
         {
             return _snapshot != null && currentSequence == _writtenSequence;

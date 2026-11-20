@@ -223,7 +223,7 @@ namespace VRime.Core
         /// <summary>
         /// 実行中に設定を差し替える。次の <see cref="Tick"/> から新しい値で判定する。
         /// 実行中に変えられるのはスティックとトリガーのしきい値・連続入力の時間・変換を使えるかだけで、それ以外の値が異なる設定は例外にする
-        /// （子音の手は表示の組み立てに、同時押しの窓は開閉の判定に、生成時の値が使われているため）。
+        /// （子音の手は表示の組み立てに、同時押しの許容時間は開閉の判定に、生成時の値が使われているため）。
         /// </summary>
         public void ApplySettings(KeyboardSettings settings)
         {
@@ -241,7 +241,7 @@ namespace VRime.Core
         public void SetNotice(string notice)
         {
             if (notice == null) throw new ArgumentNullException(nameof(notice));
-            // 通知を出した時点のバッファの版を覚え、その後に内容が変わったら消す。
+            // 通知を出した時点のバッファのバージョンを覚え、その後に内容が変わったら消す。
             _noticeBufferVersion = _buffer.Version;
             if (notice == _notice) return;
             _notice = notice;

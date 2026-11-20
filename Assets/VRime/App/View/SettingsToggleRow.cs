@@ -10,17 +10,17 @@ namespace VRime.App.View
     /// 設定画面のオン・オフの項目の行。スイッチと現在の値を表示する。行の矩形全体が、押すと切り替わる領域になる。
     /// 値をアプリの外が持つ項目で値を利用できない間は、スイッチをオフの色にし、値の欄に「利用不可」と表示する。
     /// どの項目の行かは <see cref="_key"/>（<see cref="SettingsCatalog"/> の項目のキー）で決める。項目名などのラベルはシーンに置いたまま変えない。
-    /// つまみは、アンカーとピボットの x をオフで 0（左端）、オンで 1（右端）にして置く。
+    /// ハンドルは、アンカーとピボットの x をオフで 0（左端）、オンで 1（右端）にして置く。
     /// </summary>
     public sealed class SettingsToggleRow : MonoBehaviour
     {
         [Tooltip("項目のキー（SettingsCatalog の項目のキー）。focusOnStartup / showTypingText / autoLaunch / useGoogleConversion。")]
         [SerializeField] string _key;
 
-        [Tooltip("スイッチの地。色でオン・オフを示す。")]
+        [Tooltip("スイッチの背景。色でオン・オフを示す。")]
         [SerializeField] Image _switch;
 
-        [Tooltip("スイッチのつまみ。_switch の直下に置く。")]
+        [Tooltip("スイッチのハンドル。_switch の直下に置く。")]
         [SerializeField] Image _knob;
 
         [SerializeField] TextMeshProUGUI _value;

@@ -7,7 +7,7 @@ namespace VRime.App.View
 {
     /// <summary>
     /// グリップ入力のパネル（子音側 3×3・母音側 5方向または 3×3）とページ・全角/半角・大文字/小文字の状態。
-    /// <see cref="GripViewState"/> を描くだけで、入力の判断は持たない。
+    /// <see cref="GripViewState"/> を描画するだけで、入力の判断は持たない。
     /// 左右のパネルはシーンに置き、子音を担当する手の側を子音側、反対側を母音側にする。
     /// </summary>
     public sealed class GripPanelView : MonoBehaviour
@@ -48,7 +48,7 @@ namespace VRime.App.View
         GripPanelCaption _vowelCaption;
 
         /// <summary>
-        /// 母音側の通常ページで、3×3 のその位置（行優先の 0..8）に5方向のマスを置くか。四隅には置かず、機能ページのヒントだけを示す。
+        /// 母音側の通常ページで、3×3 のその位置（行優先の 0..8）に5方向のセルを置くか。四隅には置かず、機能ページのヒントだけを示す。
         /// </summary>
         public static bool HasVowelDirection(int cell)
         {
@@ -128,7 +128,7 @@ namespace VRime.App.View
                     }
                     else
                     {
-                        // 5方向のマスがない位置（四隅）には、ヒントがあればヒントだけを置く。
+                        // 5方向のセルがない位置（四隅）には、ヒントがあればヒントだけを置く。
                         cell.SetActive(hint.Length != 0);
                         if (hint.Length != 0) cell.SetHintOnly(hint);
                     }

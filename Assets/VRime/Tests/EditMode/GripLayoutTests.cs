@@ -88,7 +88,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void かなの機能ページの中段3マス()
+        public void かなの機能ページの中段の3つのセル()
         {
             GripCell modifier = GripLayout.GetConsonantCell(GripPage.Kana, true, 3);
             Assert.AreEqual(GripCellKind.Action, modifier.Kind);
@@ -105,7 +105,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 英字の機能ページの中段3マス()
+        public void 英字の機能ページの中段の3つのセル()
         {
             Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 3).Kind);
             Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 4).Kind);
@@ -113,7 +113,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 数字の機能ページの中段3マス()
+        public void 数字の機能ページの中段の3つのセル()
         {
             AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 3), "-+*/~");
             AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 4), "0(=)&");

@@ -50,7 +50,7 @@ namespace VRime.App.Conversion
             using (UnityWebRequest request = UnityWebRequest.Get(url))
             {
                 // 制限時間は自前の時計で測る（Time は使わない。エディタの停止中や timeScale に左右されないため）。
-                // request.timeout は自前の判定が止まった場合の保険で、こちらが先に働くよう長めにする。
+                // request.timeout は自前の判定が止まった場合の予備で、こちらが先に作動するよう長めにする。
                 request.timeout = Mathf.CeilToInt(_timeoutSeconds) + 1;
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 UnityWebRequestAsyncOperation operation = request.SendWebRequest();

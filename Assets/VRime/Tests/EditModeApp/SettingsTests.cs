@@ -1068,7 +1068,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void ボタンの外で離すと働かない()
+        public void ボタンの外で離すと動作しない()
         {
             SettingsRowLayout row = Row("tiltDegrees");
             _form.PointerDown(row.Increase.center);
@@ -1140,7 +1140,7 @@ namespace VRime.App.Tests
             Assert.AreEqual(1, requests.Count);
             Assert.AreSame(SettingsCatalog.AutoLaunch, requests[0].item);
             Assert.IsTrue(requests[0].value);
-            Assert.AreEqual(false, _form.GetExternalValue(SettingsCatalog.AutoLaunch), "読み直した値が渡されるまで変えない");
+            Assert.AreEqual(false, _form.GetExternalValue(SettingsCatalog.AutoLaunch), "再取得した値が渡されるまで変えない");
             Assert.AreEqual(0, _changed.Count);
             Assert.AreEqual(0, _committed.Count);
 
@@ -1179,7 +1179,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void スライダーはつまんでいる間随時変わり離したときに確定する()
+        public void スライダーはドラッグしている間随時変わり離したときに確定する()
         {
             SettingsRowLayout row = Row("rightMeters");
             float y = row.Slider.center.y;
@@ -1187,7 +1187,7 @@ namespace VRime.App.Tests
             Assert.AreEqual(-0.50f, _form.Settings.Placement.RightMeters);
             Assert.AreSame(row.Item, _form.DraggingItem);
 
-            // 行の外へ動かしても、つまんでいる間は追従する。
+            // 行の外へ動かしても、ドラッグしている間は追従する。
             _form.PointerMove(new Vector2(row.Track.xMax, y + 200f));
             Assert.AreEqual(0.50f, _form.Settings.Placement.RightMeters);
             Assert.AreEqual(2, _changed.Count);
@@ -1213,7 +1213,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void つまんだままポインターが外れると確定する()
+        public void ドラッグしたままポインターが外れると確定する()
         {
             SettingsRowLayout row = Row("widthMeters");
             _form.PointerDown(new Vector2(row.Track.xMin, row.Slider.center.y));
@@ -1273,7 +1273,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 指しているものと押しているものが変わると版が増える()
+        public void 指しているものと押しているものが変わるとバージョンが増える()
         {
             SettingsRowLayout row = Row("tiltDegrees");
             int version = _form.Version;
@@ -1444,7 +1444,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 選択肢以外の場所を押して離すと何も変えずに一覧を閉じ_後ろの対象は働かない()
+        public void 選択肢以外の場所を押して離すと何も変えずに一覧を閉じ_後ろの対象は動作しない()
         {
             SettingsDropdownLayout dropdown = ThemeDropdown();
             Click(_form, dropdown.Button.center);
@@ -1492,7 +1492,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 通知を変えると版が増える()
+        public void 通知を変えるとバージョンが増える()
         {
             int version = _form.Version;
             _form.SetNotice("通知");

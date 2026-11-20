@@ -9,7 +9,7 @@ namespace VRime.App.View
     /// <summary>
     /// 設定画面の数値の項目の行。［−］・スライダー・［＋］と現在の値を表示する。
     /// どの項目の行かは <see cref="_key"/>（<see cref="SettingsCatalog"/> の項目のキー）で決める。項目名などのラベルはシーンに置いたまま変えない。
-    /// スライダーの塗りとつまみは、値の範囲（<see cref="_track"/>）に対する割合をアンカーの x に設定して置く。
+    /// スライダーのフィルとハンドルは、値の範囲（<see cref="_track"/>）に対する割合をアンカーの x に設定して置く。
     /// </summary>
     public sealed class SettingsRow : MonoBehaviour
     {
@@ -25,10 +25,10 @@ namespace VRime.App.View
         [Tooltip("値の範囲。左端が最小値、右端が最大値。")]
         [SerializeField] RectTransform _track;
 
-        [Tooltip("値までの塗り。_track の直下に置き、アンカーの x を 0 から値の割合までにする。")]
+        [Tooltip("値までのフィル。_track の直下に置き、アンカーの x を 0 から値の割合までにする。")]
         [SerializeField] RectTransform _fill;
 
-        [Tooltip("つまみ。_track の直下に置き、アンカーの x を値の割合にする。")]
+        [Tooltip("ハンドル。_track の直下に置き、アンカーの x を値の割合にする。")]
         [SerializeField] Image _thumb;
 
         [SerializeField] TextMeshProUGUI _value;

@@ -14,7 +14,7 @@ namespace VRime.Core.Grip
         Action,
     }
 
-    /// <summary>パネルの1マス。種類によって使える情報が異なる。</summary>
+    /// <summary>パネルのセル。種類によって使える情報が異なる。</summary>
     public sealed class GripCell
     {
         public const int DirectionCount = 5;

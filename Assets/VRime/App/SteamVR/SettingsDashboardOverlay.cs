@@ -70,7 +70,7 @@ namespace VRime.App.SteamVR
         /// <summary>設定画面のタブが表示されているか。<see cref="Update"/> で更新される。</summary>
         public bool IsVisible { get; private set; }
 
-        /// <summary>テクスチャの内容が新しく描かれた。テクスチャを渡す処理をレンダースレッドに依頼する。</summary>
+        /// <summary>テクスチャの内容が新しく描画された。テクスチャを渡す処理をレンダースレッドに依頼する。</summary>
         public void NotifyRendered()
         {
             ThrowIfDisposed();
@@ -118,7 +118,7 @@ namespace VRime.App.SteamVR
             ulong handle = _handle;
             _handle = 0;
             IsVisible = false;
-            // 先にレンダースレッドからの参照を断つ（KeyboardOverlay.Dispose と同じ理由）。
+            // 先にレンダースレッドからの参照を解除する（KeyboardOverlay.Dispose と同じ理由）。
             _submitter?.Dispose();
             _submitter = null;
             OpenVRErrors.Check(OpenVR.Overlay.DestroyOverlay(handle), "DestroyOverlay");

@@ -4,7 +4,7 @@ namespace VRime.App.View
 {
     /// <summary>
     /// 表示に使っているテーマ。設定でテーマを変えると <see cref="Set"/> で差し替わる。
-    /// ビューはこれを共有して保持し、描くたびに <see cref="Current"/> を読む。<see cref="Version"/> の変化で、描き直しが必要なことを知る。
+    /// ビューはこれを共有して保持し、描画するたびに <see cref="Current"/> を読む。<see cref="Version"/> の変化で、再描画が必要なことを知る。
     /// </summary>
     public sealed class ActiveTheme
     {

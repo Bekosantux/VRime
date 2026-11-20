@@ -7,9 +7,9 @@ namespace VRime.App.View
 {
     /// <summary>
     /// 候補欄の1文節の列（カード）。見出しの下に、候補を表示しているときだけ区切りの線を置き、候補を縦に並べる（<see cref="VerticalLayoutGroup"/>）。
-    /// カードの地と影は、配置から外した（LayoutElement.ignoreLayout）子として列の先頭に置く。
-    /// 子は親より後に描かれるため、影を列自身の Image にはできない。
-    /// 候補の行は、シーンに置いた雛形（<see cref="_candidateTemplate"/>）を必要な数だけ複製する。雛形自身は表示しない。
+    /// カードの背景と影は、配置から外した（LayoutElement.ignoreLayout）子として列の先頭に置く。
+    /// 子は親より後に描画されるため、影を列自身の Image にはできない。
+    /// 候補の行は、シーンに置いたテンプレート（<see cref="_candidateTemplate"/>）を必要な数だけ複製する。テンプレート自身は表示しない。
     /// </summary>
     public sealed class CandidateColumn : MonoBehaviour
     {
@@ -19,7 +19,7 @@ namespace VRime.App.View
         [Tooltip("見出しと候補の間の区切り。この列の直下に置く。")]
         [SerializeField] GameObject _separator;
 
-        [Tooltip("候補の1行の雛形。この列の直下に置く。")]
+        [Tooltip("候補の1行のテンプレート。この列の直下に置く。")]
         [SerializeField] CandidateLabel _candidateTemplate;
 
         readonly List<CandidateLabel> _candidates = new List<CandidateLabel>();
@@ -58,7 +58,7 @@ namespace VRime.App.View
             {
                 CandidateLabel candidate = Instantiate(_candidateTemplate, transform);
                 candidate.name = _candidateTemplate.name + " " + _candidates.Count;
-                // 雛形は非表示のため、複製も非表示になる。文字の幅を測れるよう、一度も有効にしていない状態で使わない。
+                // テンプレートは非表示のため、複製も非表示になる。文字の幅を測れるよう、一度も有効にしていない状態で使わない。
                 candidate.gameObject.SetActive(true);
                 candidate.Initialize(_theme, _maxWidth);
                 _candidates.Add(candidate);

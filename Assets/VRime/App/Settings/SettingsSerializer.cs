@@ -7,7 +7,7 @@ namespace VRime.App.Settings
 {
     /// <summary>
     /// <see cref="UserSettings"/> と設定ファイルの JSON の相互変換（docs/spec/settings.md「設定ファイル」）。
-    /// 項目が欠けている場合はその項目だけ既定値にする。形式・型・範囲・版が正しくない場合は <see cref="FormatException"/>。
+    /// 項目が欠けている場合はその項目だけ既定値にする。形式・型・範囲・バージョンが正しくない場合は <see cref="FormatException"/>。
     /// </summary>
     public static class SettingsSerializer
     {
@@ -86,7 +86,7 @@ namespace VRime.App.Settings
             JToken version = root[VersionKey];
             if (version == null) throw new FormatException("\"" + VersionKey + "\" がありません。");
             if (version.Type != JTokenType.Integer || (long)version != CurrentVersion)
-                throw new FormatException("対応していない版です: " + version.ToString(Formatting.None));
+                throw new FormatException("対応していないバージョンです: " + version.ToString(Formatting.None));
 
             UserSettings defaults = UserSettings.Default;
             KeyboardPlacement dp = defaults.Placement;
@@ -126,7 +126,7 @@ namespace VRime.App.Settings
             }
         }
 
-        // float を double に広げると 0.26 が 0.25999999046325684 になるため、float として最短の 10進表記を経由する。
+        // float を double に変換すると 0.26 が 0.25999999046325684 になるため、float として最短の 10進表記を経由する。
         static JValue Number(float value)
         {
             return new JValue(double.Parse(value.ToString("R", CultureInfo.InvariantCulture), CultureInfo.InvariantCulture));

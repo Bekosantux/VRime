@@ -21,9 +21,9 @@ namespace VRime.App.Native
     /// <summary>
     /// タスクトレイ（通知領域）のアイコンと、右クリックのメニュー（docs/spec/lifecycle.md「システムトレイ」）。
     /// アイコンの通知を受けるウィンドウとメッセージループは専用のスレッドに置く。メニュー（<c>TrackPopupMenuEx</c>）は閉じるまで
-    /// 呼び出し元のスレッドを止めるため、メインスレッドで出すと、その間 Unity のフレームが止まり、VR 内のキーボードが固まる。
+    /// 呼び出し元のスレッドを止めるため、メインスレッドで出すと、その間 Unity のフレームが止まり、VR 内のキーボードが応答しなくなる。
     /// 選ばれた操作はキューに積み、メインスレッドが <see cref="TryTakeCommand"/> で取り出す。
-    /// エクスプローラーが再起動したとき（<c>TaskbarCreated</c>）は、アイコンを登録し直す。
+    /// エクスプローラーが再起動したとき（<c>TaskbarCreated</c>）は、アイコンを再登録する。
     /// ウィンドウのクラスを登録するため、プロセスに同時に 1 つだけ作れる。
     /// </summary>
     public sealed class TrayIcon : IDisposable
@@ -98,7 +98,7 @@ namespace VRime.App.Native
 
         /// <summary>
         /// 選ばれた操作を 1 つ取り出す。メインスレッドで毎フレーム呼ぶ。
-        /// アイコンのスレッドで失敗が起きていれば、1 件ずつ例外にする（アイコンの登録し直しの失敗など）。
+        /// アイコンのスレッドで失敗が起きていれば、1 件ずつ例外にする（アイコンの再登録の失敗など）。
         /// </summary>
         public bool TryTakeCommand(out TrayCommand command)
         {
@@ -187,7 +187,7 @@ namespace VRime.App.Native
                 IntPtr.Zero, IntPtr.Zero, _instance, IntPtr.Zero);
             if (_window == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error(), "タスクトレイのウィンドウを作れません。");
 
-            // ウィンドウプロシージャ（静的）から、このインスタンスを引けるようにする。
+            // ウィンドウプロシージャ（静的）から、このインスタンスを取得できるようにする。
             IntPtr selfPointer = GCHandle.ToIntPtr(self);
             Win32.SetWindowLongPtr(_window, Win32.GWLP_USERDATA, selfPointer);
             if (Win32.GetWindowLongPtr(_window, Win32.GWLP_USERDATA) != selfPointer)
@@ -290,7 +290,7 @@ namespace VRime.App.Native
             if (selfPointer == IntPtr.Zero) return Win32.DefWindowProc(window, message, wParam, lParam);
 
             var self = (TrayIcon)GCHandle.FromIntPtr(selfPointer).Target;
-            // コールバックの中で投げた例外は、ネイティブのコードを越えて伝わらないため、キューに積んでメインスレッドで投げる。
+            // コールバックの中で送出した例外は、ネイティブのコードを越えて伝わらないため、キューに積んでメインスレッドで送出する。
             try
             {
                 if (self.Handle(message, wParam, lParam)) return IntPtr.Zero;
@@ -345,7 +345,7 @@ namespace VRime.App.Native
             }
         }
 
-        // NOTIFYICON_VERSION_4 の通知。lParam の下位 16 ビットが事象、wParam がメニューを出す位置（スクリーン座標）。
+        // NOTIFYICON_VERSION_4 の通知。lParam の下位 16 ビットがイベント、wParam がメニューを出す位置（スクリーン座標）。
         void OnIconEvent(IntPtr wParam, IntPtr lParam)
         {
             uint iconEvent = (uint)((long)lParam & 0xFFFF);
@@ -364,7 +364,7 @@ namespace VRime.App.Native
 
         void ShowMenu(int x, int y)
         {
-            // メニューの外をクリックしたときにメニューが閉じるよう、メニューの持ち主を前面にする（TrackPopupMenu の仕様上の制約）。
+            // メニューの外をクリックしたときにメニューが閉じるよう、メニューの所有者を前面にする（TrackPopupMenu の仕様上の制約）。
             Win32.SetForegroundWindow(_window);
             int item;
             _menuOpen = true;
@@ -419,7 +419,7 @@ namespace VRime.App.Native
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "タスクトレイのウィンドウを破棄できません。");
         }
 
-        // アイコンのスレッドの終わりに呼ぶ。起動の途中で失敗したときは、作ったものだけを片付ける。
+        // アイコンのスレッドの終わりに呼ぶ。起動の途中で失敗したときは、作ったものだけを解放する。
         void ReleaseResources()
         {
             if (_window != IntPtr.Zero && !_windowDestroyed && !Win32.DestroyWindow(_window))

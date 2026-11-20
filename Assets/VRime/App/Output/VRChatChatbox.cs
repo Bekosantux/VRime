@@ -57,7 +57,7 @@ namespace VRime.App.Output
             _outbox.SetPreview(text != null ? Truncate(text) : null);
         }
 
-        // サロゲートペアの途中では切らない。
+        // サロゲートペアを分割しない。
         static string Truncate(string text)
         {
             if (text.Length <= MaxLength) return text;
@@ -116,7 +116,7 @@ namespace VRime.App.Output
             _udp.Send(packet, packet.Length, _endpoint);
         }
 
-        // 宛先の設定が変わっていたら解決し直す。
+        // 宛先の設定が変わっていたら再解決する。
         void EnsureEndpoint()
         {
             if (_udp != null && _endpointHost == _settings.OscHost && _endpointPort == _settings.OscPort) return;

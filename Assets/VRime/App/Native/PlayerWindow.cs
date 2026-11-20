@@ -64,7 +64,7 @@ namespace VRime.App.Native
                 handle.Free();
             }
 
-            // コールバックの中で例外を投げると、ネイティブのコードを越えて伝わらないため、列挙を終えてから投げる。
+            // コールバックの中で例外を送出すると、ネイティブのコードを越えて伝わらないため、列挙を終えてから送出する。
             if (search.Error != 0) throw new Win32Exception(search.Error, "ウィンドウのクラス名を取得できませんでした。");
             if (search.Found.Count != 1)
                 throw new InvalidOperationException("Unity のプレイヤーのウィンドウ（" + ClassName + "）が 1 つではありません: " + search.Found.Count + " 個");

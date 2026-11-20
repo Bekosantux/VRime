@@ -21,7 +21,7 @@ namespace VRime.App.SteamVR
         ulong _handle;
         bool _visible;
 
-        /// <param name="overlayPlacement">位置からオーバーレイの変換を求めるもの（盤面の配置を持つ）。</param>
+        /// <param name="overlayPlacement">位置からオーバーレイの変換を求めるもの（ボードの配置を持つ）。</param>
         /// <param name="placement">最初の位置。</param>
         public KeyboardOverlay(RenderTexture texture, OverlayPlacement overlayPlacement, KeyboardPlacement placement)
         {
@@ -72,7 +72,7 @@ namespace VRime.App.SteamVR
         }
 
         /// <summary>
-        /// テクスチャの内容が新しく描かれた。テクスチャを渡す処理をレンダースレッドに依頼する。
+        /// テクスチャの内容が新しく描画された。テクスチャを渡す処理をレンダースレッドに依頼する。
         /// 依頼は描画コマンドの後ろに積まれるため、渡されるテクスチャには描画が完了した内容が入っている。
         /// </summary>
         public void NotifyRendered()
@@ -95,7 +95,7 @@ namespace VRime.App.SteamVR
             ulong handle = _handle;
             _handle = 0;
             _visible = false;
-            // 先にレンダースレッドからの参照を断つ。これが戻った後はテクスチャを渡す処理がこのオーバーレイに触れないため、破棄してよい。
+            // 先にレンダースレッドからの参照を解除する。これが戻った後はテクスチャを渡す処理がこのオーバーレイにアクセスしないため、破棄してよい。
             _submitter?.Dispose();
             _submitter = null;
             OpenVRErrors.Check(OpenVR.Overlay.DestroyOverlay(handle), "DestroyOverlay");

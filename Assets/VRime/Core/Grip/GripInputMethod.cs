@@ -120,7 +120,7 @@ namespace VRime.Core.Grip
 
         /// <summary>
         /// 入力を受け付けていなかった後（開いたとき・変換から戻ったとき）に呼び、
-        /// スティックの分類を現在の傾きに合わせる。振動は出さない。
+        /// スティックの分類を現在の傾きに合わせる。振動させない。
         /// </summary>
         public void Reset(ControllerFrame frame)
         {
@@ -369,7 +369,7 @@ namespace VRime.Core.Grip
             return character;
         }
 
-        /// <summary>結果に応じた振動を出し、実行できたかを返す。</summary>
+        /// <summary>結果に応じて振動させ、実行できたかを返す。</summary>
         bool Report(EditResult result, Hand hand, List<HapticEvent> haptics)
         {
             if (result == EditResult.Done)

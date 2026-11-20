@@ -10,7 +10,7 @@ namespace VRime.Editor.Build
     /// <summary>
     /// 開発用のツールがプロジェクトに置く DLL を、エディター専用に保つ。
     /// 対象のフォルダーは git の管理外で、ツールが既定のインポート設定（全プラットフォーム）で置くため、
-    /// .meta を手で直しても置き直すたびに戻る。そこで、インポートのたびにエディター専用へ直し、
+    /// .meta を手動で修正しても、再配置されるたびに戻る。そこで、インポートのたびにエディター専用へ変更し、
     /// ビルドの前にも検査して、Player に含まれる設定ならビルドを止める。
     /// </summary>
     public static class EditorOnlyPlugins
@@ -48,7 +48,7 @@ namespace VRime.Editor.Build
         }
     }
 
-    /// <summary>対象の DLL がインポートされたら、エディター専用に直して保存する。</summary>
+    /// <summary>対象の DLL がインポートされたら、エディター専用に変更して保存する。</summary>
     sealed class EditorOnlyPluginPostprocessor : AssetPostprocessor
     {
         static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)

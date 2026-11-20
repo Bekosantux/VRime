@@ -74,7 +74,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 同時押しの時間差は窓の境界で判定する()
+        public void 同時押しの時間差は許容時間の境界で判定する()
         {
             // 2進数で正確に表せる値にして、境界を丸め誤差なしに確かめる。
             var settings = new KeyboardSettings(chordWindowSeconds: 0.25, doubleChordWindowSeconds: 0.5);
@@ -82,16 +82,16 @@ namespace VRime.Core.Tests
             var within = new Rig(settings, open: false);
             Chord(within, 0.25);
             Chord(within, 0.25);
-            Assert.IsTrue(within.Session.IsOpen, "時間差がちょうど窓なら同時押し");
+            Assert.IsTrue(within.Session.IsOpen, "時間差がちょうど許容時間なら同時押し");
 
             var beyond = new Rig(settings, open: false);
             Chord(beyond, 0.25);
             Chord(beyond, 0.3125);
-            Assert.IsFalse(beyond.Session.IsOpen, "時間差が窓を超えたら同時押しではない");
+            Assert.IsFalse(beyond.Session.IsOpen, "時間差が許容時間を超えたら同時押しではない");
         }
 
         [Test]
-        public void 同時押しの間隔は窓の境界で判定する()
+        public void 同時押しの間隔は許容時間の境界で判定する()
         {
             var settings = new KeyboardSettings(chordWindowSeconds: 0.25, doubleChordWindowSeconds: 0.5);
 
@@ -100,17 +100,17 @@ namespace VRime.Core.Tests
             Chord(within, 0.125);
             within.Tick(0.25);
             Chord(within, 0.125);
-            Assert.IsTrue(within.Session.IsOpen, "間隔がちょうど窓なら開く");
+            Assert.IsTrue(within.Session.IsOpen, "間隔がちょうど許容時間なら開く");
 
             var beyond = new Rig(settings, open: false);
             Chord(beyond, 0.125);
             beyond.Tick(0.3125);
             Chord(beyond, 0.125);
-            Assert.IsFalse(beyond.Session.IsOpen, "間隔が窓を超えたら開かない");
+            Assert.IsFalse(beyond.Session.IsOpen, "間隔が許容時間を超えたら開かない");
         }
 
         [Test]
-        public void 既定の窓は0_20秒と0_60秒()
+        public void 既定の許容時間は0_20秒と0_60秒()
         {
             var within = new Rig(open: false);
             Chord(within, 0.19, 0.01);
@@ -1081,7 +1081,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 変換を使えない設定では変換が無効のセルになり_押すと要求せずに無効の振動を返す()
+        public void 変換を使えない設定では変換が無効のセルになり_押すと要求せずに無効の振動で知らせる()
         {
             var rig = new Rig(new KeyboardSettings(conversionEnabled: false));
             rig.Type(0, StickDirection.Center);

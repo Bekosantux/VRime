@@ -35,7 +35,7 @@ namespace VRime.App.Output
         /// <summary>前面のウィンドウ。<see cref="OutputTargetKind.None"/> のときは null。</summary>
         public ForegroundWindowInfo Window { get; }
 
-        /// <summary>利用者に見せる送信先の名前。</summary>
+        /// <summary>利用者向けの送信先の名前。</summary>
         public string Name
         {
             get

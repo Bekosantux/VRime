@@ -906,7 +906,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 消去は連続入力され_消すものがなくなると1回だけ無効の振動を出して止まる()
+        public void 消去は連続入力され_消すものがなくなると1回だけ無効の振動で知らせて止まる()
         {
             var rig = RepeatRig();
             rig.Type(0, StickDirection.Center);

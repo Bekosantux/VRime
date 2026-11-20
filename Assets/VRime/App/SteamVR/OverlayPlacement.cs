@@ -5,14 +5,14 @@ namespace VRime.App.SteamVR
 {
     /// <summary>
     /// キーボードのオーバーレイの、HMD に対する相対位置（頭部固定。docs/spec/keyboard.md「表示位置」）。値は <see cref="KeyboardPlacement"/>（設定画面で変更できる）。
-    /// 位置は「キーボード本体（盤面）の中心」の位置として指定する。テクスチャの上部は候補欄の透明な領域のため、
-    /// OpenVR が基準にするテクスチャの中心は盤面の中心よりも上にある。その差はシーンの盤面の配置から受け取る（<see cref="View.KeyboardView.BoardCenterOffset"/>）。
+    /// 位置は「キーボード本体（ボード）の中心」の位置として指定する。テクスチャの上部は候補欄の透明な領域のため、
+    /// OpenVR が基準にするテクスチャの中心はボードの中心よりも上にある。その差はシーンのボードの配置から受け取る（<see cref="View.KeyboardView.BoardCenterOffset"/>）。
     /// </summary>
     public sealed class OverlayPlacement
     {
         readonly float _boardCenterOffset;
 
-        /// <param name="boardCenterOffset">テクスチャの中心から盤面の中心までの下向きの距離を、テクスチャの幅で割った比。</param>
+        /// <param name="boardCenterOffset">テクスチャの中心からボードの中心までの下向きの距離を、テクスチャの幅で割った比。</param>
         public OverlayPlacement(float boardCenterOffset)
         {
             if (float.IsNaN(boardCenterOffset) || float.IsInfinity(boardCenterOffset))
@@ -28,14 +28,14 @@ namespace VRime.App.SteamVR
         {
             if (placement == null) throw new ArgumentNullException(nameof(placement));
 
-            // 傾きは X 軸まわりの回転。負の角度で、法線（オーバーレイの +Z）が上向きになり、下前方の盤面が目の方を向く。
+            // 傾きは X 軸まわりの回転。負の角度で、法線（オーバーレイの +Z）が上向きになり、下前方のボードが目の方を向く。
             float pitch = -placement.TiltDegrees * (float)Math.PI / 180f;
             float cos = (float)Math.Cos(pitch);
             float sin = (float)Math.Sin(pitch);
 
             float boardOffsetDown = BoardOffsetDownMeters(placement);
 
-            // 盤面の中心が (右, -下, -前) に来るよう、テクスチャの中心の位置を決める。
+            // ボードの中心が (右, -下, -前) に来るよう、テクスチャの中心の位置を決める。
             // オーバーレイの下向き（-Y）は、回転後に (0, -cos, -sin) の向きになる。
             return new[]
             {
@@ -45,7 +45,7 @@ namespace VRime.App.SteamVR
             };
         }
 
-        /// <summary>テクスチャの中心から盤面の中心までの、オーバーレイ面内の下向きの距離。</summary>
+        /// <summary>テクスチャの中心からボードの中心までの、オーバーレイ面内の下向きの距離。</summary>
         public float BoardOffsetDownMeters(KeyboardPlacement placement)
         {
             if (placement == null) throw new ArgumentNullException(nameof(placement));

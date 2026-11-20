@@ -91,7 +91,7 @@ namespace VRime.App.Settings
     /// <summary>
     /// 値をアプリの外（SteamVR など）が持つオン・オフの項目。設定ファイルには保存しない。
     /// 値の読み書きは <see cref="SettingsForm"/> を通してアプリが行う（<see cref="SettingsForm.SetExternalValue"/> / <see cref="SettingsForm.ExternalChangeRequested"/>）。
-    /// 外の値はアプリの外でも変わりうるため、アプリは表示の前に読み直して渡す。
+    /// 外の値はアプリの外でも変わりうるため、アプリは表示の前に再取得して渡す。
     /// </summary>
     public sealed class ExternalToggleSettingItem : SwitchSettingItem
     {
@@ -183,7 +183,7 @@ namespace VRime.App.Settings
         public UserSettings ResetToDefault(UserSettings settings) => SetIndex(settings, GetIndex(UserSettings.Default));
     }
 
-    /// <summary>設定画面のタブ 1 つ分の項目のまとまり。「既定に戻す」はカテゴリごとに働く。</summary>
+    /// <summary>設定画面のタブ 1 つ分の項目のまとまり。「既定に戻す」はカテゴリごとに作用する。</summary>
     public sealed class SettingsCategory
     {
         /// <param name="showsKeyboardPreview">このカテゴリを表示している間、位置の確認用にキーボードのオーバーレイを表示するか。</param>

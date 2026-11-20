@@ -34,7 +34,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void 盤面の中心はテクスチャの中心より下にある()
+        public void ボードの中心はテクスチャの中心より下にある()
         {
             Assert.Greater(Single<KeyboardView>().BoardCenterOffset, 0f);
         }

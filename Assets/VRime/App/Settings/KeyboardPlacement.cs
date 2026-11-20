@@ -3,7 +3,7 @@ using System;
 namespace VRime.App.Settings
 {
     /// <summary>
-    /// キーボードのオーバーレイの位置・傾き・大きさ（docs/spec/keyboard.md「表示位置」）。位置は HMD を基準にした「盤面の中心」の位置。
+    /// キーボードのオーバーレイの位置・傾き・大きさ（docs/spec/keyboard.md「表示位置」）。位置は HMD を基準にした「ボードの中心」の位置。
     /// 値は生成時に範囲を検査し、範囲外は例外にする。
     /// </summary>
     public sealed class KeyboardPlacement
@@ -31,16 +31,16 @@ namespace VRime.App.Settings
             WidthMeters = widthMeters;
         }
 
-        /// <summary>盤面の中心の位置: HMD から下へ。</summary>
+        /// <summary>ボードの中心の位置: HMD から下へ。</summary>
         public float DownMeters { get; }
 
-        /// <summary>盤面の中心の位置: HMD から前へ。</summary>
+        /// <summary>ボードの中心の位置: HMD から前へ。</summary>
         public float ForwardMeters { get; }
 
-        /// <summary>盤面の中心の位置: HMD から右へ（負は左）。</summary>
+        /// <summary>ボードの中心の位置: HMD から右へ（負は左）。</summary>
         public float RightMeters { get; }
 
-        /// <summary>盤面の傾き。上端が奥へ倒れる向きを正とし、0° は HMD の正面に垂直に立つ。</summary>
+        /// <summary>ボードの傾き。上端が奥へ倒れる向きを正とし、0° は HMD の正面に垂直に立つ。</summary>
         public float TiltDegrees { get; }
 
         /// <summary>オーバーレイ（テクスチャ全体）の幅。高さはテクスチャの縦横比で決まる。</summary>
