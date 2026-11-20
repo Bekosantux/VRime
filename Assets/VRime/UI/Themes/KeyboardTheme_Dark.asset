@@ -57,21 +57,25 @@ MonoBehaviour:
   _settingsText: {r: 0.96, g: 0.97, b: 0.98, a: 1}
   _settingsNote: {r: 0.6, g: 0.64, b: 0.7, a: 1}
   _settingsNotice: {r: 1, g: 0.6, b: 0.35, a: 1}
-  _settingsTrack: {r: 0.13, g: 0.15, b: 0.19, a: 1}
+  _settingsPanel: {r: 0.105882354, g: 0.12156863, b: 0.15294118, a: 1}
+  _settingsSeparator: {r: 0.14901961, g: 0.16470589, b: 0.1882353, a: 1}
+  _settingsNoticeBackground: {r: 0.21176471, g: 0.18039216, b: 0.1764706, a: 1}
+  _settingsTrack: {r: 0.16470589, g: 0.1882353, b: 0.23137255, a: 1}
   _settingsSliderFill: {r: 0.14, g: 0.5, b: 0.95, a: 1}
   _settingsBackdrop: {r: 0, g: 0, b: 0, a: 0.7}
-  _settingsDialog: {r: 0.1, g: 0.12, b: 0.15, a: 1}
+  _settingsDialog: {r: 0.13725491, g: 0.15686275, b: 0.2, a: 1}
   _settingsListBorder: {r: 0.227, g: 0.263, b: 0.329, a: 1}
   _settingsWindowMargin: {r: 0.08, g: 0.09, b: 0.11, a: 1}
-  _settingsButton: {r: 0.2, g: 0.23, b: 0.29, a: 1}
-  _settingsButtonHover: {r: 0.27, g: 0.31, b: 0.39, a: 1}
+  _settingsButton: {r: 0.18039216, g: 0.20784314, b: 0.25882354, a: 1}
+  _settingsButtonHover: {r: 0.22745098, g: 0.2627451, b: 0.32941177, a: 1}
   _settingsButtonPressed: {r: 0.14, g: 0.5, b: 0.95, a: 1}
   _settingsQuit: {r: 0.29, g: 0.2, b: 0.2, a: 1}
   _settingsQuitHover: {r: 0.5377358, g: 0.23589353, b: 0.23589353, a: 1}
   _settingsQuitPressed: {r: 0.86, g: 0.27, b: 0.27, a: 1}
   _settingsThumb: {r: 0.96, g: 0.97, b: 0.98, a: 1}
   _settingsThumbActive: {r: 0.45, g: 0.78, b: 1, a: 1}
-  _settingsTab: {r: 0.14, g: 0.16, b: 0.2, a: 1}
+  _settingsThumbRing: {r: 0.9607843, g: 0.96862745, b: 0.98039216, a: 1}
+  _settingsTab: {r: 0, g: 0, b: 0, a: 0}
   _settingsTabSelected: {r: 0.14, g: 0.5, b: 0.95, a: 1}
   _settingsSwitchOn: {r: 0.14, g: 0.5, b: 0.95, a: 1}
   _settingsSwitchOff: {r: 0.27, g: 0.31, b: 0.39, a: 1}

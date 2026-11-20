@@ -75,5 +75,14 @@ namespace VRime.App.View
 
         /// <summary>選択肢の一覧の枠。</summary>
         SettingsListBorder = 24,
+
+        /// <summary>設定画面のタブの列と内容を載せるパネル。</summary>
+        SettingsPanel = 25,
+
+        /// <summary>設定画面の行の区切り線。</summary>
+        SettingsSeparator = 26,
+
+        /// <summary>設定画面の下部の通知の背景。</summary>
+        SettingsNoticeBackground = 27,
     }
 }

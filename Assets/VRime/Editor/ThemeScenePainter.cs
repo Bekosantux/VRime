@@ -97,7 +97,10 @@ namespace VRime.Editor
                 set(Field(tab, "_background"), page.gameObject.activeSelf ? theme.SettingsTabSelected : theme.SettingsTab, nameof(SettingsTab));
             }
             foreach (SettingsRow row in All<SettingsRow>(scene))
-                set(Field(row, "_thumb"), theme.SettingsThumb, nameof(SettingsRow));
+            {
+                set(Field(row, "_thumb"), theme.SettingsThumbRing, nameof(SettingsRow));
+                set(Field(row, "_thumbFill"), theme.SettingsThumb, nameof(SettingsRow));
+            }
             foreach (SettingsToggleRow row in All<SettingsToggleRow>(scene))
             {
                 bool on = SettingsCatalog.FindSwitch(row.Key) switch

@@ -25,8 +25,11 @@ namespace VRime.App.View
         [Tooltip("同意の画面。オンにする前に同意が必要な項目ごとに 1 つずつ、カテゴリの項目の順に並べる。ページより後（下）に置く。")]
         [SerializeField] SettingsConsentDialog[] _consents = Array.Empty<SettingsConsentDialog>();
 
-        [Tooltip("通知（設定ファイルの問題・保存の失敗）を表示する。")]
+        [Tooltip("通知（設定ファイルの問題・保存の失敗）を表示する。_noticeArea の下に置く。")]
         [SerializeField] TextMeshProUGUI _notice;
+
+        [Tooltip("通知の領域。通知がない間は隠す。")]
+        [SerializeField] RectTransform _noticeArea;
 
         SettingsForm _form;
         ActiveTheme _theme;
@@ -40,11 +43,14 @@ namespace VRime.App.View
             SceneChecks.Require(_reset, this, nameof(_reset));
             SceneChecks.Require(_quit, this, nameof(_quit));
             SceneChecks.Require(_notice, this, nameof(_notice));
+            SceneChecks.Require(_noticeArea, this, nameof(_noticeArea));
             if (_pages == null || _pages.Length == 0) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_pages) + " が空です。");
             SceneChecks.RequireAll(_pages, _pages.Length, this, nameof(_pages));
             SceneChecks.RequireUnder(_reset, this, this, nameof(_reset));
             SceneChecks.RequireUnder(_quit, this, this, nameof(_quit));
-            SceneChecks.RequireUnder(_notice, this, this, nameof(_notice));
+            SceneChecks.RequireUnder(_noticeArea, this, this, nameof(_noticeArea));
+            if (!_notice.transform.IsChildOf(_noticeArea))
+                throw new InvalidOperationException(SceneChecks.PathOf(_notice.transform) + " は " + SceneChecks.PathOf(_noticeArea) + " の下に置く必要があります。");
             for (int i = 0; i < _pages.Length; i++)
             {
                 SceneChecks.RequireUnder(_pages[i], this, this, nameof(_pages) + "[" + i + "]");
@@ -140,6 +146,8 @@ namespace VRime.App.View
             foreach (SettingsConsentDialog consent in _consents) consent.Refresh(_form);
             string notice = _form.Notice ?? string.Empty;
             if (_notice.text != notice) _notice.text = notice;
+            bool hasNotice = notice.Length != 0;
+            if (_noticeArea.gameObject.activeSelf != hasNotice) _noticeArea.gameObject.SetActive(hasNotice);
             return true;
         }
     }

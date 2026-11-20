@@ -141,8 +141,17 @@ namespace VRime.App.View
         [Tooltip("画面の下部の通知（設定ファイルの問題・保存の失敗）。")]
         [SerializeField] Color _settingsNotice = new Color(1f, 0.6f, 0.35f, 1f);
 
+        [Tooltip("タブの列と内容を載せるパネル。")]
+        [SerializeField] Color _settingsPanel = new Color(0.106f, 0.122f, 0.153f, 1f);
+
+        [Tooltip("行の区切り線。パネルの上に置くため、混ぜた後の色を不透明で指定する。")]
+        [SerializeField] Color _settingsSeparator = new Color(0.149f, 0.165f, 0.188f, 1f);
+
+        [Tooltip("通知の背景。パネルの上に置くため、混ぜた後の色を不透明で指定する。")]
+        [SerializeField] Color _settingsNoticeBackground = new Color(0.212f, 0.180f, 0.176f, 1f);
+
         [Tooltip("スライダーのトラック。")]
-        [SerializeField] Color _settingsTrack = new Color(0.13f, 0.15f, 0.19f, 1f);
+        [SerializeField] Color _settingsTrack = new Color(0.165f, 0.188f, 0.231f, 1f);
 
         [Tooltip("スライダーの値までのフィル。")]
         [SerializeField] Color _settingsSliderFill = new Color(0.14f, 0.50f, 0.95f, 1f);
@@ -151,7 +160,7 @@ namespace VRime.App.View
         [SerializeField] Color _settingsBackdrop = new Color(0f, 0f, 0f, 0.7f);
 
         [Tooltip("同意の画面と、選択肢の一覧の背景。")]
-        [SerializeField] Color _settingsDialog = new Color(0.1f, 0.12f, 0.15f, 1f);
+        [SerializeField] Color _settingsDialog = new Color(0.137f, 0.157f, 0.2f, 1f);
 
         [Tooltip("選択肢の一覧の枠。")]
         [SerializeField] Color _settingsListBorder = new Color(0.227f, 0.263f, 0.329f, 1f);
@@ -160,8 +169,8 @@ namespace VRime.App.View
         [SerializeField] Color _settingsWindowMargin = new Color(0.08f, 0.09f, 0.11f, 1f);
 
         [Header("設定画面の操作の対象")]
-        [SerializeField] Color _settingsButton = new Color(0.20f, 0.23f, 0.29f, 1f);
-        [SerializeField] Color _settingsButtonHover = new Color(0.27f, 0.31f, 0.39f, 1f);
+        [SerializeField] Color _settingsButton = new Color(0.180f, 0.208f, 0.259f, 1f);
+        [SerializeField] Color _settingsButtonHover = new Color(0.227f, 0.263f, 0.329f, 1f);
         [SerializeField] Color _settingsButtonPressed = new Color(0.14f, 0.50f, 0.95f, 1f);
 
         [Tooltip("「アプリを終了」のボタン。ほかのボタンと見分けられる色にする。")]
@@ -174,8 +183,11 @@ namespace VRime.App.View
         [Tooltip("ドラッグしている・指しているスライダーのハンドル。")]
         [SerializeField] Color _settingsThumbActive = new Color(0.45f, 0.78f, 1.00f, 1f);
 
-        [Tooltip("選んでいないカテゴリのタブ。指している・押しているときはボタンと同じ色にする。")]
-        [SerializeField] Color _settingsTab = new Color(0.14f, 0.16f, 0.20f, 1f);
+        [Tooltip("スライダーのハンドルの枠。パネルと同じ明るさのハンドルが見えるようにする。ドラッグしている・指しているときはハンドルと同じ色にする。")]
+        [SerializeField] Color _settingsThumbRing = new Color(0.96f, 0.97f, 0.98f, 1f);
+
+        [Tooltip("選んでいないカテゴリのタブ。タブの列のパネルが見えるよう、既定は透明。指している・押しているときはボタンと同じ色にする。")]
+        [SerializeField] Color _settingsTab = new Color(0f, 0f, 0f, 0f);
 
         [SerializeField] Color _settingsTabSelected = new Color(0.14f, 0.50f, 0.95f, 1f);
 
@@ -233,6 +245,7 @@ namespace VRime.App.View
         public Color SettingsQuitPressed => _settingsQuitPressed;
         public Color SettingsThumb => _settingsThumb;
         public Color SettingsThumbActive => _settingsThumbActive;
+        public Color SettingsThumbRing => _settingsThumbRing;
         public Color SettingsTab => _settingsTab;
         public Color SettingsTabSelected => _settingsTabSelected;
         public Color SettingsSwitchOn => _settingsSwitchOn;
@@ -269,6 +282,9 @@ namespace VRime.App.View
                 case ThemeColorRole.SettingsBackdrop: return _settingsBackdrop;
                 case ThemeColorRole.SettingsDialog: return _settingsDialog;
                 case ThemeColorRole.SettingsListBorder: return _settingsListBorder;
+                case ThemeColorRole.SettingsPanel: return _settingsPanel;
+                case ThemeColorRole.SettingsSeparator: return _settingsSeparator;
+                case ThemeColorRole.SettingsNoticeBackground: return _settingsNoticeBackground;
                 default: throw new ArgumentOutOfRangeException(nameof(role), role, "未知の色の役割です。");
             }
         }
