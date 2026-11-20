@@ -98,6 +98,9 @@ namespace VRime.Core
         /// <summary>送信結果などの表示用の文字列。入力バッファの内容が変わるか、キーボードを開くと消える。</summary>
         public string Notice => _notice;
 
+        /// <summary>貼り付けモード（docs/spec/output.md「貼り付けモード」）がオンか。送信先を決めるときに使う。</summary>
+        public bool IsPasteMode => _grip.IsPasteMode;
+
         public GripInputMethod GripInput => _grip;
         public GripViewState GripView => _grip.View;
 
@@ -221,8 +224,16 @@ namespace VRime.Core
         }
 
         /// <summary>
+        /// 貼り付けモードを使えるか（前面のウィンドウが VRChat か）を渡す。毎フレームの <see cref="Tick"/> の前に呼ぶ。
+        /// </summary>
+        public void SetPasteModeAvailable(bool available)
+        {
+            _grip.SetPasteModeAvailable(available);
+        }
+
+        /// <summary>
         /// 実行中に設定を差し替える。次の <see cref="Tick"/> から新しい値で判定する。
-        /// 実行中に変えられるのはスティックとトリガーのしきい値・連続入力の時間・変換を使えるかだけで、それ以外の値が異なる設定は例外にする
+        /// 実行中に変えられるのはスティックとトリガーのしきい値・連続入力の時間・変換を使えるか・貼り付けモードを戻すかだけで、それ以外の値が異なる設定は例外にする
         /// （子音の手は表示の組み立てに、同時押しの許容時間は開閉の判定に、生成時の値が使われているため）。
         /// </summary>
         public void ApplySettings(KeyboardSettings settings)
@@ -321,6 +332,7 @@ namespace VRime.Core
                 {
                     // バッファが変わるため、それまでの通知（前回の送信の失敗など）は消える。
                     _buffer.Clear();
+                    _grip.OnSent();
                     _haptics.Add(new HapticEvent(hand, HapticKind.Input));
                 }
                 else

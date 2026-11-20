@@ -30,6 +30,7 @@ namespace VRime.App.Settings
         const string VRChatKey = "vrchat";
         const string FocusOnStartupKey = "focusOnStartup";
         const string ShowTypingTextKey = "showTypingText";
+        const string ResetPasteModeAfterSendKey = "resetPasteModeAfterSend";
         const string PrivacyKey = "privacy";
         const string UseGoogleConversionKey = "useGoogleConversion";
 
@@ -59,6 +60,7 @@ namespace VRime.App.Settings
                 {
                     [FocusOnStartupKey] = settings.VRChat.FocusOnStartup,
                     [ShowTypingTextKey] = settings.VRChat.ShowTypingText,
+                    [ResetPasteModeAfterSendKey] = settings.VRChat.ResetPasteModeAfterSend,
                 },
                 [PrivacyKey] = new JObject
                 {
@@ -96,7 +98,8 @@ namespace VRime.App.Settings
             JObject privacy = OptionalObject(root, PrivacyKey);
             var vrchatSettings = new VRChatSettings(
                 OptionalBool(vrchat, FocusOnStartupKey, defaults.VRChat.FocusOnStartup),
-                OptionalBool(vrchat, ShowTypingTextKey, defaults.VRChat.ShowTypingText));
+                OptionalBool(vrchat, ShowTypingTextKey, defaults.VRChat.ShowTypingText),
+                OptionalBool(vrchat, ResetPasteModeAfterSendKey, defaults.VRChat.ResetPasteModeAfterSend));
             var privacySettings = new PrivacySettings(
                 OptionalBool(privacy, UseGoogleConversionKey, defaults.Privacy.UseGoogleConversion));
             string themeName = OptionalString(display, ThemeKey);

@@ -616,6 +616,95 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 119784371}
   m_CullTransparentMesh: 1
+--- !u!1 &149854668
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 149854669}
+  - component: {fileID: 149854672}
+  - component: {fileID: 149854671}
+  - component: {fileID: 149854670}
+  m_Layer: 9
+  m_Name: Separator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &149854669
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 149854668}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1410951696}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 0, y: -199}
+  m_SizeDelta: {x: 936, y: 2}
+  m_Pivot: {x: 0, y: 1}
+--- !u!114 &149854670
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 149854668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f293cd0392f04441824778f178722a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VRime.App::VRime.App.View.ThemeColor
+  _role: 26
+--- !u!114 &149854671
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 149854668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.8901961, g: 0.9137255, b: 0.8392157, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &149854672
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 149854668}
+  m_CullTransparentMesh: 1
 --- !u!1001 &207073460
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7314,7 +7403,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: -216}
+  m_AnchoredPosition: {x: 0, y: -288}
   m_SizeDelta: {x: 936, y: 48}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1327503666
@@ -8344,6 +8433,7 @@ MonoBehaviour:
   _toggles:
   - {fileID: 1319022371}
   - {fileID: 1994807801}
+  - {fileID: 1787142168}
   - {fileID: 2147312727}
   _dropdowns: []
 --- !u!224 &1410951696
@@ -8362,6 +8452,8 @@ RectTransform:
   - {fileID: 1319022370}
   - {fileID: 1317840603}
   - {fileID: 1994807800}
+  - {fileID: 149854669}
+  - {fileID: 1787142167}
   - {fileID: 1327503665}
   - {fileID: 2147312728}
   m_Father: {fileID: 602176184}
@@ -10149,6 +10241,62 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VRime.App::VRime.App.View.ThemeColor
   _role: 22
+--- !u!1001 &1787142166
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1410951696}
+    m_Modifications:
+    - target: {fileID: 2552791143336273611, guid: af41456f185c70941a291a0d123f539b,
+        type: 3}
+      propertyPath: m_text
+      value: "\u8CBC\u308A\u4ED8\u3051\u6210\u529F\u6642\u306B\u300C\u8CBC\u4ED8\u300D\u30AD\u30FC\u3092\u623B\u3059"
+      objectReference: {fileID: 0}
+    - target: {fileID: 3324019582703145295, guid: af41456f185c70941a291a0d123f539b,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3324019582703145295, guid: af41456f185c70941a291a0d123f539b,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -200
+      objectReference: {fileID: 0}
+    - target: {fileID: 4153520547516606979, guid: af41456f185c70941a291a0d123f539b,
+        type: 3}
+      propertyPath: _key
+      value: resetPasteModeAfterSend
+      objectReference: {fileID: 0}
+    - target: {fileID: 5489894380191045100, guid: af41456f185c70941a291a0d123f539b,
+        type: 3}
+      propertyPath: m_Name
+      value: resetPasteModeAfterSend
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: af41456f185c70941a291a0d123f539b, type: 3}
+--- !u!224 &1787142167 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 3324019582703145295, guid: af41456f185c70941a291a0d123f539b,
+    type: 3}
+  m_PrefabInstance: {fileID: 1787142166}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1787142168 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4153520547516606979, guid: af41456f185c70941a291a0d123f539b,
+    type: 3}
+  m_PrefabInstance: {fileID: 1787142166}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1d6cd051e93ef94faf231e267abc514, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VRime.App::VRime.App.View.SettingsToggleRow
 --- !u!1 &1900247778
 GameObject:
   m_ObjectHideFlags: 0
@@ -11507,7 +11655,7 @@ PrefabInstance:
     - target: {fileID: 3324019582703145295, guid: af41456f185c70941a291a0d123f539b,
         type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -272
+      value: -344
       objectReference: {fileID: 0}
     - target: {fileID: 4153520547516606979, guid: af41456f185c70941a291a0d123f539b,
         type: 3}

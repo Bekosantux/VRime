@@ -10,7 +10,7 @@ namespace VRime.Core.Tests
     public class SessionTests
     {
         const int Commit = 8;
-        const int Language = 6;
+        const int Language = 1;
 
         // 左右のグリップを gap 秒の差で押して離す（左が先）。
         static void Chord(Rig rig, double gap, double lead = 0.0625)
@@ -591,11 +591,152 @@ namespace VRime.Core.Tests
         }
     }
 
+    /// <summary>貼り付けモード（docs/spec/output.md「貼り付けモード」）と「貼付」キー。</summary>
+    public class PasteModeTests
+    {
+        const int PasteMode = 6;
+        const int Commit = 8;
+
+        static GripCellView PasteCell(Rig rig)
+        {
+            rig.SetGrip(rig.Vowel, true);
+            rig.Tick();
+            GripCellView cell = rig.Session.GripView.VowelCells[PasteMode];
+            rig.SetGrip(rig.Vowel, false);
+            rig.Tick();
+            return cell;
+        }
+
+        static void TypeAndSend(Rig rig)
+        {
+            rig.Type(0, StickDirection.Center);
+            rig.VowelFunction(Commit);
+            rig.VowelFunction(Commit);
+        }
+
+        [Test]
+        public void 使えない間は空きセルとして表示し押しても何もしない()
+        {
+            var rig = new Rig();
+            Assert.AreEqual("・", PasteCell(rig).Label);
+            Assert.AreEqual("", rig.Session.GripView.VowelHints[PasteMode]);
+
+            rig.Effects.Haptics.Clear();
+            rig.VowelFunction(PasteMode);
+            Assert.IsFalse(rig.Session.IsPasteMode);
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+        }
+
+        [Test]
+        public void 使える間は押すたびに切り替わりオンの間は点灯する()
+        {
+            var rig = new Rig();
+            rig.Session.SetPasteModeAvailable(true);
+            Assert.AreEqual("貼", rig.Session.GripView.VowelHints[PasteMode]);
+            GripCellView off = PasteCell(rig);
+            Assert.AreEqual("貼付", off.Label);
+            Assert.IsFalse(off.Lit);
+
+            rig.Effects.Haptics.Clear();
+            rig.VowelFunction(PasteMode);
+            Assert.IsTrue(rig.Session.IsPasteMode);
+            Assert.IsTrue(PasteCell(rig).Lit);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Input));
+
+            rig.VowelFunction(PasteMode);
+            Assert.IsFalse(rig.Session.IsPasteMode);
+            Assert.IsFalse(PasteCell(rig).Lit);
+        }
+
+        [Test]
+        public void 使えなくなってもオンのまま保ち使えるようになれば点灯する()
+        {
+            var rig = new Rig();
+            rig.Session.SetPasteModeAvailable(true);
+            rig.VowelFunction(PasteMode);
+
+            rig.Session.SetPasteModeAvailable(false);
+            Assert.IsTrue(rig.Session.IsPasteMode);
+            Assert.AreEqual("・", PasteCell(rig).Label);
+
+            rig.Session.SetPasteModeAvailable(true);
+            Assert.IsTrue(PasteCell(rig).Lit);
+        }
+
+        [Test]
+        public void 使えるかが変わると表示のバージョンが変わる()
+        {
+            var rig = new Rig();
+            int version = rig.Session.ViewVersion;
+            rig.Session.SetPasteModeAvailable(true);
+            Assert.AreNotEqual(version, rig.Session.ViewVersion);
+            version = rig.Session.ViewVersion;
+            rig.Session.SetPasteModeAvailable(true);
+            Assert.AreEqual(version, rig.Session.ViewVersion);
+        }
+
+        [Test]
+        public void 送信に成功するとオフに戻る()
+        {
+            var rig = new Rig();
+            rig.Session.SetPasteModeAvailable(true);
+            rig.VowelFunction(PasteMode);
+            TypeAndSend(rig);
+            CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
+            Assert.IsFalse(rig.Session.IsPasteMode);
+        }
+
+        [Test]
+        public void 設定がオフなら送信に成功してもオンのまま()
+        {
+            var rig = new Rig(new KeyboardSettings(resetPasteModeAfterSend: false));
+            rig.Session.SetPasteModeAvailable(true);
+            rig.VowelFunction(PasteMode);
+            TypeAndSend(rig);
+            Assert.IsTrue(rig.Session.IsPasteMode);
+        }
+
+        [Test]
+        public void 実行中に戻すかの設定を変えられる()
+        {
+            var rig = new Rig();
+            rig.Session.ApplySettings(new KeyboardSettings(resetPasteModeAfterSend: false));
+            rig.Session.SetPasteModeAvailable(true);
+            rig.VowelFunction(PasteMode);
+            TypeAndSend(rig);
+            Assert.IsTrue(rig.Session.IsPasteMode);
+        }
+
+        [Test]
+        public void 送信に失敗したらオンのまま()
+        {
+            var rig = new Rig();
+            rig.Session.SetPasteModeAvailable(true);
+            rig.VowelFunction(PasteMode);
+            rig.Effects.SendSucceeds = false;
+            TypeAndSend(rig);
+            Assert.IsTrue(rig.Session.IsPasteMode);
+        }
+
+        [Test]
+        public void 使えない間の送信ではオフに戻さない()
+        {
+            var rig = new Rig();
+            rig.Session.SetPasteModeAvailable(true);
+            rig.VowelFunction(PasteMode);
+            rig.Session.SetPasteModeAvailable(false);
+            TypeAndSend(rig);
+            CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
+            Assert.IsTrue(rig.Session.IsPasteMode);
+        }
+    }
+
     /// <summary>変換の流れ（docs/spec/conversion.md「候補欄」）。</summary>
     public class ConversionFlowTests
     {
         const int Convert = 7;
-        const int Language = 6;
+        const int Language = 1;
         const int Commit = 8;
 
         static ConversionSegment Segment(string reading, params string[] candidates)

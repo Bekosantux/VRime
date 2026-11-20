@@ -14,7 +14,7 @@ namespace VRime.App.View
     /// </summary>
     public sealed class SettingsToggleRow : MonoBehaviour
     {
-        [Tooltip("項目のキー（SettingsCatalog の項目のキー）。focusOnStartup / showTypingText / autoLaunch / useGoogleConversion。")]
+        [Tooltip("項目のキー（SettingsCatalog の項目のキー）。focusOnStartup / showTypingText / resetPasteModeAfterSend / autoLaunch / useGoogleConversion。")]
         [SerializeField] string _key;
 
         [Tooltip("スイッチの背景。色でオン・オフを示す。")]

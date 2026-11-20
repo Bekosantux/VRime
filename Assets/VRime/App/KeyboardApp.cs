@@ -335,8 +335,11 @@ namespace VRime.App
             if (_quitting) return;
 
             // 送信先は、このフレームの入力を処理する前に決める。送信と文字数の上限が同じ送信先に従うようにするため。
-            _monitor.Update();
-            _session.SetLengthLimit(_monitor.Target.Kind == OutputTargetKind.VRChat ? VRChatChatbox.MaxLength : (int?)null);
+            // 貼り付けモードの切り替えは、次のフレームの送信先に反映する。
+            _monitor.Update(_session.IsPasteMode);
+            OutputTarget target = _monitor.Target;
+            _session.SetPasteModeAvailable(target.IsVRChat);
+            _session.SetLengthLimit(target.Kind == OutputTargetKind.VRChat ? VRChatChatbox.MaxLength : (int?)null);
 
             // ダッシュボードが入力を持っている間は、手動で閉じるのと同じ処理でキーボードを閉じる（ARCHITECTURE.md「入力の横取り」）。
             _session.SetDashboardVisible(_platform.IsDashboardHoldingInput);

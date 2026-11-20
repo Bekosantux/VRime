@@ -125,11 +125,11 @@ namespace VRime.Core.Tests
         {
             GripAction?[] expected =
             {
-                GripAction.ToggleWidth, null, GripAction.NumberPage,
+                GripAction.ToggleWidth, GripAction.Language, GripAction.NumberPage,
                 GripAction.CursorLeft, GripAction.ToggleCase, GripAction.CursorRight,
-                GripAction.Language, GripAction.Convert, GripAction.Commit,
+                GripAction.TogglePasteMode, GripAction.Convert, GripAction.Commit,
             };
-            string[] labels = { "全/半", "・", "数字", "←", "↑", "→", "言語", "変換", "確定" };
+            string[] labels = { "全/半", "言語", "数字", "←", "↑", "→", "貼付", "変換", "確定" };
             for (int cell = 0; cell < 9; cell++)
             {
                 GripCell actual = GripLayout.GetVowelFunctionCell(cell);

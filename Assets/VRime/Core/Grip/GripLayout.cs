@@ -53,9 +53,9 @@ namespace VRime.Core.Grip
 
         static readonly GripCell[] VowelFunctionCells =
         {
-            GripCell.ForAction(GripAction.ToggleWidth, "全/半"), GripCell.Empty, GripCell.ForAction(GripAction.NumberPage, "数字"),
+            GripCell.ForAction(GripAction.ToggleWidth, "全/半"), GripCell.ForAction(GripAction.Language, "言語"), GripCell.ForAction(GripAction.NumberPage, "数字"),
             GripCell.ForAction(GripAction.CursorLeft, "←"), GripCell.ForAction(GripAction.ToggleCase, "↑"), GripCell.ForAction(GripAction.CursorRight, "→"),
-            GripCell.ForAction(GripAction.Language, "言語"), GripCell.ForAction(GripAction.Convert, "変換"), GripCell.ForAction(GripAction.Commit, "確定"),
+            GripCell.ForAction(GripAction.TogglePasteMode, "貼付"), GripCell.ForAction(GripAction.Convert, "変換"), GripCell.ForAction(GripAction.Commit, "確定"),
         };
 
         /// <summary>子音パネルのセル。cell は 0..8（行優先、左上が 0、中央が 4）。</summary>

@@ -289,6 +289,8 @@ namespace VRime.App.Settings
                     s => s.VRChat.FocusOnStartup, (s, v) => s.WithVRChat(s.VRChat.WithFocusOnStartup(v))),
                 new ToggleSettingItem("showTypingText",
                     s => s.VRChat.ShowTypingText, (s, v) => s.WithVRChat(s.VRChat.WithShowTypingText(v))),
+                new ToggleSettingItem("resetPasteModeAfterSend",
+                    s => s.VRChat.ResetPasteModeAfterSend, (s, v) => s.WithVRChat(s.VRChat.WithResetPasteModeAfterSend(v))),
                 AutoLaunch,
             }),
             new SettingsCategory("privacy", new SettingItem[]

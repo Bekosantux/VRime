@@ -20,7 +20,7 @@ namespace VRime.Core.Tests
         const int CursorLeft = 3;
         const int ToggleCase = 4;
         const int CursorRight = 5;
-        const int Language = 6;
+        const int Language = 1;
 
         static readonly string[] NoHints = { "", "", "", "", "", "", "", "", "" };
 
@@ -620,7 +620,8 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             GripViewState view = rig.Session.GripView;
             string[] consonant = { "", "", "消", "小", "わ", "記", "", "", "空" };
-            string[] vowel = { "全", "", "数", "←", "↑", "→", "言", "変", "確" };
+            // 貼り付けモードを使えない間（既定）は、「貼付」のヒントを示さない。
+            string[] vowel = { "全", "言", "数", "←", "↑", "→", "", "変", "確" };
             CollectionAssert.AreEqual(consonant, view.ConsonantHints);
             CollectionAssert.AreEqual(vowel, view.VowelHints);
         }

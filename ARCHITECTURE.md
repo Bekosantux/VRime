@@ -130,13 +130,13 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 
 1. `IKeyboardPlatform.BeginFrame()`: 環境のイベントの処理と、設定タブの操作。終了を求められたら、以降の API を呼ばない。
 2. `TrayIcon.TryTakeCommand`: トレイの操作。
-3. `ForegroundWindowMonitor.Update` と `KeyboardSession.SetLengthLimit`: 送信先と文字数の上限。
+3. `ForegroundWindowMonitor.Update(KeyboardSession.IsPasteMode)`・`KeyboardSession.SetPasteModeAvailable`・`KeyboardSession.SetLengthLimit`: 送信先、「貼付」キーを使えるか、文字数の上限。「貼付」キーによる貼り付けモードの切り替えは、次のフレームの送信先に反映する。
 4. `KeyboardSession.SetDashboardVisible(IsDashboardHoldingInput)`: ダッシュボードによる一時停止。
 5. `IControllerSource.Read` → `KeyboardSession.Tick`。
 6. 変換の中止の判定。
 7. `SetPlacementPreviewVisible`: 設定タブかデスクトップの設定ウィンドウの表示中で、選んでいるカテゴリが `ShowsKeyboardPreview` のとき、位置の確認用にキーボードを表示する。
 8. 表示の更新（[描画](#描画)）。
-9. `/chatbox/typing` と入力中の文字の表示。どちらも送信先が VRChat の間だけ送り、送信先が変われば次のフレームで取り下げる。
+9. `/chatbox/typing` と入力中の文字の表示。どちらも送信先が VRChat（チャットボックス）の間だけ送り、送信先が変われば（貼り付けモードへの切り替えを含む）次のフレームで取り下げる。
 10. チャットボックスの送信（`VRChatChatbox.Update`）。送信は失敗したときだけ通知を入力欄に出す。
 
 - 値を SteamVR が持つ設定項目（自動で起動するか）は、環境を作った直後と設定画面の表示中の毎フレームに `IKeyboardPlatform.AutoLaunch` を読んで `SettingsForm.SetExternalValue` で渡す。`SettingsForm.ExternalChangeRequested` を受けたら `SetAutoLaunch` で変えてから読み直す。

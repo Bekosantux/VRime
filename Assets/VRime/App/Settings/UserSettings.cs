@@ -73,7 +73,8 @@ namespace VRime.App.Settings
                 stickThreshold: StickThreshold,
                 triggerThreshold: TriggerThreshold,
                 repeatDelaySeconds: ToDouble(RepeatDelaySeconds),
-                conversionEnabled: Privacy.UseGoogleConversion);
+                conversionEnabled: Privacy.UseGoogleConversion,
+                resetPasteModeAfterSend: VRChat.ResetPasteModeAfterSend);
         }
 
         public bool Equals(UserSettings other)

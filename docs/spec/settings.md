@@ -26,6 +26,7 @@ SteamVR ダッシュボードにこのアプリのタブ「VRime」を追加し�
 | グリップ入力 | トリガーのしきい値・スティックのしきい値・長押しの時間（[grip-input.md](grip-input.md)） | |
 | 外部連携 | 起動時にVRChatにフォーカス（[output.md](output.md#vrchat)） | オン |
 | | 入力中の文字をテキストボックスに表示（[output.md](output.md#vrchat)） | オン |
+| | 貼り付け成功時に「貼付」キーを戻す（[output.md](output.md#貼り付けモード)） | オン |
 | | SteamVRの起動時に自動で起動（[lifecycle.md](lifecycle.md#steamvr-への登録と自動起動)） | オフ |
 | 個人情報 | 変換に Google API を使用する。オンにするには注意事項への同意が必要（[conversion.md](conversion.md#プライバシーと同意)） | オフ |
 
@@ -35,7 +36,7 @@ SteamVR ダッシュボードにこのアプリのタブ「VRime」を追加し�
 
 ### 反映と保存
 
-- 変えた値は、キーボードの位置と入力の判定、テーマ、チャットボックスへの入力中の文字の表示、変換を使えるかにすぐ反映する。「起動時にVRChatにフォーカス」は次回の起動から有効。
+- 変えた値は、キーボードの位置と入力の判定、テーマ、チャットボックスへの入力中の文字の表示、変換を使えるか、貼り付けモードを戻すかにすぐ反映する。「起動時にVRChatにフォーカス」は次回の起動から有効。
 - 保存は値が確定したとき（スライダーを離したとき、ボタン・スイッチ・選択肢を押したとき）に行う。
 - 保存に失敗しても、アプリは動き続ける（反映済みの値はそのまま使う）。
 
@@ -56,7 +57,7 @@ SteamVR ダッシュボードにこのアプリのタブ「VRime」を追加し�
   "version": 1,
   "display": { "downMeters": 0.26, "forwardMeters": 0.85, "rightMeters": 0, "tiltDegrees": 17, "widthMeters": 0.45, "theme": "lime" },
   "grip": { "triggerThreshold": 0.7, "stickThreshold": 0.5, "repeatDelaySeconds": 0.5 },
-  "vrchat": { "focusOnStartup": true, "showTypingText": true },
+  "vrchat": { "focusOnStartup": true, "showTypingText": true, "resetPasteModeAfterSend": true },
   "privacy": { "useGoogleConversion": false }
 }
 ```

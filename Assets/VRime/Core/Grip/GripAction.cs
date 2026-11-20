@@ -29,5 +29,8 @@ namespace VRime.Core.Grip
 
         Convert,
         Commit,
+
+        /// <summary>貼付（貼り付けモードの オン / オフ）。</summary>
+        TogglePasteMode,
     }
 }

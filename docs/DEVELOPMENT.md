@@ -55,7 +55,7 @@
 - 項目:
   1. 設定ファイルに保存する項目は、値を `UserSettings` に加え、設定ファイルでの名前と読み書きを `SettingsSerializer` に加える。仕様書（[docs/spec/settings.md](spec/settings.md)）も更新する。
   2. `SettingsCatalog` に項目を加え、`UserSettings` の値を読み書きする関数を渡す。保存する項目のキーは、設定ファイルの項目名と同じにする。
-  3. シーンの該当するページに、同じキーの行を置く。数値は `SettingsRow`、オン・オフは `SettingsToggleRow`（同名のプレハブを置き、`_key` と項目名を設定する）、選択肢は `SettingsDropdownRow`。
+  3. シーンの該当するページに、同じキーの行を置く。数値は `SettingsRow`、オン・オフは `SettingsToggleRow`（同名のプレハブを置き、`_key` と項目名を設定する）、選択肢は `SettingsDropdownRow`。置いた行は、ページの `SettingsPage` の `_rows`・`_toggles`・`_dropdowns` のうち該当するものに加える。
 - カテゴリ: `SettingsPage` とタブ（`SettingsTab` のプレハブ）を置き、`SettingsView._pages` に `SettingsCatalog` と同じ順で加える。
 - 同意が必要な項目: `SettingsConsentDialog` を置き、`SettingsView._consents` に項目の順で加える。
 - 行やページの過不足は `SettingsLayout` の作成時に例外になる。`MainSceneTests` で確かめる。

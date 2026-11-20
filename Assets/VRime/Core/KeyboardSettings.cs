@@ -16,7 +16,8 @@ namespace VRime.Core
             double doubleChordWindowSeconds = 0.60,
             double repeatDelaySeconds = 0.50,
             double repeatIntervalSeconds = 0.10,
-            bool conversionEnabled = true)
+            bool conversionEnabled = true,
+            bool resetPasteModeAfterSend = true)
         {
             if (consonantHand != Hand.Left && consonantHand != Hand.Right)
                 throw new ArgumentOutOfRangeException(nameof(consonantHand), consonantHand, null);
@@ -37,6 +38,7 @@ namespace VRime.Core
             RepeatDelaySeconds = repeatDelaySeconds;
             RepeatIntervalSeconds = repeatIntervalSeconds;
             ConversionEnabled = conversionEnabled;
+            ResetPasteModeAfterSend = resetPasteModeAfterSend;
         }
 
         /// <summary>子音パネルを担当する手。母音パネルは反対の手。</summary>
@@ -64,6 +66,9 @@ namespace VRime.Core
 
         /// <summary>変換を使えるか。false の間、「変換」は無効のセルになり、押すと無効の振動で知らせる（変換の要求を出さない）。</summary>
         public bool ConversionEnabled { get; }
+
+        /// <summary>貼り付けモードで送信に成功したら、貼り付けモードをオフに戻すか（docs/spec/output.md「貼り付けモード」）。</summary>
+        public bool ResetPasteModeAfterSend { get; }
 
         // 傾き・引き量は 0..1 で表されるため、1 を超える値には到達できない。0 以下だと、触れていなくても倒した・押したとみなす。
         static void ValidateThreshold(float value, string name)
