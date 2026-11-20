@@ -21,7 +21,7 @@ VRime（ブイライム）は、SteamVR 上で動作する日本語入力用の�
 |---|---|
 | OS | Windows 10 / 11 |
 | VR ランタイム | SteamVR |
-| コントローラー | 既定のバインドを同梱: Valve Index、Meta Quest（Link / Air Link / Virtual Desktop 等）、HTC Vive ワンド（トラックパッドをスティックとして使用）、Pico、HTC Vive Focus 3、Steam Frame。そのほかのコントローラーは、SteamVR のバインド設定画面で割り当てれば使えるはずです |
+| コントローラー | 動作確認済み: Meta Quest（Air Link / Steam Link / Virtual Desktop）。<br>未確認: Valve Index、HTC Vive ワンド、Pico、HTC Vive Focus 3、Steam Frame。既定のバインドは同梱していますが、実機での動作は確認していません。<br>詳細は [docs/SPEC.md「動作環境」](docs/SPEC.md#動作環境) を参照してください |
 | ネットワーク | 変換に必要です |
 
 ## 外部サービスの利用

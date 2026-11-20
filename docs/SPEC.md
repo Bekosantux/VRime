@@ -29,7 +29,7 @@ SteamVR 上で動作する、日本語入力用のキーボードオーバーレ
 |---|---|
 | OS | Windows 10 / 11（64bit） |
 | VR ランタイム | SteamVR（必須） |
-| コントローラー | 既定のバインドを同梱: Valve Index、Meta Quest（Link / Air Link / Virtual Desktop で SteamVR 経由）、HTC Vive ワンド（トラックパッドをスティック代わりに使う）、Pico、HTC Vive Focus 3、Steam Frame。そのほかのコントローラーは、SteamVR のバインド設定画面で割り当てれば使える（[grip-input.md](spec/grip-input.md#コントローラーの割り当て)） |
+| コントローラー | 動作確認済み: Meta Quest（Air Link / Steam Link / Virtual Desktop で SteamVR 経由）。<br>未確認（既定のバインドは同梱するが、実機での動作を確認していない）: Valve Index、HTC Vive ワンド（トラックパッドをスティック代わりに使う）、Pico、HTC Vive Focus 3、Steam Frame。利用者からの報告を受けて順次確認する。<br>そのほかのコントローラーは、SteamVR のバインド設定画面で割り当てれば使える（[grip-input.md](spec/grip-input.md#コントローラーの割り当て)） |
 | VRChat | PC版。VRChat 側で OSC を有効にする（Action Menu → Options → OSC → Enabled） |
 | ネットワーク | 変換に必要（Google の API を使うため） |
 
