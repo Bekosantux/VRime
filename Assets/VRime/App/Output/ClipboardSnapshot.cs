@@ -7,8 +7,8 @@ using VRime.App.Native;
 namespace VRime.App.Output
 {
     /// <summary>
-    /// クリップボードの内容の複製（SPEC 7.2）。いずれもクリップボードを開いている間（<see cref="ClipboardAccess"/>）に呼ぶ。
-    /// メモリ（HGLOBAL）の形式と拡張メタファイルを複製する。CF_BITMAP・CF_PALETTE は CF_DIB から Windows が作り直すため複製しない。
+    /// クリップボードの内容の複製（docs/spec/output.md「クリップボードの扱い」）。いずれもクリップボードを開いている間（<see cref="ClipboardAccess"/>）に呼ぶ。
+    /// メモリ（HGLOBAL）の形式と拡張メタファイルを複製する。CF_BITMAP・CF_PALETTE は CF_DIB から Windows が再生成するため複製しない。
     /// それ以外の GDI ハンドルの形式・オーナー描画・アプリ固有のハンドル（CF_PRIVATEFIRST〜CF_GDIOBJLAST）は中身を複製できないため捨てる。
     /// </summary>
     internal sealed class ClipboardSnapshot

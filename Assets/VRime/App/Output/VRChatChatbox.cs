@@ -11,7 +11,7 @@ namespace VRime.App.Output
     }
 
     /// <summary>
-    /// VRChat のチャットボックスへ OSC（UDP）で送る（SPEC 7.3）。
+    /// VRChat のチャットボックスへ OSC（UDP）で送る（docs/spec/output.md「VRChat」）。
     /// <see cref="Send"/> と <see cref="SetPreview"/> は予約だけを行い、毎フレーム呼ぶ <see cref="Update"/> が 1秒以上の間隔を空けて実際に送る。
     /// 送信の失敗（ソケットの例外）は <see cref="Update"/> / <see cref="SetTyping"/> から送出される。
     /// </summary>
@@ -57,7 +57,7 @@ namespace VRime.App.Output
             _outbox.SetPreview(text != null ? Truncate(text) : null);
         }
 
-        // サロゲートペアの途中では切らない。
+        // サロゲートペアを分割しない。
         static string Truncate(string text)
         {
             if (text.Length <= MaxLength) return text;
@@ -93,7 +93,7 @@ namespace VRime.App.Output
             }
         }
 
-        /// <summary>入力中の表示（SPEC 7.3）。値が変わったときだけ送る。</summary>
+        /// <summary>入力中の表示（docs/spec/output.md「VRChat」）。値が変わったときだけ送る。</summary>
         public void SetTyping(bool typing)
         {
             ThrowIfDisposed();
@@ -116,7 +116,7 @@ namespace VRime.App.Output
             _udp.Send(packet, packet.Length, _endpoint);
         }
 
-        // 宛先の設定が変わっていたら解決し直す。
+        // 宛先の設定が変わっていたら再解決する。
         void EnsureEndpoint()
         {
             if (_udp != null && _endpointHost == _settings.OscHost && _endpointPort == _settings.OscPort) return;

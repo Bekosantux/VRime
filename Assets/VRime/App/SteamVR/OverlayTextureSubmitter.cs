@@ -24,7 +24,7 @@ namespace VRime.App.SteamVR
         static readonly RenderEventCallback s_callback = OnRenderEvent;
         static readonly IntPtr s_callbackPtr = Marshal.GetFunctionPointerForDelegate(s_callback);
 
-        // 登録簿とその内部の状態（各インスタンスの失敗の記録を含む）の保護に使う。
+        // s_registryとその内部の状態（各インスタンスの失敗の記録を含む）の保護に使う。
         static readonly object s_lock = new object();
         static readonly Dictionary<int, OverlayTextureSubmitter> s_registry = new Dictionary<int, OverlayTextureSubmitter>();
         static int s_nextId;
@@ -38,8 +38,8 @@ namespace VRime.App.SteamVR
         EVROverlayError _failedError = EVROverlayError.None;
         Exception _failedException;
 
-        // 失敗が記録されたか。毎フレームの確認でロックを取らないためのもの
-        // （ロックを取ると、レンダースレッドが SetOverlayTexture を実行している間メインスレッドが待たされる）。
+        // 失敗が記録されたか。毎フレームの確認でロックを取得しないためのもの
+        // （ロックを取得すると、レンダースレッドが SetOverlayTexture を実行している間メインスレッドが待たされる）。
         volatile bool _hasFailed;
 
         public OverlayTextureSubmitter(ulong overlayHandle, IntPtr nativeTexture)
@@ -82,7 +82,7 @@ namespace VRime.App.SteamVR
 
         /// <summary>
         /// 登録を解除する。冪等。
-        /// 戻った後は、依頼済みのイベントが残っていても、コールバックがこのオーバーレイに触れることはない
+        /// 戻った後は、依頼済みのイベントが残っていても、コールバックがこのオーバーレイにアクセスすることはない
         /// （コールバックは登録の確認から呼び出しの完了までロックを保持し、解除も同じロックの下で行うため）。
         /// これにより、続く <c>DestroyOverlay</c> と <c>OpenVR.Shutdown</c> を安全に実行できる。
         /// </summary>
@@ -96,7 +96,7 @@ namespace VRime.App.SteamVR
             }
         }
 
-        // レンダースレッドから呼ばれる。ここから例外が出るとプロセスが異常終了するため、必ず捕捉する。
+        // レンダースレッドから呼ばれる。ここから例外が送出されるとプロセスが異常終了するため、必ず捕捉する。
         // Unity の API は呼ばない（レンダースレッドからは使えない）。
         [AOT.MonoPInvokeCallback(typeof(RenderEventCallback))]
         static void OnRenderEvent(int eventId)
@@ -112,7 +112,7 @@ namespace VRime.App.SteamVR
             }
             catch
             {
-                // ロックの取得や登録簿の参照が失敗する状況は想定されない。記録する先もないため、握りつぶすしかない。
+                // ロックの取得やs_registryの参照が失敗する状況は想定されない。記録する先もないため、無視するしかない。
             }
         }
 
@@ -123,7 +123,7 @@ namespace VRime.App.SteamVR
             {
                 // 色空間: RenderTexture はリニア色空間のプロジェクトでは sRGB 形式（R8G8B8A8_SRGB）で、
                 // 書き込まれたバイト列はすでにガンマ（sRGB）符号化されている。ディスプレイにそのまま出せる値のため Gamma を指定する。
-                // Linear はバイト列がリニア値のときの指定で、ここで指定すると符号化済みの値をさらに符号化して白っぽくなる。
+                // Linear はバイト列がリニア値のときの指定で、ここで指定すると符号化済みの値をさらに符号化し、本来より明るくなる。
                 var texture = new Texture_t
                 {
                     handle = _nativeTexture,

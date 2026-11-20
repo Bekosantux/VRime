@@ -14,7 +14,7 @@ namespace VRime.App.View
     /// </summary>
     public sealed class KeyboardFonts : IDisposable
     {
-        // 日本語は字種が多いため、複数のアトラスに分けて追加する。サンプリングサイズはオーバーレイ上の最大の文字より大きく取る。
+        // 日本語は字種が多いため、複数のアトラスに分けて追加する。サンプリングサイズはオーバーレイ上の最大の文字より大きくする。
         const int SamplingPointSize = 64;
         const int AtlasPadding = 6;
         const int AtlasSize = 2048;

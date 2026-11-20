@@ -7,7 +7,7 @@ namespace VRime.App.Conversion
         /// <summary>接続できない（DNS の解決失敗・接続拒否・ネットワーク切断）。</summary>
         Connection,
 
-        /// <summary>制限時間内に応答がなかった（SPEC 6.4）。</summary>
+        /// <summary>制限時間内に応答がなかった（docs/spec/conversion.md「エラー時の扱い」）。</summary>
         Timeout,
 
         /// <summary>HTTP のエラーステータスが返った。</summary>

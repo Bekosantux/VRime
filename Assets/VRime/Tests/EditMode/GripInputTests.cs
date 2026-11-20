@@ -4,10 +4,10 @@ using VRime.Core.Input;
 
 namespace VRime.Core.Tests
 {
-    /// <summary>グリップ入力（SPEC 5.2）の振る舞い。Rig を通して、実際の操作と同じ入力列で確認する。</summary>
+    /// <summary>グリップ入力（docs/spec/grip-input.md）の振る舞い。Rig を通して、実際の操作と同じ入力列で確認する。</summary>
     public class GripInputTests
     {
-        // 機能ページのセル番号（SPEC 5.2）
+        // 機能ページのセル番号（docs/spec/grip-input.md）
         const int Erase = 2;
         const int Modifier = 3;
         const int Wa = 4;
@@ -20,7 +20,7 @@ namespace VRime.Core.Tests
         const int CursorLeft = 3;
         const int ToggleCase = 4;
         const int CursorRight = 5;
-        const int Language = 6;
+        const int Language = 1;
 
         static readonly string[] NoHints = { "", "", "", "", "", "", "", "", "" };
 
@@ -620,7 +620,8 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             GripViewState view = rig.Session.GripView;
             string[] consonant = { "", "", "消", "小", "わ", "記", "", "", "空" };
-            string[] vowel = { "全", "", "数", "←", "↑", "→", "言", "変", "確" };
+            // 貼り付けモードを使えない間（既定）は、「貼付」のヒントを示さない。
+            string[] vowel = { "全", "言", "数", "←", "↑", "→", "", "変", "確" };
             CollectionAssert.AreEqual(consonant, view.ConsonantHints);
             CollectionAssert.AreEqual(vowel, view.VowelHints);
         }
@@ -656,6 +657,86 @@ namespace VRime.Core.Tests
             rig.VowelFunction(NumberPage);
             Assert.AreEqual("－", rig.Session.GripView.ConsonantHints[Modifier]);
             Assert.AreEqual("０", rig.Session.GripView.ConsonantHints[Wa]);
+        }
+
+        static string[] DirectionHintsOf(GripCellView cell)
+        {
+            return new[]
+            {
+                cell.DirectionHint(StickDirection.Left), cell.DirectionHint(StickDirection.Up),
+                cell.DirectionHint(StickDirection.Right), cell.DirectionHint(StickDirection.Down),
+            };
+        }
+
+        static readonly string[] NoDirectionHints = { "", "", "", "" };
+
+        [Test]
+        public void 子音パネルの文字のセルには方向の文字をヒントとして示す()
+        {
+            var rig = new Rig();
+            GripViewState view = rig.Session.GripView;
+            CollectionAssert.AreEqual(new[] { "い", "う", "え", "お" }, DirectionHintsOf(view.ConsonantCells[0]));
+            CollectionAssert.AreEqual(new[] { "に", "ぬ", "ね", "の" }, DirectionHintsOf(view.ConsonantCells[4]));
+            CollectionAssert.AreEqual(new[] { "「", "ゆ", "」", "よ" }, DirectionHintsOf(view.ConsonantCells[7]));
+        }
+
+        [Test]
+        public void 方向のヒントは大文字と全角を反映する()
+        {
+            var rig = new Rig();
+            ToEnglish(rig);
+            CollectionAssert.AreEqual(new[] { "b", "c", "#", "2" }, DirectionHintsOf(rig.Session.GripView.ConsonantCells[1]));
+            rig.VowelFunction(ToggleCase);
+            CollectionAssert.AreEqual(new[] { "B", "C", "#", "2" }, DirectionHintsOf(rig.Session.GripView.ConsonantCells[1]));
+            rig.VowelFunction(ToggleWidth);
+            CollectionAssert.AreEqual(new[] { "Ｂ", "Ｃ", "＃", "２" }, DirectionHintsOf(rig.Session.GripView.ConsonantCells[1]));
+        }
+
+        [Test]
+        public void 機能ページの文字のセルにも方向のヒントを示し_動作のセルには示さない()
+        {
+            var rig = new Rig();
+            rig.SetGrip(rig.Consonant, true);
+            rig.Tick();
+            GripViewState view = rig.Session.GripView;
+            CollectionAssert.AreEqual(new[] { "を", "ん", "ー", "〜" }, DirectionHintsOf(view.ConsonantCells[Wa]));
+            CollectionAssert.AreEqual(new[] { "。", "？", "！", "…" }, DirectionHintsOf(view.ConsonantCells[Symbol]));
+            CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[Modifier]));
+            CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[Erase]));
+            CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[0]));
+        }
+
+        [Test]
+        public void 未割り当ての方向と母音パネルには方向のヒントがない()
+        {
+            var rig = new Rig();
+            GripViewState view = rig.Session.GripView;
+            foreach (GripCellView cell in view.VowelCells)
+                CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(cell));
+
+            rig.VowelFunction(NumberPage);
+            view = rig.Session.GripView;
+            CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[0]));
+
+            rig.SetGrip(rig.Vowel, true);
+            rig.Tick();
+            foreach (GripCellView cell in rig.Session.GripView.VowelCells)
+                CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(cell));
+        }
+
+        [Test]
+        public void 方向のヒントは中央を受け付けない()
+        {
+            GripCellView cell = new Rig().Session.GripView.ConsonantCells[0];
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => cell.DirectionHint(StickDirection.Center));
+        }
+
+        [Test]
+        public void 方向のヒントは4方向分が必要()
+        {
+            Assert.Throws<System.ArgumentException>(() => new GripCellView("あ", false, false, new[] { "い", "う", "え" }));
+            Assert.Throws<System.ArgumentException>(() => new GripCellView("あ", false, false, new[] { "い", null, "え", "お" }));
+            Assert.Throws<System.ArgumentNullException>(() => new GripCellView("あ", false, false, null));
         }
 
         [Test]
@@ -826,7 +907,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 消去は連続入力され_消すものがなくなると1回だけ無効の振動を出して止まる()
+        public void 消去は連続入力され_消すものがなくなると1回だけ無効の振動で知らせて止まる()
         {
             var rig = RepeatRig();
             rig.Type(0, StickDirection.Center);

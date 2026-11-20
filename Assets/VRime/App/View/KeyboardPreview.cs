@@ -12,7 +12,8 @@ namespace VRime.App.View
     /// <summary>
     /// エディター専用の確認表示。VR 機器がなくても、Game ビューにオーバーレイのテクスチャ・振動・操作キーを表示する。
     /// 設定画面の表示中は、設定画面のテクスチャを表示し、開発用の環境ではマウスで操作できる。
-    /// メインカメラは使わず、OnGUI から描く。
+    /// メインカメラは使わず、OnGUI から描画する。
+    /// ビルドではプレイヤーのウィンドウを隠し、表示するときは設定ウィンドウ（<see cref="DesktopSettingsWindow"/>）として使うため、開発ビルドにも含めない。
     /// </summary>
     public sealed class KeyboardPreview
     {

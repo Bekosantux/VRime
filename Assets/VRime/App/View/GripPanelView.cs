@@ -7,7 +7,7 @@ namespace VRime.App.View
 {
     /// <summary>
     /// グリップ入力のパネル（子音側 3×3・母音側 5方向または 3×3）とページ・全角/半角・大文字/小文字の状態。
-    /// <see cref="GripViewState"/> を描くだけで、入力の判断は持たない。
+    /// <see cref="GripViewState"/> を描画するだけで、入力の判断は持たない。
     /// 左右のパネルはシーンに置き、子音を担当する手の側を子音側、反対側を母音側にする。
     /// </summary>
     public sealed class GripPanelView : MonoBehaviour
@@ -29,10 +29,10 @@ namespace VRime.App.View
         [Tooltip("右のパネルの 3×3 のセル。左上から行ごとの順。")]
         [SerializeField] GripPanelCell[] _rightCells = new GripPanelCell[CellCount];
 
-        [Tooltip("左のパネルの見出し（手の名前と役割）。")]
+        [Tooltip("左のパネルの見出し（役割）。")]
         [SerializeField] GripPanelCaption _leftCaption;
 
-        [Tooltip("右のパネルの見出し（手の名前と役割）。")]
+        [Tooltip("右のパネルの見出し（役割）。")]
         [SerializeField] GripPanelCaption _rightCaption;
 
         [Tooltip("かな・英字・数字の順。")]
@@ -41,12 +41,20 @@ namespace VRime.App.View
         [SerializeField] GripPanelChip _widthChip;
         [SerializeField] GripPanelChip _caseChip;
 
-        KeyboardTheme _theme;
-        Hand _consonantHand;
+        ActiveTheme _theme;
         GripPanelCell[] _consonantCells;
         GripPanelCell[] _vowelCells;
         GripPanelCaption _consonantCaption;
         GripPanelCaption _vowelCaption;
+
+        /// <summary>
+        /// 母音側の通常ページで、3×3 のその位置（行優先の 0..8）に5方向のセルを置くか。四隅には置かず、機能ページのヒントだけを示す。
+        /// </summary>
+        public static bool HasVowelDirection(int cell)
+        {
+            if (cell < 0 || cell >= CellCount) throw new ArgumentOutOfRangeException(nameof(cell), cell, null);
+            return CellToDirection[cell] >= 0;
+        }
 
         public void Validate()
         {
@@ -67,11 +75,10 @@ namespace VRime.App.View
             _caseChip.Validate();
         }
 
-        public void Initialize(Hand consonantHand, KeyboardTheme theme)
+        public void Initialize(Hand consonantHand, ActiveTheme theme)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
-            _consonantHand = consonantHand;
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             bool consonantLeft = consonantHand == Hand.Left;
             _consonantCells = consonantLeft ? _leftCells : _rightCells;
             _vowelCells = consonantLeft ? _rightCells : _leftCells;
@@ -92,7 +99,7 @@ namespace VRime.App.View
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
             GripViewState view = input.View;
-            _group.alpha = dimmed ? _theme.PanelDimAlpha : 1f;
+            _group.alpha = dimmed ? _theme.Current.PanelDimAlpha : 1f;
 
             for (int i = 0; i < _consonantCells.Length; i++)
             {
@@ -113,23 +120,23 @@ namespace VRime.App.View
                 {
                     GripPanelCell cell = _vowelCells[i];
                     string hint = view.VowelHints[i];
-                    int direction = CellToDirection[i];
-                    if (direction >= 0)
+                    if (HasVowelDirection(i))
                     {
+                        int direction = CellToDirection[i];
                         cell.SetActive(true);
                         cell.Set(view.VowelCells[direction], direction == view.VowelSelected, hint);
                     }
                     else
                     {
-                        // 5方向のマスがない位置（四隅）には、ヒントがあればヒントだけを置く。
+                        // 5方向のセルがない位置（四隅）には、ヒントがあればヒントだけを置く。
                         cell.SetActive(hint.Length != 0);
                         if (hint.Length != 0) cell.SetHintOnly(hint);
                     }
                 }
             }
 
-            _consonantCaption.Set(_consonantHand, view.ConsonantFunctionPage ? "機能" : "子音", view.ConsonantFunctionPage);
-            _vowelCaption.Set(_consonantHand.Opposite(), view.VowelFunctionPage ? "機能" : "母音", view.VowelFunctionPage);
+            _consonantCaption.Set(view.ConsonantFunctionPage ? "機能" : "子音", view.ConsonantFunctionPage);
+            _vowelCaption.Set(view.VowelFunctionPage ? "機能" : "母音", view.VowelFunctionPage);
 
             RefreshChips(input, view.Page);
         }
@@ -140,7 +147,7 @@ namespace VRime.App.View
             _pageChips[1].Set("英字", page == GripPage.Alpha ? GripChipState.Selected : GripChipState.Inactive);
             _pageChips[2].Set("数字", page == GripPage.Number ? GripChipState.Selected : GripChipState.Inactive);
 
-            // 全角/半角は英字・数字ページ、大文字/小文字は英字ページでのみ作用する（SPEC 5.2）。
+            // 全角/半角は英字・数字ページ、大文字/小文字は英字ページでのみ作用する（docs/spec/grip-input.md「母音側の機能ページ」）。
             bool widthApplies = page != GripPage.Kana;
             _widthChip.Set(input.IsFullWidth ? "全角" : "半角", widthApplies ? GripChipState.Active : GripChipState.Inactive);
             bool caseApplies = page == GripPage.Alpha;

@@ -9,8 +9,9 @@ namespace VRime.App.View
     /// <summary>
     /// 設定画面（<see cref="SettingsForm"/>）の状態を uGUI に反映する。設定画面のキャンバスに置く。
     /// 操作の対象の配置（<see cref="SettingsLayout"/>）はシーンの uGUI の矩形から作るため、シーンで動かした位置がそのまま当たり判定になる。
-    /// 毎フレーム <see cref="RefreshIfChanged"/> を呼ぶと、<see cref="SettingsForm.Version"/> が変わったときだけ uGUI を更新する。
-    /// 題名・見出し・説明・項目名はシーンに置いたまま変えない。
+    /// 毎フレーム <see cref="RefreshIfChanged"/> を呼ぶと、<see cref="SettingsForm.Version"/> か <see cref="ActiveTheme.Version"/> が変わったときだけ uGUI を更新する。
+    /// テーマが変わったときは、状態によらない色（<see cref="ThemeColor"/>）も再設定する。
+    /// タイトル・見出し・説明・項目名はシーンに置いたまま変えない。バージョンの文字は <see cref="Initialize"/> で 1 回だけ設定する。
     /// </summary>
     public sealed class SettingsView : MonoBehaviour
     {
@@ -24,11 +25,19 @@ namespace VRime.App.View
         [Tooltip("同意の画面。オンにする前に同意が必要な項目ごとに 1 つずつ、カテゴリの項目の順に並べる。ページより後（下）に置く。")]
         [SerializeField] SettingsConsentDialog[] _consents = Array.Empty<SettingsConsentDialog>();
 
-        [Tooltip("通知（設定ファイルの問題・保存の失敗）を表示する。")]
+        [Tooltip("通知（設定ファイルの問題・保存の失敗）を表示する。_noticeArea の下に置く。")]
         [SerializeField] TextMeshProUGUI _notice;
 
+        [Tooltip("通知の領域。通知がない間は隠す。")]
+        [SerializeField] RectTransform _noticeArea;
+
+        [Tooltip("アプリのバージョンを表示する。")]
+        [SerializeField] TextMeshProUGUI _version;
+
         SettingsForm _form;
+        ActiveTheme _theme;
         int _renderedVersion = -1;
+        int _renderedThemeVersion = -1;
 
         RectTransform Canvas => (RectTransform)transform;
 
@@ -37,11 +46,16 @@ namespace VRime.App.View
             SceneChecks.Require(_reset, this, nameof(_reset));
             SceneChecks.Require(_quit, this, nameof(_quit));
             SceneChecks.Require(_notice, this, nameof(_notice));
+            SceneChecks.Require(_noticeArea, this, nameof(_noticeArea));
+            SceneChecks.Require(_version, this, nameof(_version));
             if (_pages == null || _pages.Length == 0) throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_pages) + " が空です。");
             SceneChecks.RequireAll(_pages, _pages.Length, this, nameof(_pages));
             SceneChecks.RequireUnder(_reset, this, this, nameof(_reset));
             SceneChecks.RequireUnder(_quit, this, this, nameof(_quit));
-            SceneChecks.RequireUnder(_notice, this, this, nameof(_notice));
+            SceneChecks.RequireUnder(_noticeArea, this, this, nameof(_noticeArea));
+            SceneChecks.RequireUnder(_version, this, this, nameof(_version));
+            if (!_notice.transform.IsChildOf(_noticeArea))
+                throw new InvalidOperationException(SceneChecks.PathOf(_notice.transform) + " は " + SceneChecks.PathOf(_noticeArea) + " の下に置く必要があります。");
             for (int i = 0; i < _pages.Length; i++)
             {
                 SceneChecks.RequireUnder(_pages[i], this, this, nameof(_pages) + "[" + i + "]");
@@ -99,11 +113,11 @@ namespace VRime.App.View
         }
 
         /// <param name="form">このビューの <see cref="CreateLayout"/> で作った配置を持つ設定画面。</param>
-        public void Initialize(SettingsForm form, KeyboardTheme theme)
+        public void Initialize(SettingsForm form, ActiveTheme theme)
         {
             Validate();
             _form = form ?? throw new ArgumentNullException(nameof(form));
-            if (theme == null) throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             IReadOnlyList<SettingsPageLayout> pages = form.Layout.Pages;
             if (pages.Count != _pages.Length)
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " のページの数が配置のページの数と一致しません。");
@@ -114,15 +128,23 @@ namespace VRime.App.View
             if (consents.Count != _consents.Length)
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の同意の画面の数が配置の同意の画面の数と一致しません。");
             for (int i = 0; i < consents.Count; i++) _consents[i].Initialize(consents[i], theme);
+            _version.text = "v" + AppInfo.Version;
             _renderedVersion = -1;
+            _renderedThemeVersion = -1;
         }
 
         /// <summary>表示に関わる状態が変わっていれば uGUI を更新して true を返す。</summary>
         public bool RefreshIfChanged()
         {
             int version = _form.Version;
-            if (version == _renderedVersion) return false;
+            int themeVersion = _theme.Version;
+            if (version == _renderedVersion && themeVersion == _renderedThemeVersion) return false;
             _renderedVersion = version;
+            if (themeVersion != _renderedThemeVersion)
+            {
+                _renderedThemeVersion = themeVersion;
+                ThemeColor.ApplyAll(transform, _theme.Current);
+            }
 
             foreach (SettingsPage page in _pages) page.Refresh(_form);
             _reset.Refresh(_form);
@@ -130,6 +152,8 @@ namespace VRime.App.View
             foreach (SettingsConsentDialog consent in _consents) consent.Refresh(_form);
             string notice = _form.Notice ?? string.Empty;
             if (_notice.text != notice) _notice.text = notice;
+            bool hasNotice = notice.Length != 0;
+            if (_noticeArea.gameObject.activeSelf != hasNotice) _noticeArea.gameObject.SetActive(hasNotice);
             return true;
         }
     }

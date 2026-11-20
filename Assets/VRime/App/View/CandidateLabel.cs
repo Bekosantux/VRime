@@ -16,7 +16,7 @@ namespace VRime.App.View
         [SerializeField] HorizontalLayoutGroup _layout;
         [SerializeField] LayoutElement _size;
 
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
         float _maxWidth;
         string _text;
 
@@ -29,10 +29,10 @@ namespace VRime.App.View
         }
 
         /// <param name="maxWidth">最大の幅。これを超える文字は省略記号にする。</param>
-        public void Initialize(KeyboardTheme theme, float maxWidth)
+        public void Initialize(ActiveTheme theme, float maxWidth)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             if (!(maxWidth > _layout.padding.horizontal))
                 throw new ArgumentOutOfRangeException(nameof(maxWidth), maxWidth, "左右の余白より狭い幅です。");
             _maxWidth = maxWidth;
@@ -46,10 +46,10 @@ namespace VRime.App.View
                 _text = text;
                 Fit(text);
             }
-            _background.color = selected ? _theme.CandidateSelected : _theme.Candidate;
+            _background.color = selected ? _theme.Current.CandidateSelected : _theme.Current.Candidate;
         }
 
-        // 幅は文字の長さに合わせる。上限を超えるときは、収まる長さまで切って省略記号を付ける。
+        // 幅は文字の長さに合わせる。上限を超えるときは、収まる長さまで切り詰めて省略記号を付ける。
         void Fit(string text)
         {
             float padding = _layout.padding.horizontal;

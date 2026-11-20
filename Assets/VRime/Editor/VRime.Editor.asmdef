@@ -1,0 +1,21 @@
+{
+    "name": "VRime.Editor",
+    "rootNamespace": "VRime.Editor",
+    "references": [
+        "VRime.App",
+        "VRime.Core",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

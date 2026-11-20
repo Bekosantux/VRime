@@ -24,7 +24,7 @@ namespace VRime.App.View
             _textureSize = textureSize;
         }
 
-        /// <summary>OnGUI のイベントごとに呼ぶ。<paramref name="area"/> は設定画面のテクスチャを描く矩形（GUI の座標）。</summary>
+        /// <summary>OnGUI のイベントごとに呼ぶ。<paramref name="area"/> は設定画面のテクスチャを描画する矩形（GUI の座標）。</summary>
         public void Handle(Event e, Rect area)
         {
             bool inside = area.Contains(e.mousePosition);

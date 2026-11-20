@@ -7,8 +7,8 @@ using System.Text;
 namespace VRime.App.Native
 {
     /// <summary>
-    /// Unity のプレイヤーのウィンドウ。本アプリの表示は SteamVR のオーバーレイで行うため、ビルドでは起動後に隠す（SPEC 3.1）。
-    /// デスクトップの設定ウィンドウ（SPEC 8.1）を開く間だけ表示する。
+    /// Unity のプレイヤーのウィンドウ。本アプリの表示は SteamVR のオーバーレイで行うため、ビルドでは起動後に隠す（docs/spec/lifecycle.md「起動」）。
+    /// デスクトップの設定ウィンドウ（docs/spec/settings.md「デスクトップの設定ウィンドウ」）を開く間だけ表示する。
     /// ビルドのプレイヤーでだけ使う。エディターで呼ぶと、エディター自身のウィンドウが対象になりうる。
     /// 自プロセスに該当するウィンドウがちょうど 1 つでない場合は、どの操作も例外。
     /// </summary>
@@ -64,7 +64,7 @@ namespace VRime.App.Native
                 handle.Free();
             }
 
-            // コールバックの中で例外を投げると、ネイティブのコードを越えて伝わらないため、列挙を終えてから投げる。
+            // コールバックの中で例外を送出すると、ネイティブのコードを越えて伝わらないため、列挙を終えてから送出する。
             if (search.Error != 0) throw new Win32Exception(search.Error, "ウィンドウのクラス名を取得できませんでした。");
             if (search.Found.Count != 1)
                 throw new InvalidOperationException("Unity のプレイヤーのウィンドウ（" + ClassName + "）が 1 つではありません: " + search.Found.Count + " 個");

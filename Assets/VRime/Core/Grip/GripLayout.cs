@@ -3,7 +3,7 @@ using System;
 namespace VRime.Core.Grip
 {
     /// <summary>
-    /// SPEC 5.2 の表。子音パネルの各ページと母音パネルの機能ページのセルを返す。
+    /// docs/spec/grip-input.md の文字の配置の表。子音パネルの各ページと母音パネルの機能ページのセルを返す。
     /// 文字は中央・左・上・右・下の順。英字は小文字で持ち、大文字・全角は入力時に変換する。
     /// </summary>
     public static class GripLayout
@@ -24,7 +24,7 @@ namespace VRime.Core.Grip
             Group("pqrs7"), Group("tuv~8"), Group("wxyz9"),
         };
 
-        // 中央のみ文字があり、他の方向は未割り当て（SPEC U-12）。
+        // 中央のみ文字があり、他の方向は未割り当て（docs/ROADMAP.md の U-12）。
         static readonly GripCell[] NumberCells =
         {
             Single("1"), Single("2"), Single("3"),
@@ -53,9 +53,9 @@ namespace VRime.Core.Grip
 
         static readonly GripCell[] VowelFunctionCells =
         {
-            GripCell.ForAction(GripAction.ToggleWidth, "全/半"), GripCell.Empty, GripCell.ForAction(GripAction.NumberPage, "数字"),
+            GripCell.ForAction(GripAction.ToggleWidth, "全/半"), GripCell.ForAction(GripAction.Language, "言語"), GripCell.ForAction(GripAction.NumberPage, "数字"),
             GripCell.ForAction(GripAction.CursorLeft, "←"), GripCell.ForAction(GripAction.ToggleCase, "↑"), GripCell.ForAction(GripAction.CursorRight, "→"),
-            GripCell.ForAction(GripAction.Language, "言語"), GripCell.ForAction(GripAction.Convert, "変換"), GripCell.ForAction(GripAction.Commit, "確定"),
+            GripCell.ForAction(GripAction.TogglePasteMode, "貼付"), GripCell.ForAction(GripAction.Convert, "変換"), GripCell.ForAction(GripAction.Commit, "確定"),
         };
 
         /// <summary>子音パネルのセル。cell は 0..8（行優先、左上が 0、中央が 4）。</summary>

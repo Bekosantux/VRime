@@ -12,13 +12,13 @@ namespace VRime.App.View
         Inactive,
     }
 
-    /// <summary>ページ行の札（ページ・全角/半角・大文字/小文字）。</summary>
+    /// <summary>ページ行のチップ（ページ・全角/半角・大文字/小文字）。</summary>
     public sealed class GripPanelChip : MonoBehaviour
     {
         [SerializeField] Image _background;
         [SerializeField] TextMeshProUGUI _label;
 
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
 
         public void Validate()
         {
@@ -26,10 +26,10 @@ namespace VRime.App.View
             SceneChecks.Require(_label, this, nameof(_label));
         }
 
-        public void Initialize(KeyboardTheme theme)
+        public void Initialize(ActiveTheme theme)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
         }
 
         public void Set(string label, GripChipState state)
@@ -37,16 +37,16 @@ namespace VRime.App.View
             switch (state)
             {
                 case GripChipState.Selected:
-                    _background.color = _theme.ChipSelected;
-                    _label.color = _theme.ChipText;
+                    _background.color = _theme.Current.ChipSelected;
+                    _label.color = _theme.Current.ChipText;
                     break;
                 case GripChipState.Active:
-                    _background.color = _theme.ChipActive;
-                    _label.color = _theme.ChipText;
+                    _background.color = _theme.Current.ChipActive;
+                    _label.color = _theme.Current.ChipText;
                     break;
                 case GripChipState.Inactive:
-                    _background.color = _theme.Chip;
-                    _label.color = _theme.ChipTextInactive;
+                    _background.color = _theme.Current.Chip;
+                    _label.color = _theme.Current.ChipTextInactive;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(state), state, null);

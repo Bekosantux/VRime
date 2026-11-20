@@ -28,6 +28,7 @@ namespace VRime.App.Native
         public const uint CF_GDIOBJLAST = 0x03FF;
         public const uint GMEM_MOVEABLE = 0x0002;
         public const int ERROR_SUCCESS = 0;
+        public const int ERROR_ALREADY_EXISTS = 183;
 
         /// <summary>CreateWindowEx の親に渡すと、メッセージ専用のウィンドウになる。</summary>
         public static readonly IntPtr HWND_MESSAGE = new IntPtr(-3);
@@ -72,6 +73,11 @@ namespace VRime.App.Native
 
         public const uint MSGFLT_ALLOW = 1;
 
+        public const uint MB_OK = 0x00000000;
+        public const uint MB_ICONERROR = 0x00000010;
+        public const uint MB_SETFOREGROUND = 0x00010000;
+        public const uint MB_TOPMOST = 0x00040000;
+
         public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
         public const uint TOKEN_QUERY = 0x0008;
         public const int TokenElevation = 20;
@@ -79,7 +85,7 @@ namespace VRime.App.Native
 
         /// <summary>
         /// INPUT 構造体（x64 で 40 バイト）。キーボード入力の部分だけを定義する。
-        /// 共用体の MOUSEINPUT が最大のため、x64 では型の後に 4 バイトの詰めが入り、本体は 8 バイト位置から始まる。
+        /// 共用体の MOUSEINPUT が最大のため、x64 では型の後に 4 バイトのパディングが入り、本体は 8 バイト位置から始まる。
         /// </summary>
         [StructLayout(LayoutKind.Explicit, Size = 40)]
         public struct INPUT
@@ -136,7 +142,7 @@ namespace VRime.App.Native
             public uint lPrivate;
         }
 
-        /// <summary>NOTIFYICONDATAW。uVersion は uTimeout との共用体。</summary>
+        /// <summary>NOTIFYICONDATAW（x64 で 976 バイト）。uVersion は uTimeout との共用体。</summary>
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct NOTIFYICONDATA
         {
@@ -299,6 +305,10 @@ namespace VRime.App.Native
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern uint RegisterWindowMessage(string name);
 
+        /// <summary>メッセージボックスを表示し、閉じるまで待つ。押されたボタンの ID を返し、失敗で 0。</summary>
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool ChangeWindowMessageFilterEx(IntPtr hWnd, uint message, uint action, IntPtr changeFilterStruct);
@@ -354,6 +364,9 @@ namespace VRime.App.Native
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool CloseHandle(IntPtr handle);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr CreateMutex(IntPtr attributes, bool initialOwner, string name);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder name, ref uint size);

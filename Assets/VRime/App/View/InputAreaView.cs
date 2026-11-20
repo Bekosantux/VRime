@@ -9,7 +9,7 @@ namespace VRime.App.View
 {
     /// <summary>
     /// 入力欄（確定済みの文字列・未確定のかな・キャレット）と、その下の状態行（通知・送信先・文字数）。
-    /// 状態行は左から、通知の札（通知があるときだけ）・「送信先」のラベルと送信先の名前を詰めて並べ、文字数を右端に置く。
+    /// 状態行は左から、通知のバッジ（通知があるときだけ）・「送信先」のラベルと送信先の名前を詰めて並べ、文字数を右端に置く。
     /// 通知と送信先の名前は、収まらなければ切り詰める。
     /// 文字数は、上限があれば「文字数 / 上限」、なければ「文字数 文字」と表示する。
     /// 未確定のかなは色と下線で確定済みと区別する。行数が入力欄を超えるときは、キャレットの行が見える位置までずらす。
@@ -25,16 +25,16 @@ namespace VRime.App.View
         [Tooltip("キャレット。_text の子。幅はシーンの値を使い、位置と高さは文字に合わせる。")]
         [SerializeField] RectTransform _caret;
 
-        [Tooltip("状態行。通知の札・送信先・文字数はこの直下に置き、位置と幅はこのビューが決める（高さはシーンの値を使う）。")]
+        [Tooltip("状態行。通知のバッジ・送信先・文字数はこの直下に置き、位置と幅はこのビューが決める（高さはシーンの値を使う）。")]
         [SerializeField] RectTransform _statusRow;
 
-        [Tooltip("通知の札（背景）。通知が空の間は隠す。")]
+        [Tooltip("通知のバッジ（背景）。通知が空の間は隠す。")]
         [SerializeField] RectTransform _noticeBadge;
 
-        [Tooltip("通知の文字。_noticeBadge の子で、左右に余白を空けて札いっぱいに広げる（その余白を札の幅に足す）。")]
+        [Tooltip("通知の文字。_noticeBadge の子で、左右に余白を空けてバッジいっぱいに広げる（その余白をバッジの幅に足す）。")]
         [SerializeField] TextMeshProUGUI _notice;
 
-        [Tooltip("通知の札の最大の幅。超える通知は切り詰める。")]
+        [Tooltip("通知のバッジの最大の幅。超える通知は切り詰める。")]
         [SerializeField] float _noticeMaxWidth = 520f;
 
         [Tooltip("「送信先」のラベル（文字はシーンで決める）。")]
@@ -46,17 +46,18 @@ namespace VRime.App.View
         [Tooltip("文字数（上限があれば上限も）。")]
         [SerializeField] TextMeshProUGUI _length;
 
-        [Tooltip("通知の札と送信先の間、送信先と文字数の間。")]
+        [Tooltip("通知のバッジと送信先の間、送信先と文字数の間。")]
         [SerializeField] float _statusGap = 14f;
 
         [Tooltip("「送信先」のラベルと名前の間。")]
         [SerializeField] float _targetLabelGap = 10f;
 
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
         RectTransform _textRect;
         float _caretWidth;
         float _noticePadding;
         string _compositionOpenTag;
+        KeyboardTheme _compositionTagTheme;
         readonly StringBuilder _builder = new StringBuilder();
 
         public void Validate()
@@ -89,10 +90,10 @@ namespace VRime.App.View
                 throw new InvalidOperationException(SceneChecks.PathOf(_text.transform) + " のリッチテキストが無効です。");
         }
 
-        public void Initialize(KeyboardTheme theme)
+        public void Initialize(ActiveTheme theme)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             _textRect = _text.rectTransform;
             _caretWidth = _caret.sizeDelta.x;
             RectTransform noticeRect = _notice.rectTransform;
@@ -101,7 +102,7 @@ namespace VRime.App.View
             _noticePadding = noticeRect.offsetMin.x - noticeRect.offsetMax.x;
             if (!(_noticeMaxWidth > _noticePadding))
                 throw new InvalidOperationException(SceneChecks.PathOf(transform) + " の " + nameof(_noticeMaxWidth) + " が通知の文字の左右の余白より狭いです。");
-            _compositionOpenTag = "<color=#" + ColorUtility.ToHtmlStringRGBA(theme.Composition) + "><u>";
+            _compositionTagTheme = null;
         }
 
         public void Refresh(KeyboardSession session, OutputTarget target)
@@ -158,14 +159,14 @@ namespace VRime.App.View
             if (limit.HasValue)
             {
                 text = length + " / " + limit.Value;
-                color = length > limit.Value ? _theme.LengthOverLimit
-                    : length == limit.Value ? _theme.LengthAtLimit
-                    : _theme.Length;
+                color = length > limit.Value ? _theme.Current.LengthOverLimit
+                    : length == limit.Value ? _theme.Current.LengthAtLimit
+                    : _theme.Current.Length;
             }
             else
             {
                 text = length + " 文字";
-                color = _theme.Length;
+                color = _theme.Current.Length;
             }
             if (_length.text != text) _length.text = text;
             _length.color = color;
@@ -181,7 +182,7 @@ namespace VRime.App.View
             AppendEscaped(_builder, committed, 0, committedCursor);
             if (composition.Length > 0)
             {
-                _builder.Append(_compositionOpenTag);
+                _builder.Append(CompositionOpenTag());
                 AppendEscaped(_builder, composition, 0, composition.Length);
                 _builder.Append("</u></color>");
             }
@@ -204,7 +205,7 @@ namespace VRime.App.View
             float bottom;
             if (info.characterCount == 0)
             {
-                // 空のときは、先頭行の位置を字体の寸法から求める。
+                // 空のときは、先頭行の位置をフォントのメトリクスから求める。
                 TMP_FontAsset font = _text.font;
                 float scale = _text.fontSize / font.faceInfo.pointSize;
                 x = 0f;
@@ -244,6 +245,18 @@ namespace VRime.App.View
                 if (text[i] == '<') builder.Append("<noparse><</noparse>");
                 else builder.Append(text[i]);
             }
+        }
+
+        // 未確定のかなの色のタグ。テーマが変わったときだけ再作成する。
+        string CompositionOpenTag()
+        {
+            KeyboardTheme theme = _theme.Current;
+            if (theme != _compositionTagTheme)
+            {
+                _compositionOpenTag = "<color=#" + ColorUtility.ToHtmlStringRGBA(theme.Composition) + "><u>";
+                _compositionTagTheme = theme;
+            }
+            return _compositionOpenTag;
         }
 
         static int CountCharacters(string text, int utf16Length)

@@ -7,7 +7,7 @@ namespace VRime.App.View
     /// <summary>
     /// オンにする前に同意が必要な項目の、同意の画面。<see cref="SettingsForm.ConsentItem"/> がこの項目の間だけ表示する（GameObject を切り替える）。
     /// どの項目の画面かは <see cref="_key"/>（<see cref="SettingsCatalog"/> の項目のキー）で決める。注意事項の文章はシーンに置いたまま変えない。
-    /// ページの上に重ねて描くため、ページより後（下）に置く。
+    /// ページの上に重ねて描画するため、ページより後（下）に置く。
     /// </summary>
     public sealed class SettingsConsentDialog : MonoBehaviour
     {
@@ -44,7 +44,7 @@ namespace VRime.App.View
         }
 
         /// <param name="layout">この画面の <see cref="BuildLayout"/> で作った配置。</param>
-        public void Initialize(SettingsConsentLayout layout, KeyboardTheme theme)
+        public void Initialize(SettingsConsentLayout layout, ActiveTheme theme)
         {
             if (layout == null) throw new ArgumentNullException(nameof(layout));
             CheckItem(layout.Item);

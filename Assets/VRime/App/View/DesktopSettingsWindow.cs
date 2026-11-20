@@ -6,7 +6,7 @@ using VRime.App.Settings;
 namespace VRime.App.View
 {
     /// <summary>
-    /// デスクトップの設定ウィンドウ（SPEC 8.1）。隠している Unity のプレイヤーのウィンドウを表示し、設定画面のテクスチャを OnGUI で描いて、マウスで操作させる。
+    /// デスクトップの設定ウィンドウ（docs/spec/settings.md「デスクトップの設定ウィンドウ」）。隠している Unity のプレイヤーのウィンドウを表示し、設定画面のテクスチャを OnGUI で描画して、マウスで操作させる。
     /// 設定画面の状態と描画は、ダッシュボードの設定タブと共有する（同じテクスチャと <see cref="ISettingsPointer"/>）。
     /// メインカメラは使わない。ビルドでだけ使う（<see cref="PlayerWindow"/> はエディターでは使えないため）。
     /// </summary>
@@ -15,20 +15,20 @@ namespace VRime.App.View
         // 最初に開くときの大きさの上限（画面の解像度に対する割合）。テクスチャがこれより大きければ、縦横比を保って縮める。
         const float MaxScreenFraction = 0.8f;
 
-        // ウィンドウの縦横比がテクスチャと違うときに、テクスチャの周りに見える色。
-        static readonly Color Backdrop = new Color(0.08f, 0.09f, 0.11f, 1f);
-
         readonly RenderTexture _texture;
+        readonly ActiveTheme _theme;
         readonly SettingsMouseInput _mouse;
         readonly string _title;
         bool _opened;
 
         /// <param name="texture">設定画面の描画先のテクスチャ。</param>
         /// <param name="pointer">マウスの操作の渡し先。</param>
+        /// <param name="theme">ウィンドウの縦横比がテクスチャと違うときに、テクスチャの周りに見える色（<see cref="KeyboardTheme.SettingsWindowMargin"/>）を取得する。</param>
         /// <param name="title">ウィンドウのタイトル。</param>
-        public DesktopSettingsWindow(RenderTexture texture, ISettingsPointer pointer, string title)
+        public DesktopSettingsWindow(RenderTexture texture, ISettingsPointer pointer, ActiveTheme theme, string title)
         {
             _texture = texture != null ? texture : throw new ArgumentNullException(nameof(texture));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             if (string.IsNullOrEmpty(title)) throw new ArgumentException("タイトルが空です。", nameof(title));
             _mouse = new SettingsMouseInput(pointer, new Vector2Int(texture.width, texture.height));
             _title = title;
@@ -71,7 +71,7 @@ namespace VRime.App.View
             if (Event.current.type != EventType.Repaint) return;
 
             Color previous = GUI.color;
-            GUI.color = Backdrop;
+            GUI.color = _theme.Current.SettingsWindowMargin;
             GUI.DrawTexture(window, Texture2D.whiteTexture);
             GUI.color = previous;
             GUI.DrawTexture(area, _texture, ScaleMode.StretchToFill, true);

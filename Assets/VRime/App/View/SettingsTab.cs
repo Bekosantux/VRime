@@ -13,7 +13,7 @@ namespace VRime.App.View
     {
         [SerializeField] Image _background;
 
-        KeyboardTheme _theme;
+        ActiveTheme _theme;
         SettingsCategory _category;
         SettingsHit _hit;
 
@@ -24,20 +24,20 @@ namespace VRime.App.View
             SceneChecks.Require(_background, this, nameof(_background));
         }
 
-        public void Initialize(KeyboardTheme theme, SettingsCategory category)
+        public void Initialize(ActiveTheme theme, SettingsCategory category)
         {
             Validate();
-            _theme = theme != null ? theme : throw new ArgumentNullException(nameof(theme));
+            _theme = theme ?? throw new ArgumentNullException(nameof(theme));
             _category = category ?? throw new ArgumentNullException(nameof(category));
             _hit = SettingsHit.Tab(category);
         }
 
         public void Refresh(SettingsForm form)
         {
-            if (form.Category == _category) _background.color = _theme.SettingsTabSelected;
-            else if (form.Pressed == _hit) _background.color = _theme.SettingsButtonPressed;
-            else if (form.Hover == _hit) _background.color = _theme.SettingsButtonHover;
-            else _background.color = _theme.SettingsTab;
+            if (form.Category == _category) _background.color = _theme.Current.SettingsTabSelected;
+            else if (form.Pressed == _hit) _background.color = _theme.Current.SettingsButtonPressed;
+            else if (form.Hover == _hit) _background.color = _theme.Current.SettingsButtonHover;
+            else _background.color = _theme.Current.SettingsTab;
         }
     }
 }

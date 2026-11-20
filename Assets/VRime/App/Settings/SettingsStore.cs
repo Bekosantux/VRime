@@ -6,7 +6,7 @@ using System.Text;
 namespace VRime.App.Settings
 {
     /// <summary>
-    /// 設定ファイルの読み書き（SPEC 8章）。
+    /// 設定ファイルの読み書き（docs/spec/settings.md「設定ファイル」）。
     /// 内容が正しくないファイルは、別名に移して既定値で起動する（次の保存で上書きされて失われないようにするため）。
     /// ファイルの読み書き自体の失敗（権限など）は例外にする。
     /// </summary>
@@ -28,8 +28,7 @@ namespace VRime.App.Settings
         }
 
         /// <summary>%AppData%\VRime\settings.json</summary>
-        public static string DefaultPath => System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VRime", FileName);
+        public static string DefaultPath => System.IO.Path.Combine(AppInfo.DataDirectory, FileName);
 
         public string Path { get; }
 

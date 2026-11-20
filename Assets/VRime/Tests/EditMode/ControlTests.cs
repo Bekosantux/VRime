@@ -37,7 +37,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 時間差が窓以内の同時押しを窓以内に2回で開閉する()
+        public void 時間差が許容時間以内の同時押しを許容時間以内に2回で開閉する()
         {
             var detector = Create();
             Assert.IsFalse(PressBoth(detector, 1.0, 1.25));
@@ -46,7 +46,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 時間差が窓を超えると同時押しとみなさない()
+        public void 時間差が許容時間を超えると同時押しとみなさない()
         {
             var detector = Create();
             PressBoth(detector, 1.0, 1.25);
@@ -56,7 +56,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 同時押しの間隔が窓を超えると開閉しない()
+        public void 同時押しの間隔が許容時間を超えると開閉しない()
         {
             var detector = Create();
             PressBoth(detector, 1.0, 1.0);
@@ -66,7 +66,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 同時押しの間隔が窓ちょうどなら開閉する()
+        public void 同時押しの間隔が許容時間ちょうどなら開閉する()
         {
             var detector = Create();
             PressBoth(detector, 1.0, 1.0);
@@ -93,7 +93,7 @@ namespace VRime.Core.Tests
             detector.Update(true, false, 1.0);
             Assert.IsFalse(detector.Update(true, true, 1.1)); // 同時押しの1回目
             detector.Update(true, false, 1.15); // 右だけ離す
-            // 右を押し直す。左を押した 1.0 との差が窓以内で、2回目の同時押しになる。
+            // 右を押し直す。左を押した 1.0 との差が許容時間以内で、2回目の同時押しになる。
             Assert.IsTrue(detector.Update(true, true, 1.2));
         }
 
@@ -118,7 +118,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 窓が不正なら例外()
+        public void 許容時間が不正なら例外()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new DoubleChordDetector(0.0, 0.6));
             Assert.Throws<ArgumentOutOfRangeException>(() => new DoubleChordDetector(0.2, -1.0));
@@ -126,7 +126,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 既定の窓_0_20秒と0_60秒()
+        public void 既定の許容時間_0_20秒と0_60秒()
         {
             var settings = new KeyboardSettings();
             var detector = new DoubleChordDetector(settings.ChordWindowSeconds, settings.DoubleChordWindowSeconds);

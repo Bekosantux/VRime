@@ -6,12 +6,12 @@ namespace VRime.App.SteamVR
 {
     /// <summary>
     /// アクションマニフェスト（<c>actions.json</c>）のアクションセットとアクションのハンドル。
-    /// アクションは物理的なボタンではなく役割ごとに定義し、ボタンとの対応は SteamVR のバインドに任せる（SPEC 5.6）。
-    /// ハンドルは接続（<see cref="OpenVRRuntime"/>）ごとに取り直す。
+    /// アクションは物理的なボタンではなく役割ごとに定義し、ボタンとの対応は SteamVR のバインドに任せる（docs/spec/grip-input.md「コントローラーの割り当て」）。
+    /// ハンドルは接続（<see cref="OpenVRRuntime"/>）ごとに再取得する。
     /// </summary>
     public sealed class OpenVRActions
     {
-        /// <summary>アクションセットは 1つだけ使う（SPEC 4.3）。</summary>
+        /// <summary>アクションセットは 1つだけ使う（ARCHITECTURE.md「入力の横取り」）。</summary>
         public const string ActionSetName = "/actions/keyboard";
 
         public const string LeftOpenCloseName = ActionSetName + "/in/openclose_left";
@@ -25,7 +25,10 @@ namespace VRime.App.SteamVR
         public const string LeftHapticName = ActionSetName + "/out/haptic_left";
         public const string RightHapticName = ActionSetName + "/out/haptic_right";
 
-        /// <summary>このアプリが読むアクションのすべて。マニフェストの <c>actions</c> と過不足なく一致させる。</summary>
+        /// <summary>
+        /// このアプリが読むアクションのすべて。マニフェストの <c>actions</c> と過不足なく一致させる。
+        /// 一致と、同梱の既定のバインドがすべてのアクションを割り当てていることは <c>ActionManifestTests</c> が検査する。
+        /// </summary>
         public static IReadOnlyList<string> Names { get; } = new[]
         {
             LeftOpenCloseName, RightOpenCloseName,

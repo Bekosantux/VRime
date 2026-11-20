@@ -25,7 +25,7 @@ namespace VRime.App.Output
         /// <summary>実行ファイル名（拡張子なし）。プロセスを開けず取得できなかったときは null。</summary>
         public string ProcessName { get; }
 
-        /// <summary>利用者に見せるアプリ名（実行ファイルの説明。例: メモ帳）。取得できなかったときは null。</summary>
+        /// <summary>利用者向けのアプリ名（実行ファイルの説明。例: メモ帳）。取得できなかったときは null。</summary>
         public string DisplayName { get; }
 
         public static int CurrentProcessId => (int)Win32.GetCurrentProcessId();
