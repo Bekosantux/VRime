@@ -4,8 +4,6 @@
 
 VRime（ブイライム）は、SteamVR 上で動作する日本語入力用のキーボードオーバーレイアプリです。VR 内で、HMD を外さずに日本語の文章を入力・変換・送信できます。主に VRChat のテキストチャットでの利用を想定していますが、その他のVRやデスクトップアプリへの入力にも対応します。
 
-現在は開発中で、配布用のビルドはまだ公開していません。
-
 ## 主な機能
 
 - グリップ入力: レーザーポインター、ジャイロを使わない独自の入力方式です。フリック入力の配置を踏襲しており、子音パネルのスティックで 3×3 のセルから1つを選び、母音パネルのスティックの方向で文字を選びます。グリップボタンを握っている間は、パネルが機能ページに切り替わります。
@@ -14,6 +12,13 @@ VRime（ブイライム）は、SteamVR 上で動作する日本語入力用の�
 - 送信: フォーカス中のウィンドウが送信先になります。VRChat には OSC で直接チャットボックスに送り、それ以外のデスクトップのアプリには、文字列をクリップボードに一時的にコピーして Ctrl+V で貼り付けます。
 - 設定: SteamVR ダッシュボードにこのアプリのタブを追加し、そこで設定します。システムトレイのアイコンからは、デスクトップの設定ウィンドウを開けます。
 - 自動起動: SteamVR にアプリとして登録し、SteamVR の起動と同時に起動できます（設定画面で切り替えます。既定はオフ）。
+
+## 使い方
+1. SteamVR を起動後、`VRime.exe` を起動します。
+2. 両手のグリップボタンを同時に2度押すとボードが開きます。
+3. 入力出来ます。
+
+詳細なガイドは、[ドキュメントを参照してください。](https://bekosantux.github.io/shop-document/vrime/how-to-use)
 
 ## 動作環境
 
@@ -31,11 +36,15 @@ VRime（ブイライム）は、SteamVR 上で動作する日本語入力用の�
 ## 開発の始め方
 
 1. Unity 6000.3.19f1 でプロジェクトを開きます。
-2. シーン `Assets/VRime/Scenes/Main.unity` を開いて再生します。既定では、PC のキーボードで両手のコントローラーを模すため、VR 機器は不要です。操作キーは Game ビューに表示されます。SteamVR に接続して確かめるときは、`KeyboardApp` の `Editor Device` を `OpenVR` にします。
+2. シーン `Assets/VRime/Scenes/Main.unity` を開いて再生します。既定では、PC のキーボードで両手のコントローラーを模すため、VR 機器は不要です。SteamVR に接続して確かめるときは、`KeyboardApp` の `Editor Device` を `OpenVR` にします。
 3. テストは Test Runner の EditMode で実行します。
 4. ビルドはメニューの `VRime/Build/Development` または `VRime/Build/Release` で行います（出力先は `Builds/`）。
 
-設計は [ARCHITECTURE.md](ARCHITECTURE.md)、作業の手順は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、仕様は [docs/SPEC.md](docs/SPEC.md)、未実装の機能は [docs/ROADMAP.md](docs/ROADMAP.md) を参照してください。
+### ドキュメント
+- 設計: [ARCHITECTURE.md](ARCHITECTURE.md)
+- 作業の手順: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+- 仕様: [docs/SPEC.md](docs/SPEC.md)
+- 未実装の機能: [docs/ROADMAP.md](docs/ROADMAP.md)
 
 ## ライセンス
 
