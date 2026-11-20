@@ -75,6 +75,17 @@
 - 2つのプロファイルの違いは Development Build の有無だけで、Player Settings は上書きしない。スクリプトのバックエンド（Mono）と Managed Stripping Level（Medium）はプロジェクト共通の設定にし、ストリッピングによる欠落を開発用のビルドでも再現させる。
 - IL2CPP は、このプロジェクトでは `GameAssembly.dll` が Mono のランタイムと IL の合計より大きくなり、配布物が Mono より約 7MB（zip で）大きくなるため使っていない。
 - `VRime/Build/Release` は、ビルドの後に `Builds/<製品名>-v<Version>-win64.zip` を作る。中身は製品名のフォルダーにまとめ、ライセンス文（`LICENSE` と、同梱するサードパーティのもの）を加え、配布してはいけないフォルダー（`*_BurstDebugInformation_DoNotShip` など）を除く。Version は Player Settings の Version（`bundleVersion`）。
+- バージョンの正本は Player Settings の Version だけで、配布用の zip の名前と設定画面の表示（`AppInfo.Version`）に使う。
 - 実行には、`<名前>_Data/Plugins/x86_64/openvr_api.dll` と、StreamingAssets のファイル（`<名前>_Data/StreamingAssets/SteamVR/` のアクションマニフェスト・既定のバインド・`dashboard_icon.png`、`Windows/tray_icon.ico`）が必要。
 - 開発用のツールが置く DLL（MCP for Unity が `Assets/Plugins/Roslyn/` に置く Roslyn。git の管理外）は、`EditorOnlyPlugins` がインポートのたびにエディター専用へ変更する。ツールは全プラットフォーム向けの設定で置くため、そのままでは Player に約 12MB が入る。ビルドの前にも検査し、Player に含まれる設定ならビルドを止める。対象のフォルダーを増やすときは `EditorOnlyPlugins.Folders` に加える。
-- `Assets/VRime/link.xml` で、自前のアセンブリ（`VRime.Core`・`VRime.App`）と `Valve.OpenVR`・`Newtonsoft.Json` をストリッピングから丸ごと保護する。リフレクションを使う処理や、ネイティブ側から呼ばれる処理を加えても、これらのアセンブリの中なら削られない。それ以外のアセンブリ（パッケージなど）でリフレクションを使うときは、ここに加える。
+- `Assets/VRime/link.xml` で、自前のアセンブリ（`VRime.Core`・`VRime.App`）と `Valve.OpenVR`・`Newtonsoft.Json` をストリッピングから保護する。それ以外のアセンブリ（パッケージなど）でリフレクションを使うときは、ここに加える。
+
+## リリース
+
+- Version は SemVer の形式にする。正式版は `MAJOR.MINOR.PATCH`（例: `0.1.0`）、プレリリースは `-beta.N` を付ける（例: `0.1.0-beta.1`）。
+- 手順:
+  1. 配布する変更をすべて develop に入れる。
+  2. Version の変更だけを含むコミット（`chore(release): v<Version>`）を作る。
+  3. main にマージし、main のそのコミットに `v<Version>` のタグを付ける。
+  4. タグのコミットで `VRime/Build/Release` を実行し、zip を配布する。
+- プレリリースから内容を変えずに正式版にするときも、Version を変えてビルドし直す。
