@@ -47,7 +47,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void わと記号は機能ページから入力できる()
+        public void わと記号は機能レイヤーから入力できる()
         {
             var rig = new Rig();
             rig.ConsonantFunction(ConsonantFunctionCells.Wa, StickDirection.Left);
@@ -113,7 +113,7 @@ namespace VRime.Core.Tests
             rig.Modify();
             Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Invalid));
 
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             rig.Type(0, StickDirection.Center); // 1
             rig.Modify();
             Assert.AreEqual("1", rig.Session.Committed);
@@ -135,14 +135,14 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 機能ページの小濁点半濁点は子音側のトリガーと同じ切り替えをする()
+        public void 機能レイヤーの小濁点半濁点は子音側のトリガーと同じ切り替えをする()
         {
             var rig = new Rig();
             rig.Type(3, StickDirection.Up); // つ
             rig.ConsonantFunction(ConsonantFunctionCells.Modifier);
             Assert.AreEqual("っ", rig.Session.Composition);
 
-            // 英字を入れてからかなページへ戻ると、直前の英字が対象になる。
+            // 英字を入れてからかなモードへ戻ると、直前の英字が対象になる。
             ToEnglish(rig);
             rig.Type(1, StickDirection.Center); // a（未確定の「っ」を先に確定する）
             ToEnglish(rig);
@@ -151,12 +151,12 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 機能ページでは左右どちらのトリガーでも実行する()
+        public void 機能レイヤーでは左右どちらのトリガーでも実行する()
         {
             var rig = new Rig();
             rig.Type(1, StickDirection.Center); // か
 
-            // 子音側の機能ページを、子音側のトリガーで実行する（切り替えにはならない）。
+            // 子音側の機能レイヤーを、子音側のトリガーで実行する（切り替えにはならない）。
             rig.SetGrip(rig.Consonant, true);
             rig.SetStick(rig.Consonant, Sticks.Cell(ConsonantFunctionCells.Space));
             rig.Tick();
@@ -166,7 +166,7 @@ namespace VRime.Core.Tests
             rig.Tick();
             Assert.AreEqual("か　", rig.Session.Committed);
 
-            // 母音側の機能ページを、母音側のトリガーで実行する。
+            // 母音側の機能レイヤーを、母音側のトリガーで実行する。
             rig.SetGrip(rig.Vowel, true);
             rig.SetStick(rig.Vowel, Sticks.Cell(VowelFunctionCells.Language));
             rig.Tick();
@@ -174,7 +174,7 @@ namespace VRime.Core.Tests
             rig.SetGrip(rig.Vowel, false);
             rig.SetStick(rig.Vowel, StickValue.Zero);
             rig.Tick();
-            Assert.AreEqual(GripPage.Alpha, rig.Session.GripView.Page);
+            Assert.AreEqual(GripInputMode.Alpha, rig.Session.GripView.InputMode);
         }
 
         [Test]
@@ -222,7 +222,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void かなページの空白は未確定をそのまま確定して全角空白を入れる()
+        public void かなモードの空白は未確定をそのまま確定して全角空白を入れる()
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
@@ -232,7 +232,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 機能ページの空のセルは何もしない()
+        public void 機能レイヤーの空のセルは何もしない()
         {
             var rig = new Rig();
             rig.ConsonantFunction(0);
@@ -246,13 +246,13 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 言語を切り替えると英字ページになり確定済みに直接入る()
+        public void 言語を切り替えると英字モードになり確定済みに直接入る()
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center); // あ
             ToEnglish(rig);
             Assert.AreEqual(InputLanguage.English, rig.Session.GripInput.Language);
-            Assert.AreEqual(GripPage.Alpha, rig.Session.GripInput.Page);
+            Assert.AreEqual(GripInputMode.Alpha, rig.Session.GripInput.InputMode);
             rig.Type(1, StickDirection.Left);   // b
             // 英字は確定済みへ入る。未確定のかなは先に確定される。
             Assert.AreEqual("あb", rig.Session.Committed);
@@ -262,13 +262,13 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void もう一度言語を切り替えるとかなページに戻る()
+        public void もう一度言語を切り替えるとかなモードに戻る()
         {
             var rig = new Rig();
             ToEnglish(rig);
             ToEnglish(rig);
             Assert.AreEqual(InputLanguage.Japanese, rig.Session.GripInput.Language);
-            Assert.AreEqual(GripPage.Kana, rig.Session.GripInput.Page);
+            Assert.AreEqual(GripInputMode.Kana, rig.Session.GripInput.InputMode);
         }
 
         [Test]
@@ -287,7 +287,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 大文字の切り替えはかなページでは無効()
+        public void 大文字の切り替えはかなモードでは無効()
         {
             var rig = new Rig();
             rig.VowelFunction(VowelFunctionCells.ToggleCase);
@@ -319,7 +319,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 全角の英字ページの空白は全角空白_半角なら半角空白()
+        public void 全角の英字モードの空白は全角空白_半角なら半角空白()
         {
             var rig = new Rig();
             ToEnglish(rig);
@@ -330,7 +330,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 全半角の切り替えはかなページでは無効()
+        public void 全半角の切り替えはかなモードでは無効()
         {
             var rig = new Rig();
             rig.VowelFunction(VowelFunctionCells.ToggleWidth);
@@ -350,21 +350,21 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 数字ページは確定済みへ中央の数字を入れる()
+        public void 数字モードは確定済みへ中央の数字を入れる()
         {
             var rig = new Rig();
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
-            Assert.IsTrue(rig.Session.GripInput.IsNumberPage);
-            Assert.AreEqual(GripPage.Number, rig.Session.GripInput.Page);
+            rig.VowelFunction(VowelFunctionCells.Number);
+            Assert.AreEqual(GripInputMode.Number, rig.Session.GripInput.InputMode);
+            Assert.AreEqual(GripInputMode.Number, rig.Session.GripInput.InputMode);
             for (int cell = 0; cell < 9; cell++) rig.Type(cell, StickDirection.Center);
             Assert.AreEqual("123456789", rig.Session.Committed);
         }
 
         [Test]
-        public void 数字ページの中央以外の方向は何も入らない()
+        public void 数字モードの中央以外の方向は何も入らない()
         {
             var rig = new Rig();
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             rig.Effects.ClearAll();
             rig.Type(0, StickDirection.Left);
             rig.Type(0, StickDirection.Up);
@@ -376,10 +376,10 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 数字ページの機能ページから記号と0を入れる()
+        public void 数字モードの機能レイヤーから記号と0を入れる()
         {
             var rig = new Rig();
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             rig.ConsonantFunction(4, StickDirection.Center); // 0
             rig.ConsonantFunction(4, StickDirection.Left);   // (
             rig.ConsonantFunction(3, StickDirection.Up);     // *
@@ -388,55 +388,55 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 数字ページは全角にできる()
+        public void 数字モードは全角にできる()
         {
             var rig = new Rig();
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             rig.VowelFunction(VowelFunctionCells.ToggleWidth);
             rig.Type(0, StickDirection.Center);
             Assert.AreEqual("１", rig.Session.Committed);
         }
 
         [Test]
-        public void 数字ページでは大文字の切り替えが無効()
+        public void 数字モードでは大文字の切り替えが無効()
         {
             var rig = new Rig();
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             rig.VowelFunction(VowelFunctionCells.ToggleCase);
             Assert.IsFalse(rig.Session.GripInput.IsUpperCase);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
         }
 
         [Test]
-        public void 数字ページをもう一度押すと元のページに戻る()
+        public void 数字をもう一度押すと元の入力モードに戻る()
         {
             var rig = new Rig();
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
-            Assert.AreEqual(GripPage.Kana, rig.Session.GripInput.Page);
+            rig.VowelFunction(VowelFunctionCells.Number);
+            rig.VowelFunction(VowelFunctionCells.Number);
+            Assert.AreEqual(GripInputMode.Kana, rig.Session.GripInput.InputMode);
 
             ToEnglish(rig);
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
-            Assert.AreEqual(GripPage.Alpha, rig.Session.GripInput.Page);
+            rig.VowelFunction(VowelFunctionCells.Number);
+            rig.VowelFunction(VowelFunctionCells.Number);
+            Assert.AreEqual(GripInputMode.Alpha, rig.Session.GripInput.InputMode);
         }
 
         [Test]
-        public void 数字ページで言語を切り替えると数字ページを閉じて切り替える()
+        public void 数字モードで言語を切り替えると数字モードを解除して切り替える()
         {
             var rig = new Rig();
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             ToEnglish(rig);
-            Assert.IsFalse(rig.Session.GripInput.IsNumberPage);
-            Assert.AreEqual(GripPage.Alpha, rig.Session.GripInput.Page);
+            Assert.AreNotEqual(GripInputMode.Number, rig.Session.GripInput.InputMode);
+            Assert.AreEqual(GripInputMode.Alpha, rig.Session.GripInput.InputMode);
         }
 
         [Test]
-        public void 数字ページの数字は未確定のかなを先に確定する()
+        public void 数字モードの数字は未確定のかなを先に確定する()
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             rig.Type(0, StickDirection.Center);
             Assert.AreEqual("あ1", rig.Session.Committed);
             Assert.AreEqual("", rig.Session.Composition);
@@ -483,15 +483,15 @@ namespace VRime.Core.Tests
             rig.Grips(true, true); rig.Tick();
             Assert.IsTrue(rig.Session.IsOpen);
 
-            // 母音側だけ離す。子音側のグリップは握ったままだが、機能ページにはならない。
+            // 母音側だけ離す。子音側のグリップは握ったままだが、機能レイヤーにはならない。
             rig.SetGrip(rig.Vowel, false);
             rig.SetStick(rig.Consonant, Sticks.Cell(5));
             rig.Tick();
-            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage);
+            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionLayer);
             rig.Pull(rig.Vowel);
             Assert.AreEqual("は", rig.Session.Composition);
 
-            // 一度離して握り直せば機能ページになる。
+            // 一度離して握り直せば機能レイヤーになる。
             rig.SetGrip(rig.Consonant, false);
             rig.Tick();
             rig.ConsonantFunction(ConsonantFunctionCells.Space);
@@ -522,7 +522,7 @@ namespace VRime.Core.Tests
             Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Vowel, HapticKind.Input));
             Assert.AreEqual(0, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Input));
 
-            // 母音側の機能ページを子音側のトリガーで実行すると、子音側に出る。
+            // 母音側の機能レイヤーを子音側のトリガーで実行すると、子音側に出る。
             rig.Effects.ClearAll();
             rig.VowelFunction(VowelFunctionCells.CursorLeft);
             Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Input));
@@ -533,7 +533,7 @@ namespace VRime.Core.Tests
         public void ビューは子音パネルの文字を表示する()
         {
             var rig = new Rig();
-            Assert.AreEqual(GripPage.Kana, rig.Session.GripView.Page);
+            Assert.AreEqual(GripInputMode.Kana, rig.Session.GripView.InputMode);
             Assert.AreEqual(9, rig.Session.GripView.ConsonantCells.Count);
             Assert.AreEqual("あ", rig.Session.GripView.ConsonantCells[0].Label);
             Assert.AreEqual("や", rig.Session.GripView.ConsonantCells[7].Label);
@@ -549,31 +549,31 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void ビューはグリップで機能ページに切り替わる()
+        public void ビューはグリップで機能レイヤーに切り替わる()
         {
             var rig = new Rig();
             rig.SetGrip(rig.Consonant, true);
             rig.Tick();
             GripViewState view = rig.Session.GripView;
-            Assert.IsTrue(view.ConsonantFunctionPage);
-            Assert.AreEqual(GripLayout.GetConsonantCell(GripPage.Kana, true, ConsonantFunctionCells.Modifier).Label, view.ConsonantCells[ConsonantFunctionCells.Modifier].Label);
+            Assert.IsTrue(view.ConsonantFunctionLayer);
+            Assert.AreEqual(GripLayout.GetConsonantCell(GripInputMode.Kana, true, ConsonantFunctionCells.Modifier).Label, view.ConsonantCells[ConsonantFunctionCells.Modifier].Label);
 
             rig.SetGrip(rig.Consonant, false);
             rig.SetGrip(rig.Vowel, true);
             rig.Tick();
             view = rig.Session.GripView;
-            Assert.IsFalse(view.ConsonantFunctionPage);
-            Assert.IsTrue(view.VowelFunctionPage);
+            Assert.IsFalse(view.ConsonantFunctionLayer);
+            Assert.IsTrue(view.VowelFunctionLayer);
             Assert.AreEqual(9, view.VowelCells.Count);
         }
 
         [Test]
-        public void ビューの数字ページ機能ページと設定の表示()
+        public void ビューの数字モードの機能レイヤーと設定の表示()
         {
             var rig = new Rig();
             rig.SetGrip(rig.Vowel, true);
             rig.Tick();
-            // かなページでは全/半と大文字が無効
+            // かなモードでは全/半と大文字が無効
             Assert.IsTrue(rig.Session.GripView.VowelCells[VowelFunctionCells.ToggleWidth].Disabled);
             Assert.IsTrue(rig.Session.GripView.VowelCells[VowelFunctionCells.ToggleCase].Disabled);
             rig.SetGrip(rig.Vowel, false);
@@ -600,7 +600,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 通常のページには機能ページのキーをヒントとして示す()
+        public void 基本レイヤーには機能レイヤーのキーをヒントとして示す()
         {
             var rig = new Rig();
             GripViewState view = rig.Session.GripView;
@@ -612,7 +612,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 機能ページを表示している側にはヒントがない()
+        public void 機能レイヤーを表示している側にはヒントがない()
         {
             var rig = new Rig();
             rig.SetGrip(rig.Consonant, true);
@@ -630,7 +630,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void ヒントはページと全角を反映する()
+        public void ヒントは入力モードと全角を反映する()
         {
             var rig = new Rig();
             ToEnglish(rig);
@@ -639,7 +639,7 @@ namespace VRime.Core.Tests
             rig.VowelFunction(VowelFunctionCells.ToggleWidth);
             Assert.AreEqual("，", rig.Session.GripView.ConsonantHints[ConsonantFunctionCells.Symbol]);
 
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             Assert.AreEqual("－", rig.Session.GripView.ConsonantHints[ConsonantFunctionCells.Modifier]);
             Assert.AreEqual("０", rig.Session.GripView.ConsonantHints[ConsonantFunctionCells.Wa]);
         }
@@ -678,7 +678,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 機能ページの文字のセルにも方向のヒントを示し_動作のセルには示さない()
+        public void 機能レイヤーの文字のセルにも方向のヒントを示し_動作のセルには示さない()
         {
             var rig = new Rig();
             rig.SetGrip(rig.Consonant, true);
@@ -699,7 +699,7 @@ namespace VRime.Core.Tests
             foreach (GripCellView cell in view.VowelCells)
                 CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(cell));
 
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             view = rig.Session.GripView;
             CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[0]));
 
@@ -725,10 +725,10 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 数字ページのビューは中央以外の方向が空になる()
+        public void 数字モードのビューは中央以外の方向が空になる()
         {
             var rig = new Rig();
-            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.Number);
             Assert.AreEqual("1", rig.Session.GripView.ConsonantCells[0].Label);
             rig.SetStick(rig.Consonant, Sticks.Cell(0));
             rig.Tick();
@@ -744,7 +744,7 @@ namespace VRime.Core.Tests
             return new Rig(new KeyboardSettings(repeatDelaySeconds: 0.5, repeatIntervalSeconds: 0.1));
         }
 
-        /// <summary>通常ページで「あ」を選び、母音側のトリガーを引いたままにする（1回目が入る）。</summary>
+        /// <summary>基本レイヤーで「あ」を選び、母音側のトリガーを引いたままにする（1回目が入る）。</summary>
         static void HoldA(Rig rig)
         {
             rig.SetStick(rig.Consonant, Sticks.Cell(0));
@@ -754,7 +754,7 @@ namespace VRime.Core.Tests
             rig.Tick();
         }
 
-        /// <summary>機能ページのセルを選び、実行するトリガーを引いたままにする（1回目が実行される）。</summary>
+        /// <summary>機能レイヤーのセルを選び、実行するトリガーを引いたままにする（1回目が実行される）。</summary>
         static void HoldFunction(Rig rig, Hand gripHand, int cell)
         {
             rig.SetGrip(gripHand, true);
@@ -919,7 +919,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 機能ページの文字は連続入力される()
+        public void 機能レイヤーの文字は連続入力される()
         {
             var rig = RepeatRig();
             HoldFunction(rig, rig.Consonant, ConsonantFunctionCells.Wa);
@@ -942,7 +942,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 文字の切り替えとページの操作は連続入力しない()
+        public void 文字の切り替えと入力モードの操作は連続入力しない()
         {
             var rig = RepeatRig();
             rig.Type(1, StickDirection.Center); // か
@@ -954,9 +954,9 @@ namespace VRime.Core.Tests
             rig.SetStick(rig.Consonant, StickValue.Zero);
             rig.Tick();
 
-            HoldFunction(rig, rig.Vowel, VowelFunctionCells.NumberPage);
+            HoldFunction(rig, rig.Vowel, VowelFunctionCells.Number);
             rig.Tick(1.0);
-            Assert.IsTrue(rig.Session.GripInput.IsNumberPage);
+            Assert.AreEqual(GripInputMode.Number, rig.Session.GripInput.InputMode);
         }
     }
 }

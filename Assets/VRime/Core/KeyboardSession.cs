@@ -393,7 +393,7 @@ namespace VRime.Core
                 case ConversionOutcome.Cancel:
                 {
                     Hand hand = edges.LeftPanel ? Hand.Left : Hand.Right;
-                    // 取り消した直後に、押したままのパネルの切り替えのボタンで機能ページが開かないようにする。
+                    // 取り消した直後に、押したままのパネルの切り替えのボタンで機能レイヤーに切り替わらないようにする。
                     IgnoreHeldPanels(effective);
                     EndConversion();
                     _grip.Reset(ApplyPanelIgnore(raw));

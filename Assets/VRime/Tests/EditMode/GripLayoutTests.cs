@@ -37,29 +37,29 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void かなページの全セル全方向()
+        public void かなモードの全セル全方向()
         {
             for (int cell = 0; cell < 9; cell++)
             {
-                AssertGroup(GripLayout.GetConsonantCell(GripPage.Kana, false, cell), KanaRows[cell]);
+                AssertGroup(GripLayout.GetConsonantCell(GripInputMode.Kana, false, cell), KanaRows[cell]);
             }
         }
 
         [Test]
-        public void 英字ページの全セル全方向()
+        public void 英字モードの全セル全方向()
         {
             for (int cell = 0; cell < 9; cell++)
             {
-                AssertGroup(GripLayout.GetConsonantCell(GripPage.Alpha, false, cell), AlphaRows[cell]);
+                AssertGroup(GripLayout.GetConsonantCell(GripInputMode.Alpha, false, cell), AlphaRows[cell]);
             }
         }
 
         [Test]
-        public void 数字ページは中央のみ文字があり他は未割り当て()
+        public void 数字モードは中央のみ文字があり他は未割り当て()
         {
             for (int cell = 0; cell < 9; cell++)
             {
-                GripCell group = GripLayout.GetConsonantCell(GripPage.Number, false, cell);
+                GripCell group = GripLayout.GetConsonantCell(GripInputMode.Number, false, cell);
                 Assert.AreEqual(GripCellKind.Characters, group.Kind);
                 Assert.AreEqual((cell + 1).ToString(), group.CharacterAt(StickDirection.Center));
                 foreach (StickDirection direction in new[] { StickDirection.Left, StickDirection.Up, StickDirection.Right, StickDirection.Down })
@@ -69,63 +69,63 @@ namespace VRime.Core.Tests
             }
         }
 
-        [TestCase(GripPage.Kana)]
-        [TestCase(GripPage.Alpha)]
-        [TestCase(GripPage.Number)]
-        public void 機能ページの上段と下段は全ページ共通(GripPage page)
+        [TestCase(GripInputMode.Kana)]
+        [TestCase(GripInputMode.Alpha)]
+        [TestCase(GripInputMode.Number)]
+        public void 機能レイヤーの上段と下段は全入力モード共通(GripInputMode mode)
         {
             int[] empty = { 0, 1, 6, 7 };
             foreach (int cell in empty)
             {
-                Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(page, true, cell).Kind, "セル " + cell);
+                Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(mode, true, cell).Kind, "セル " + cell);
             }
-            GripCell erase = GripLayout.GetConsonantCell(page, true, 2);
+            GripCell erase = GripLayout.GetConsonantCell(mode, true, 2);
             Assert.AreEqual(GripCellKind.Action, erase.Kind);
             Assert.AreEqual(GripAction.Erase, erase.Action);
-            GripCell space = GripLayout.GetConsonantCell(page, true, 8);
+            GripCell space = GripLayout.GetConsonantCell(mode, true, 8);
             Assert.AreEqual(GripCellKind.Action, space.Kind);
             Assert.AreEqual(GripAction.Space, space.Action);
         }
 
         [Test]
-        public void かなの機能ページの中段の3つのセル()
+        public void かなモードの機能レイヤーの中段の3つのセル()
         {
-            GripCell modifier = GripLayout.GetConsonantCell(GripPage.Kana, true, 3);
+            GripCell modifier = GripLayout.GetConsonantCell(GripInputMode.Kana, true, 3);
             Assert.AreEqual(GripCellKind.Action, modifier.Kind);
             Assert.AreEqual(GripAction.CharacterModifier, modifier.Action);
             Assert.AreEqual("小゛゜", modifier.Label);
 
-            GripCell wa = GripLayout.GetConsonantCell(GripPage.Kana, true, 4);
+            GripCell wa = GripLayout.GetConsonantCell(GripInputMode.Kana, true, 4);
             AssertGroup(wa, "わをんー〜");
             Assert.AreEqual("わ", wa.Label);
 
-            GripCell symbol = GripLayout.GetConsonantCell(GripPage.Kana, true, 5);
+            GripCell symbol = GripLayout.GetConsonantCell(GripInputMode.Kana, true, 5);
             AssertGroup(symbol, "、。？！…");
             Assert.AreEqual("記号", symbol.Label);
         }
 
         [Test]
-        public void 英字の機能ページの中段の3つのセル()
+        public void 英字モードの機能レイヤーの中段の3つのセル()
         {
-            Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 3).Kind);
-            Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripPage.Alpha, true, 4).Kind);
-            AssertGroup(GripLayout.GetConsonantCell(GripPage.Alpha, true, 5), ",.?!'");
+            Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripInputMode.Alpha, true, 3).Kind);
+            Assert.AreEqual(GripCellKind.Empty, GripLayout.GetConsonantCell(GripInputMode.Alpha, true, 4).Kind);
+            AssertGroup(GripLayout.GetConsonantCell(GripInputMode.Alpha, true, 5), ",.?!'");
         }
 
         [Test]
-        public void 数字の機能ページの中段の3つのセル()
+        public void 数字モードの機能レイヤーの中段の3つのセル()
         {
-            AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 3), "-+*/~");
-            AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 4), "0(=)&");
-            AssertGroup(GripLayout.GetConsonantCell(GripPage.Number, true, 5), ".,:;%");
+            AssertGroup(GripLayout.GetConsonantCell(GripInputMode.Number, true, 3), "-+*/~");
+            AssertGroup(GripLayout.GetConsonantCell(GripInputMode.Number, true, 4), "0(=)&");
+            AssertGroup(GripLayout.GetConsonantCell(GripInputMode.Number, true, 5), ".,:;%");
         }
 
         [Test]
-        public void 母音側の機能ページ()
+        public void 母音側の機能レイヤー()
         {
             GripAction?[] expected =
             {
-                GripAction.ToggleWidth, GripAction.Language, GripAction.NumberPage,
+                GripAction.ToggleWidth, GripAction.Language, GripAction.ToggleNumber,
                 GripAction.CursorLeft, GripAction.Commit, GripAction.CursorRight,
                 GripAction.ToggleCase, GripAction.Convert, GripAction.TogglePasteMode,
             };
@@ -149,8 +149,8 @@ namespace VRime.Core.Tests
         [Test]
         public void 範囲外のセルは例外()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => GripLayout.GetConsonantCell(GripPage.Kana, false, 9));
-            Assert.Throws<ArgumentOutOfRangeException>(() => GripLayout.GetConsonantCell(GripPage.Kana, false, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => GripLayout.GetConsonantCell(GripInputMode.Kana, false, 9));
+            Assert.Throws<ArgumentOutOfRangeException>(() => GripLayout.GetConsonantCell(GripInputMode.Kana, false, -1));
             Assert.Throws<ArgumentOutOfRangeException>(() => GripLayout.GetVowelFunctionCell(9));
         }
 
@@ -161,7 +161,7 @@ namespace VRime.Core.Tests
             Assert.Throws<InvalidOperationException>(() => GripCell.Empty.CharacterAt(StickDirection.Center));
             GripCell action = GripLayout.GetVowelFunctionCell(0);
             Assert.Throws<InvalidOperationException>(() => action.CharacterAt(StickDirection.Center));
-            GripCell group = GripLayout.GetConsonantCell(GripPage.Kana, false, 0);
+            GripCell group = GripLayout.GetConsonantCell(GripInputMode.Kana, false, 0);
             Assert.Throws<InvalidOperationException>(() => { var _ = group.Action; });
         }
     }

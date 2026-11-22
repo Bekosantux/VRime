@@ -6,7 +6,7 @@ using VRime.Core.Input;
 namespace VRime.App.View
 {
     /// <summary>
-    /// グリップ入力のパネル（子音側 3×3・母音側 5方向または 3×3）とページ・全角/半角・大文字/小文字の状態。
+    /// グリップのパネル（子音側 3×3・母音側 5方向または 3×3）と入力モード・全角/半角・大文字/小文字の状態。
     /// <see cref="GripViewState"/> を描画するだけで、入力の判断は持たない。
     /// 左右のパネルはシーンに置き、子音を担当する手の側を子音側、反対側を母音側にする。
     /// </summary>
@@ -14,9 +14,9 @@ namespace VRime.App.View
     {
         const int GridSize = 3;
         const int CellCount = GridSize * GridSize;
-        const int PageCount = 3;
+        const int ModeCount = 3;
 
-        // 母音側の通常ページで、3×3 の各セルに置く5方向（StickDirection の値。中央=0・左=1・上=2・右=3・下=4）。
+        // 母音側の基本レイヤーで、3×3 の各セルに置く5方向（StickDirection の値。中央=0・左=1・上=2・右=3・下=4）。
         // 方向を置かない四隅は -1。
         static readonly int[] CellToDirection = { -1, 2, -1, 1, 0, 3, -1, 4, -1 };
 
@@ -36,7 +36,7 @@ namespace VRime.App.View
         [SerializeField] GripPanelCaption _rightCaption;
 
         [Tooltip("かな・英字・数字の順。")]
-        [SerializeField] GripPanelChip[] _pageChips = new GripPanelChip[PageCount];
+        [SerializeField] GripPanelChip[] _modeChips = new GripPanelChip[ModeCount];
 
         [SerializeField] GripPanelChip _widthChip;
         [SerializeField] GripPanelChip _caseChip;
@@ -48,7 +48,7 @@ namespace VRime.App.View
         GripPanelCaption _vowelCaption;
 
         /// <summary>
-        /// 母音側の通常ページで、3×3 のその位置（行優先の 0..8）に5方向のセルを置くか。四隅には置かず、機能ページのヒントだけを示す。
+        /// 母音側の基本レイヤーで、3×3 のその位置（行優先の 0..8）に5方向のセルを置くか。四隅には置かず、機能レイヤーのヒントだけを示す。
         /// </summary>
         public static bool HasVowelDirection(int cell)
         {
@@ -63,14 +63,14 @@ namespace VRime.App.View
             SceneChecks.RequireAll(_rightCells, CellCount, this, nameof(_rightCells));
             SceneChecks.Require(_leftCaption, this, nameof(_leftCaption));
             SceneChecks.Require(_rightCaption, this, nameof(_rightCaption));
-            SceneChecks.RequireAll(_pageChips, PageCount, this, nameof(_pageChips));
+            SceneChecks.RequireAll(_modeChips, ModeCount, this, nameof(_modeChips));
             SceneChecks.Require(_widthChip, this, nameof(_widthChip));
             SceneChecks.Require(_caseChip, this, nameof(_caseChip));
             foreach (GripPanelCell cell in _leftCells) cell.Validate();
             foreach (GripPanelCell cell in _rightCells) cell.Validate();
             _leftCaption.Validate();
             _rightCaption.Validate();
-            foreach (GripPanelChip chip in _pageChips) chip.Validate();
+            foreach (GripPanelChip chip in _modeChips) chip.Validate();
             _widthChip.Validate();
             _caseChip.Validate();
         }
@@ -89,7 +89,7 @@ namespace VRime.App.View
             foreach (GripPanelCell cell in _rightCells) cell.Initialize(theme);
             _leftCaption.Initialize(theme);
             _rightCaption.Initialize(theme);
-            foreach (GripPanelChip chip in _pageChips) chip.Initialize(theme);
+            foreach (GripPanelChip chip in _modeChips) chip.Initialize(theme);
             _widthChip.Initialize(theme);
             _caseChip.Initialize(theme);
         }
@@ -106,7 +106,7 @@ namespace VRime.App.View
                 _consonantCells[i].Set(view.ConsonantCells[i], i == view.ConsonantSelected, view.ConsonantHints[i]);
             }
 
-            if (view.VowelFunctionPage)
+            if (view.VowelFunctionLayer)
             {
                 for (int i = 0; i < _vowelCells.Length; i++)
                 {
@@ -135,22 +135,22 @@ namespace VRime.App.View
                 }
             }
 
-            _consonantCaption.Set(view.ConsonantFunctionPage ? "機能" : "子音", view.ConsonantFunctionPage);
-            _vowelCaption.Set(view.VowelFunctionPage ? "機能" : "母音", view.VowelFunctionPage);
+            _consonantCaption.Set(view.ConsonantFunctionLayer ? "機能" : "子音", view.ConsonantFunctionLayer);
+            _vowelCaption.Set(view.VowelFunctionLayer ? "機能" : "母音", view.VowelFunctionLayer);
 
-            RefreshChips(input, view.Page);
+            RefreshChips(input, view.InputMode);
         }
 
-        void RefreshChips(GripInputMethod input, GripPage page)
+        void RefreshChips(GripInputMethod input, GripInputMode mode)
         {
-            _pageChips[0].Set("かな", page == GripPage.Kana ? GripChipState.Selected : GripChipState.Inactive);
-            _pageChips[1].Set("英字", page == GripPage.Alpha ? GripChipState.Selected : GripChipState.Inactive);
-            _pageChips[2].Set("数字", page == GripPage.Number ? GripChipState.Selected : GripChipState.Inactive);
+            _modeChips[0].Set("かな", mode == GripInputMode.Kana ? GripChipState.Selected : GripChipState.Inactive);
+            _modeChips[1].Set("英字", mode == GripInputMode.Alpha ? GripChipState.Selected : GripChipState.Inactive);
+            _modeChips[2].Set("数字", mode == GripInputMode.Number ? GripChipState.Selected : GripChipState.Inactive);
 
-            // 全角/半角は英字・数字ページ、大文字/小文字は英字ページでのみ作用する（docs/spec/grip-input.md「母音側の機能ページ」）。
-            bool widthApplies = page != GripPage.Kana;
+            // 全角/半角は英字モード・数字モード、大文字/小文字は英字モードでのみ作用する（docs/spec/grip-input.md「母音側の機能レイヤー」）。
+            bool widthApplies = mode != GripInputMode.Kana;
             _widthChip.Set(input.IsFullWidth ? "全角" : "半角", widthApplies ? GripChipState.Active : GripChipState.Inactive);
-            bool caseApplies = page == GripPage.Alpha;
+            bool caseApplies = mode == GripInputMode.Alpha;
             _caseChip.Set(input.IsUpperCase ? "ABC" : "abc", caseApplies ? GripChipState.Active : GripChipState.Inactive);
         }
     }

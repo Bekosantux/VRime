@@ -38,7 +38,7 @@ namespace VRime.Core.Grip
 
     /// <summary>
     /// 入力中のグリップ入力（docs/spec/grip-input.md）。毎フレームの手の状態から、セル・方向の選択、
-    /// 機能ページの切り替え、トリガーによる入力（長押しによる連続入力を含む）を処理し、入力バッファを更新する。
+    /// 機能レイヤーの切り替え、トリガーによる入力（長押しによる連続入力を含む）を処理し、入力バッファを更新する。
     /// 変換・確定はバッファだけでは完結しないため、要求として返す。
     /// </summary>
     public sealed class GripInputMethod
@@ -48,7 +48,7 @@ namespace VRime.Core.Grip
         KeyboardSettings _settings;
 
         InputLanguage _language = InputLanguage.Japanese;
-        bool _numberPage;
+        bool _numberMode;
         bool _fullWidth;
         bool _upperCase;
         bool _pasteMode;
@@ -70,12 +70,11 @@ namespace VRime.Core.Grip
         }
 
         public InputLanguage Language => _language;
-        public bool IsNumberPage => _numberPage;
 
-        /// <summary>全角で入力するか。英字ページと数字ページでのみ作用する。</summary>
+        /// <summary>全角で入力するか。英字モードと数字モードでのみ作用する。</summary>
         public bool IsFullWidth => _fullWidth;
 
-        /// <summary>大文字で入力するか。英字ページでのみ作用する。</summary>
+        /// <summary>大文字で入力するか。英字モードでのみ作用する。</summary>
         public bool IsUpperCase => _upperCase;
 
         /// <summary>
@@ -84,21 +83,21 @@ namespace VRime.Core.Grip
         public bool IsPasteMode => _pasteMode;
 
         /// <summary>
-        /// 現在のページ。数字ページを閉じると言語に応じたページに戻るため、開く前のページを別に保持する必要はない。
+        /// 現在の入力モード。数字モードを解除すると言語に応じた入力モードに戻るため、その前の入力モードを別に保持する必要はない。
         /// </summary>
-        public GripPage Page
+        public GripInputMode InputMode
         {
             get
             {
-                if (_numberPage) return GripPage.Number;
-                return _language == InputLanguage.Japanese ? GripPage.Kana : GripPage.Alpha;
+                if (_numberMode) return GripInputMode.Number;
+                return _language == InputLanguage.Japanese ? GripInputMode.Kana : GripInputMode.Alpha;
             }
         }
 
         public int ConsonantCell => _cell;
         public StickDirection VowelDirection => _direction;
 
-        /// <summary>母音パネルが機能ページのときの選択セル（0..8）。</summary>
+        /// <summary>母音パネルが機能レイヤーのときの選択セル（0..8）。</summary>
         public int VowelFunctionCell => _vowelCell;
 
         /// <summary>表示に関わる状態が変わるたびに増える。</summary>
@@ -198,7 +197,7 @@ namespace VRime.Core.Grip
                 haptics.Add(new HapticEvent(consonantHand, HapticKind.Move));
                 changed = true;
             }
-            // 機能ページのときは3×3のセル、それ以外は5方向の変化が母音パネルの選択の変化になる。
+            // 機能レイヤーのときは3×3のセル、それ以外は5方向の変化が母音パネルの選択の変化になる。
             bool vowelMoved = vowelFunction ? vowelCell != _vowelCell : direction != _direction;
             if (vowelMoved)
             {
@@ -213,7 +212,7 @@ namespace VRime.Core.Grip
             _vowelFunction = vowelFunction;
             if (changed) Version++;
 
-            // 選択が変わる（機能ページの開閉を含む）・トリガーを離す・新たにトリガーを引くと、連続入力をやめる。
+            // 選択が変わる（基本レイヤーと機能レイヤーの切り替えを含む）・トリガーを離す・新たにトリガーを引くと、連続入力をやめる。
             if (changed || edges.AnyTrigger
                 || (_repeater.IsActive && frame.Get(_repeater.Hand).TriggerPull < _settings.TriggerThreshold))
             {
@@ -225,10 +224,10 @@ namespace VRime.Core.Grip
                 return default;
             }
 
-            // 両手の機能ページを開いている間は、どちらのパネルのセルを実行するか定まらないためトリガーを受け付けない。
+            // 両手の機能レイヤーを表示している間は、どちらのパネルのセルを実行するか定まらないためトリガーを受け付けない。
             if (!edges.AnyTrigger || (consonantFunction && vowelFunction)) return default;
 
-            // 機能ページでは、左右どちらのトリガーでもセルを実行する。
+            // 機能レイヤーでは、左右どちらのトリガーでもセルを実行する。
             if (consonantFunction || vowelFunction)
             {
                 Hand pressedHand = edges.LeftTrigger ? Hand.Left : Hand.Right;
@@ -237,7 +236,7 @@ namespace VRime.Core.Grip
                 return functionRequest;
             }
 
-            // 通常のページでは、母音側のトリガーで入力し、子音側のトリガーで直前の文字を切り替える。
+            // 基本レイヤーでは、母音側のトリガーで入力し、子音側のトリガーで直前の文字を切り替える。
             // 同じフレームで両方を引いたときは、入力してから切り替える。切り替えた文字は連続入力しない。
             GripRequest request = default;
             bool repeatable = false;
@@ -273,7 +272,7 @@ namespace VRime.Core.Grip
             }
             else
             {
-                cell = GripLayout.GetConsonantCell(Page, _consonantFunction, _cell);
+                cell = GripLayout.GetConsonantCell(InputMode, _consonantFunction, _cell);
             }
 
             switch (cell.Kind)
@@ -334,7 +333,7 @@ namespace VRime.Core.Grip
                     Report(_buffer.ApplyCharacterModifier(), pressedHand, haptics);
                     break;
                 case GripAction.ToggleWidth:
-                    if (Page == GripPage.Kana) Invalid(pressedHand, haptics);
+                    if (InputMode == GripInputMode.Kana) Invalid(pressedHand, haptics);
                     else
                     {
                         _fullWidth = !_fullWidth;
@@ -342,20 +341,20 @@ namespace VRime.Core.Grip
                     }
                     break;
                 case GripAction.ToggleCase:
-                    if (Page != GripPage.Alpha) Invalid(pressedHand, haptics);
+                    if (InputMode != GripInputMode.Alpha) Invalid(pressedHand, haptics);
                     else
                     {
                         _upperCase = !_upperCase;
                         Done(pressedHand, haptics);
                     }
                     break;
-                case GripAction.NumberPage:
-                    _numberPage = !_numberPage;
+                case GripAction.ToggleNumber:
+                    _numberMode = !_numberMode;
                     Done(pressedHand, haptics);
                     break;
                 case GripAction.Language:
-                    // 数字ページは閉じてから切り替える（1回の操作で両方）。
-                    _numberPage = false;
+                    // 数字モードは解除してから切り替える（1回の操作で両方）。
+                    _numberMode = false;
                     _language = _language == InputLanguage.Japanese ? InputLanguage.English : InputLanguage.Japanese;
                     Done(pressedHand, haptics);
                     break;
@@ -381,23 +380,23 @@ namespace VRime.Core.Grip
 
         EditResult InsertCharacter(string character)
         {
-            // かなページの文字は未確定のかなへ。英字・数字ページの文字は確定済みへ直接入る。
-            return Page == GripPage.Kana
+            // かなモードの文字は未確定のかなへ。英字モード・数字モードの文字は確定済みへ直接入る。
+            return InputMode == GripInputMode.Kana
                 ? _buffer.InsertComposition(character)
                 : _buffer.InsertCommitted(ApplyCharacterOptions(character));
         }
 
         EditResult InsertSpace()
         {
-            // かなページでは全角スペース（未確定があれば InsertCommitted が先にそのまま確定する）。
-            bool fullWidth = Page == GripPage.Kana || _fullWidth;
+            // かなモードでは全角スペース（未確定があれば InsertCommitted が先にそのまま確定する）。
+            bool fullWidth = InputMode == GripInputMode.Kana || _fullWidth;
             return _buffer.InsertCommitted(fullWidth ? "　" : " ");
         }
 
         string ApplyCharacterOptions(string character)
         {
-            if (Page == GripPage.Alpha && _upperCase) character = character.ToUpperInvariant();
-            if (Page != GripPage.Kana && _fullWidth) character = CharacterWidth.ToFullWidth(character);
+            if (InputMode == GripInputMode.Alpha && _upperCase) character = character.ToUpperInvariant();
+            if (InputMode != GripInputMode.Kana && _fullWidth) character = CharacterWidth.ToFullWidth(character);
             return character;
         }
 
@@ -426,11 +425,11 @@ namespace VRime.Core.Grip
 
         GripViewState BuildView()
         {
-            GripPage page = Page;
+            GripInputMode mode = InputMode;
             var consonantCells = new GripCellView[GripLayout.CellCount];
             for (int i = 0; i < consonantCells.Length; i++)
             {
-                consonantCells[i] = ToView(GripLayout.GetConsonantCell(page, _consonantFunction, i));
+                consonantCells[i] = ToView(GripLayout.GetConsonantCell(mode, _consonantFunction, i));
             }
 
             GripCellView[] vowelCells;
@@ -448,7 +447,7 @@ namespace VRime.Core.Grip
             else
             {
                 vowelCells = new GripCellView[GripCell.DirectionCount];
-                GripCell selected = GripLayout.GetConsonantCell(page, _consonantFunction, _cell);
+                GripCell selected = GripLayout.GetConsonantCell(mode, _consonantFunction, _cell);
                 for (int i = 0; i < vowelCells.Length; i++)
                 {
                     string character = selected.Kind == GripCellKind.Characters ? selected.CharacterAt((StickDirection)i) : null;
@@ -463,16 +462,16 @@ namespace VRime.Core.Grip
             var vowelHints = new string[GripLayout.CellCount];
             for (int i = 0; i < GripLayout.CellCount; i++)
             {
-                consonantHints[i] = _consonantFunction ? string.Empty : ToHint(GripLayout.GetConsonantCell(page, true, i));
+                consonantHints[i] = _consonantFunction ? string.Empty : ToHint(GripLayout.GetConsonantCell(mode, true, i));
                 vowelHints[i] = _vowelFunction ? string.Empty : ToHint(ResolveVowelFunctionCell(i));
             }
 
-            return new GripViewState(page, _consonantFunction, _vowelFunction,
+            return new GripViewState(mode, _consonantFunction, _vowelFunction,
                 consonantCells, _cell, vowelCells, vowelSelected, consonantHints, vowelHints);
         }
 
         /// <summary>
-        /// 母音側の機能ページのセル。「貼付」は、貼り付けモードを使えない間は空きセルにする（表示・ヒント・実行のすべてで同じ扱い）。
+        /// 母音側の機能レイヤーのセル。「貼付」は、貼り付けモードを使えない間は空きセルにする（表示・ヒント・実行のすべてで同じ扱い）。
         /// </summary>
         GripCell ResolveVowelFunctionCell(int cell)
         {
@@ -482,7 +481,7 @@ namespace VRime.Core.Grip
             return unavailablePaste ? GripCell.Empty : layoutCell;
         }
 
-        /// <summary>通常のページに重ねて示す、機能ページのセルの表示名の頭文字（1文字）。空きセルには示さない。</summary>
+        /// <summary>基本レイヤーに重ねて示す、機能レイヤーのセルの表示名の頭文字（1文字）。空きセルには示さない。</summary>
         string ToHint(GripCell functionCell)
         {
             return functionCell.Kind == GripCellKind.Empty ? string.Empty : StringInfo.GetNextTextElement(ToView(functionCell).Label);
@@ -514,7 +513,7 @@ namespace VRime.Core.Grip
 
         string ApplyDisplayOptions(string character)
         {
-            return Page == GripPage.Kana ? character : ApplyCharacterOptions(character);
+            return InputMode == GripInputMode.Kana ? character : ApplyCharacterOptions(character);
         }
 
         bool IsDisabled(GripCell cell)
@@ -522,8 +521,8 @@ namespace VRime.Core.Grip
             if (cell.Kind != GripCellKind.Action) return false;
             switch (cell.Action)
             {
-                case GripAction.ToggleWidth: return Page == GripPage.Kana;
-                case GripAction.ToggleCase: return Page != GripPage.Alpha;
+                case GripAction.ToggleWidth: return InputMode == GripInputMode.Kana;
+                case GripAction.ToggleCase: return InputMode != GripInputMode.Alpha;
                 case GripAction.Convert: return !_settings.ConversionEnabled;
                 default: return false;
             }
@@ -534,9 +533,9 @@ namespace VRime.Core.Grip
             if (cell.Kind != GripCellKind.Action) return false;
             switch (cell.Action)
             {
-                case GripAction.ToggleWidth: return _fullWidth && Page != GripPage.Kana;
-                case GripAction.ToggleCase: return _upperCase && Page == GripPage.Alpha;
-                case GripAction.NumberPage: return _numberPage;
+                case GripAction.ToggleWidth: return _fullWidth && InputMode != GripInputMode.Kana;
+                case GripAction.ToggleCase: return _upperCase && InputMode == GripInputMode.Alpha;
+                case GripAction.ToggleNumber: return _numberMode;
                 case GripAction.TogglePasteMode: return _pasteMode;
                 default: return false;
             }

@@ -214,12 +214,12 @@ namespace VRime.Core.Tests
             rig.Session.SetDashboardVisible(false);
             rig.SetStick(rig.Consonant, Sticks.Cell(5));
             rig.Tick();
-            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage);
+            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionLayer);
             rig.SetGrip(rig.Consonant, false);
             rig.Tick();
             rig.SetGrip(rig.Consonant, true);
             rig.Tick();
-            Assert.IsTrue(rig.Session.GripView.ConsonantFunctionPage);
+            Assert.IsTrue(rig.Session.GripView.ConsonantFunctionLayer);
         }
 
         [Test]
@@ -901,7 +901,7 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void グリップで変換を取り消すと未確定に戻り機能ページは開かない()
+        public void グリップで変換を取り消すと未確定に戻り機能レイヤーには切り替わらない()
         {
             var rig = new Rig();
             int id = StartConversion(rig);
@@ -914,16 +914,16 @@ namespace VRime.Core.Tests
             Assert.IsNull(rig.Session.CurrentConversion);
             Assert.AreEqual("あい", rig.Session.Composition);
             Assert.AreEqual("", rig.Session.Committed);
-            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage);
+            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionLayer);
 
             rig.TickMany(3);
-            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage, "握ったままでは機能ページにならない");
+            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionLayer, "握ったままでは機能レイヤーにならない");
 
             rig.SetGrip(rig.Consonant, false);
             rig.Tick();
             rig.SetGrip(rig.Consonant, true);
             rig.Tick();
-            Assert.IsTrue(rig.Session.GripView.ConsonantFunctionPage);
+            Assert.IsTrue(rig.Session.GripView.ConsonantFunctionLayer);
         }
 
         [Test]
@@ -1286,15 +1286,15 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 展開_収納のボタンで開閉し_機能ページは開かない()
+        public void 展開_収納のボタンで開閉し_機能レイヤーには切り替わらない()
         {
             var rig = new Rig(open: false);
             rig.SetOpenClose(Hand.Left, true); rig.SetOpenClose(Hand.Right, true); rig.Tick();
             rig.SetOpenClose(Hand.Left, false); rig.SetOpenClose(Hand.Right, false); rig.Tick();
             rig.SetOpenClose(Hand.Left, true); rig.SetOpenClose(Hand.Right, true); rig.Tick();
             Assert.IsTrue(rig.Session.IsOpen);
-            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage);
-            Assert.IsFalse(rig.Session.GripView.VowelFunctionPage);
+            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionLayer);
+            Assert.IsFalse(rig.Session.GripView.VowelFunctionLayer);
 
             rig.SetOpenClose(Hand.Left, false); rig.SetOpenClose(Hand.Right, false); rig.Tick();
             rig.TickMany(50);
@@ -1340,8 +1340,8 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.TickMany(50);
             rig.SetPanel(Hand.Left, true); rig.SetPanel(Hand.Right, true); rig.Tick();
-            Assert.IsTrue(rig.Session.GripView.ConsonantFunctionPage);
-            Assert.IsTrue(rig.Session.GripView.VowelFunctionPage);
+            Assert.IsTrue(rig.Session.GripView.ConsonantFunctionLayer);
+            Assert.IsTrue(rig.Session.GripView.VowelFunctionLayer);
             rig.Pull(rig.Vowel);
             rig.Pull(rig.Consonant);
             Assert.AreEqual("", rig.Session.Composition);
@@ -1357,7 +1357,7 @@ namespace VRime.Core.Tests
             rig.SetPanel(rig.Consonant, true); rig.Tick();
             OpenCloseTwice(rig);
             Assert.IsTrue(rig.Session.IsOpen);
-            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage, "開く前から押しているボタンでは機能ページにならない");
+            Assert.IsFalse(rig.Session.GripView.ConsonantFunctionLayer, "開く前から押しているボタンでは機能レイヤーにならない");
 
             rig.SetPanel(rig.Consonant, false); rig.Tick();
             rig.ConsonantFunction(ConsonantFunctionCells.Space);

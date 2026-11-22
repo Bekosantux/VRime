@@ -7298,7 +7298,7 @@ GameObject:
   - component: {fileID: 1268416746}
   - component: {fileID: 1268416748}
   m_Layer: 8
-  m_Name: PageChips
+  m_Name: ModeChips
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10581,7 +10581,7 @@ MonoBehaviour:
   - {fileID: 104075335}
   _leftCaption: {fileID: 1632674253}
   _rightCaption: {fileID: 110630171}
-  _pageChips:
+  _modeChips:
   - {fileID: 1695936589}
   - {fileID: 923456042}
   - {fileID: 1341634930}

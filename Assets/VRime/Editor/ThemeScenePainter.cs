@@ -17,7 +17,7 @@ namespace VRime.Editor
     /// シーンの uGUI をテーマの色に設定する（エディタでの確認用。Undo に記録する）。
     /// 状態によらない色（<see cref="ThemeColor"/>）に加え、状態で色が変わる部品も、操作していない状態の色に設定する。
     /// 操作していない状態は、セル・チップ・候補は選んでいない状態、タブは表示しているページ（GameObject が有効なページ）だけ選んでいる状態、
-    /// スイッチとドロップダウンは既定の設定値（<see cref="UserSettings.Default"/>）、グリップのパネルは既定の子音の手で通常のページを表示している状態とする。
+    /// スイッチとドロップダウンは既定の設定値（<see cref="UserSettings.Default"/>）、グリップのパネルは既定の子音の手で基本レイヤーを表示している状態とする。
     /// 状態で変わる部品は、ビューのシリアライズフィールドの名前で色の対象を探す。ビューのフィールドや色の扱いを変えたら、ここも合わせる。
     /// 対象が見つからない・同じ部品の色を二重に設定する（<see cref="ThemeColor"/> を状態で変わる部品に付けている）ときは、何も設定せずに例外にする。
     /// </summary>
@@ -51,7 +51,7 @@ namespace VRime.Editor
 
         static void AddKeyboard(Scene scene, KeyboardTheme theme, Action<Graphic, Color, string> set)
         {
-            // 母音側の通常ページの四隅はセルを置かず（背景は透明）、機能ページのヒントだけを示す。
+            // 母音側の基本レイヤーの四隅はセルを置かず（背景は透明）、機能レイヤーのヒントだけを示す。
             var vowelCorners = new HashSet<GripPanelCell>();
             string vowelCellsField = new KeyboardSettings().ConsonantHand == Hand.Left ? "_rightCells" : "_leftCells";
             foreach (GripPanelView panels in All<GripPanelView>(scene))
