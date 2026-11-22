@@ -76,7 +76,9 @@ namespace VRime.App.Tests
         sealed class FakeChatbox : IChatboxOutput
         {
             public readonly List<string> Sent = new List<string>();
+            public int ClearCount;
             public void Send(string text) { Sent.Add(text); }
+            public void Clear() { ClearCount++; }
         }
 
         sealed class FakeDesktop : IDesktopOutput
@@ -114,6 +116,30 @@ namespace VRime.App.Tests
             OutputResult result = Router(new AppSettings(), chatbox, desktop, Window(200, "vrchat")).Send("こんにちは");
             Assert.IsTrue(result.Success);
             CollectionAssert.AreEqual(new[] { "こんにちは" }, chatbox.Sent);
+            Assert.AreEqual(0, desktop.Sent.Count);
+        }
+
+        [Test]
+        public void VRChatが前面ならチャットボックスの表示を消せる()
+        {
+            var chatbox = new FakeChatbox();
+            var desktop = new FakeDesktop();
+            Assert.IsTrue(Router(new AppSettings(), chatbox, desktop, Window(200, "vrchat")).Clear());
+            Assert.AreEqual(1, chatbox.ClearCount);
+            Assert.AreEqual(0, chatbox.Sent.Count);
+            Assert.AreEqual(0, desktop.Sent.Count);
+        }
+
+        [Test]
+        public void チャットボックス以外の送信先では表示を消さない()
+        {
+            var chatbox = new FakeChatbox();
+            var desktop = new FakeDesktop();
+            Assert.IsFalse(Router(new AppSettings(), chatbox, desktop, Window(200, "vrchat"), pasteMode: true).Clear(), "貼り付けモード");
+            Assert.IsFalse(Router(new AppSettings(), chatbox, desktop, Window(300, "notepad")).Clear(), "デスクトップのアプリ");
+            Assert.IsFalse(Router(new AppSettings(), chatbox, desktop, Window(OwnPid, "VRime")).Clear(), "本アプリ自身");
+            Assert.IsFalse(Router(new AppSettings(), chatbox, desktop, null).Clear(), "前面のウィンドウなし");
+            Assert.AreEqual(0, chatbox.ClearCount);
             Assert.AreEqual(0, desktop.Sent.Count);
         }
 

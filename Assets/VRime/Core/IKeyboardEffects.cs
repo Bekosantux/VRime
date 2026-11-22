@@ -22,5 +22,12 @@ namespace VRime.Core
         /// 失敗の理由の表示は App が行う（Core が受け取るのは成否だけで、理由は受け取らない）。
         /// </summary>
         bool OnSendRequested(string text);
+
+        /// <summary>
+        /// 入力バッファが空のときの確定キーによる、送信先の表示の消去の要求（docs/spec/output.md「入力バッファ」）。
+        /// 表示を消せる送信先なら消去を受け付けて true を返し、それ以外は何もせずに false を返す。
+        /// false のとき Core は振動で知らせる。App は通知を出さない（送信の失敗ではないため）。
+        /// </summary>
+        bool OnClearRequested();
     }
 }

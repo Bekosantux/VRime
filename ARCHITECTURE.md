@@ -42,7 +42,7 @@ VRime.Editor  ──→  VRime.App  ──→  VRime.Core
 | `Valve.OpenVR` | `Assets/VRime/ThirdParty/OpenVR/` | Valve 配布の `openvr_api.cs` をそのまま置く |
 | `VRime.Editor` | `Assets/VRime/Editor/` | エディター専用の開発用ツールとビルド |
 
-- Core は App を参照しない。Core から外部への作用（開閉・振動・変換の要求・送信の要求）は、`IKeyboardEffects` で App に通知
+- Core は App を参照しない。Core から外部への作用（開閉・振動・変換の要求・送信と表示の消去の要求）は、`IKeyboardEffects` で App に通知
 - Core は時刻・スティックの傾き・押下状態をすべて引数で受け取り、時計や入力の API に依存しない。そのため、テストでは時間の経過と操作の列を固定の値で再現できる
 - App は Win32 や OpenVR を呼び出す処理を境界（`IKeyboardPlatform`・`IControllerSource`・`IForegroundWindowSource` など）の背後に隠し、振り分けや判定の規則を、境界を差し替えてテストできるようにする
 

@@ -3,7 +3,7 @@ using System;
 namespace VRime.App.Output
 {
     /// <summary>
-    /// 送信先（<see cref="OutputTarget"/>）に応じて送る（docs/spec/output.md「送信先」）。
+    /// 送信先（<see cref="OutputTarget"/>）に応じて送り、表示を消す（docs/spec/output.md「送信先」）。
     /// VRChat のチャットボックスなら OSC、それ以外（貼り付けモードの VRChat を含む）なら貼り付けで送る。前面が本アプリ自身のときは送らない。
     /// 失敗の通知に送信内容は含めない。
     /// </summary>
@@ -47,6 +47,28 @@ namespace VRime.App.Output
                 case OutputTargetKind.VRChatPaste:
                 case OutputTargetKind.Desktop:
                     return SendToDesktop(target, text);
+                default:
+                    throw new InvalidOperationException("未知の送信先: " + target.Kind);
+            }
+        }
+
+        /// <summary>
+        /// 送信先の表示を消す（docs/spec/output.md「入力バッファ」）。消せるのは VRChat のチャットボックスだけで、
+        /// それ以外の送信先では何もせずに false を返す。
+        /// </summary>
+        public bool Clear()
+        {
+            OutputTarget target = _target() ?? throw new InvalidOperationException("送信先が null です。");
+            switch (target.Kind)
+            {
+                case OutputTargetKind.VRChat:
+                    _chatbox.Clear();
+                    return true;
+                case OutputTargetKind.None:
+                case OutputTargetKind.OwnWindow:
+                case OutputTargetKind.VRChatPaste:
+                case OutputTargetKind.Desktop:
+                    return false;
                 default:
                     throw new InvalidOperationException("未知の送信先: " + target.Kind);
             }

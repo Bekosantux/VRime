@@ -460,12 +460,36 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 確定キーはバッファが空なら何もせず振動で知らせる()
+        public void 確定キーはバッファが空なら送信先の表示の消去を要求する()
         {
             var rig = new Rig();
             rig.VowelFunction(VowelFunctionCells.Commit);
+            Assert.AreEqual(1, rig.Effects.ClearCount);
             Assert.AreEqual(0, rig.Effects.Sends.Count);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Input));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+        }
+
+        [Test]
+        public void 表示を消せない送信先ならバッファが空の確定キーは振動で知らせる()
+        {
+            var rig = new Rig();
+            rig.Effects.ClearSucceeds = false;
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            Assert.AreEqual(1, rig.Effects.ClearCount);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
+        }
+
+        [Test]
+        public void バッファが空でなければ確定キーで表示の消去を要求しない()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
+            Assert.AreEqual(0, rig.Effects.ClearCount);
         }
 
         [Test]
@@ -530,6 +554,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Session.SetNotice("通知");
+            rig.Effects.ClearSucceeds = false;
             rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
             Assert.AreEqual("通知", rig.Session.Notice);

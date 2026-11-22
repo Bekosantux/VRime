@@ -107,6 +107,7 @@ namespace VRime.App.Tests
             public void OnHaptic(Hand hand, HapticKind kind) { }
             public void OnConversionRequested(int requestId, string reading) { }
             public bool OnSendRequested(string text) { return true; }
+            public bool OnClearRequested() { return true; }
         }
     }
 }

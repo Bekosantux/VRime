@@ -19,6 +19,9 @@ namespace VRime.Core.Tests
         public bool SendSucceeds = true;
         public Action<string> SendHook;
         public bool OnSendRequested(string text) { Sends.Add(text); SendHook?.Invoke(text); return SendSucceeds; }
+        public bool ClearSucceeds = true;
+        public int ClearCount;
+        public bool OnClearRequested() { ClearCount++; return ClearSucceeds; }
 
         public int CountHaptics(HapticKind kind)
         {
@@ -40,6 +43,7 @@ namespace VRime.Core.Tests
             Haptics.Clear();
             ConversionRequests.Clear();
             Sends.Clear();
+            ClearCount = 0;
         }
     }
 

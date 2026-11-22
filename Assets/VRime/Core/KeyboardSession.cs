@@ -319,6 +319,7 @@ namespace VRime.Core
         }
 
         // 確定キー（docs/spec/output.md「入力バッファ」）: 未確定があればそのまま確定し、なければ送信を要求する。
+        // バッファが空なら送信先の表示の消去を要求する。
         // 文字数の上限を超えている間は送信を要求しない。送信に失敗したらバッファを残す。
         void PressCommitKey(Hand hand)
         {
@@ -327,7 +328,11 @@ namespace VRime.Core
                 _buffer.CommitComposition();
                 _haptics.Add(new HapticEvent(hand, HapticKind.Input));
             }
-            else if (_buffer.Committed.Length > 0 && !_buffer.IsOverLengthLimit)
+            else if (_buffer.Length == 0)
+            {
+                _haptics.Add(new HapticEvent(hand, _effects.OnClearRequested() ? HapticKind.Input : HapticKind.Invalid));
+            }
+            else if (!_buffer.IsOverLengthLimit)
             {
                 if (_effects.OnSendRequested(_buffer.Committed))
                 {

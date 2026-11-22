@@ -200,6 +200,19 @@ namespace VRime.Core.Tests
         }
 
         [Test]
+        public void 表示の消去は送信と同じ順序で出し入力中の表示を取り下げる()
+        {
+            var outbox = new ChatboxOutbox();
+            outbox.SetPreview("あ");
+            outbox.TryDequeue(0.0, out _);
+            outbox.EnqueueSend("あ");
+            outbox.EnqueueClear();
+            Assert.IsFalse(outbox.HasPendingPreview);
+            Assert.AreEqual(2, outbox.PendingSendCount);
+            CollectionAssert.AreEqual(new[] { "Send:あ@1", "Clear:@2" }, Drain(outbox, 0.25, 5.0));
+        }
+
+        [Test]
         public void 表示中の入力中の表示だけを直ちに消す()
         {
             var outbox = new ChatboxOutbox();
@@ -219,6 +232,7 @@ namespace VRime.Core.Tests
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new ChatboxOutbox(-1.0));
             Assert.Throws<ArgumentNullException>(() => new ChatboxOutbox().EnqueueSend(null));
+            Assert.Throws<ArgumentException>(() => new ChatboxOutbox().EnqueueSend(""));
             Assert.Throws<ArgumentException>(() => new ChatboxOutbox().SetPreview(""));
         }
 

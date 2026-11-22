@@ -542,5 +542,10 @@ namespace VRime.App
             if (!result.Success) _session.SetNotice(result.Notice);
             return result.Success;
         }
+
+        bool IKeyboardEffects.OnClearRequested()
+        {
+            return _router.Clear();
+        }
     }
 }

@@ -8,11 +8,14 @@ namespace VRime.App.Output
     public interface IChatboxOutput
     {
         void Send(string text);
+
+        /// <summary>チャットボックスの表示を消す。</summary>
+        void Clear();
     }
 
     /// <summary>
     /// VRChat のチャットボックスへ OSC（UDP）で送る（docs/spec/output.md「VRChat」）。
-    /// <see cref="Send"/> と <see cref="SetPreview"/> は予約だけを行い、毎フレーム呼ぶ <see cref="Update"/> が 1秒以上の間隔を空けて実際に送る。
+    /// <see cref="Send"/>・<see cref="Clear"/>・<see cref="SetPreview"/> は予約だけを行い、毎フレーム呼ぶ <see cref="Update"/> が 1秒以上の間隔を空けて実際に送る。
     /// 送信の失敗（ソケットの例外）は <see cref="Update"/> / <see cref="SetTyping"/> から送出される。
     /// </summary>
     public sealed class VRChatChatbox : IChatboxOutput, IDisposable
@@ -36,7 +39,7 @@ namespace VRime.App.Output
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
-        /// <summary>送信待ちの件数。</summary>
+        /// <summary>送信待ちの件数（表示の消去を含む）。</summary>
         public int PendingSendCount => _outbox.PendingSendCount;
 
         /// <summary>送信をキューに積む。実際の送信は <see cref="Update"/> で行う。</summary>
@@ -45,6 +48,13 @@ namespace VRime.App.Output
             ThrowIfDisposed();
             if (string.IsNullOrEmpty(text)) throw new ArgumentException("送信する文字列が空です。", nameof(text));
             _outbox.EnqueueSend(text);
+        }
+
+        /// <summary>表示の消去を送信と同じキューに積む。実際の送信は <see cref="Update"/> で行う。</summary>
+        public void Clear()
+        {
+            ThrowIfDisposed();
+            _outbox.EnqueueClear();
         }
 
         /// <summary>
@@ -86,6 +96,7 @@ namespace VRime.App.Output
                     SendPacket(OscCodec.Encode("/chatbox/input", message.Text, true, _settings.PlayChatboxNotificationSound));
                     break;
                 case ChatboxMessageKind.Preview:
+                case ChatboxMessageKind.Clear:
                     SendPacket(OscCodec.Encode("/chatbox/input", message.Text, true, false));
                     break;
                 default:
