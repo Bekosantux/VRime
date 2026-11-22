@@ -43,6 +43,30 @@ namespace VRime.Core.Tests
         }
     }
 
+    /// <summary>子音側の機能ページのセル番号（docs/spec/grip-input.md「子音側の機能ページ」）。かなページのセルの名前で呼ぶ。</summary>
+    public static class ConsonantFunctionCells
+    {
+        public const int Erase = 2;
+        public const int Modifier = 3;
+        public const int Wa = 4;
+        public const int Symbol = 5;
+        public const int Space = 8;
+    }
+
+    /// <summary>母音側の機能ページのセル番号（docs/spec/grip-input.md「母音側の機能ページ」）。</summary>
+    public static class VowelFunctionCells
+    {
+        public const int ToggleWidth = 0;
+        public const int Language = 1;
+        public const int NumberPage = 2;
+        public const int CursorLeft = 3;
+        public const int Commit = 4;
+        public const int CursorRight = 5;
+        public const int ToggleCase = 6;
+        public const int Convert = 7;
+        public const int PasteMode = 8;
+    }
+
     public static class Sticks
     {
         /// <summary>セル番号（0..8）の方向に最大まで倒した値。</summary>

@@ -7,26 +7,11 @@ namespace VRime.Core.Tests
     /// <summary>グリップ入力（docs/spec/grip-input.md）の振る舞い。Rig を通して、実際の操作と同じ入力列で確認する。</summary>
     public class GripInputTests
     {
-        // 機能ページのセル番号（docs/spec/grip-input.md）
-        const int Erase = 2;
-        const int Modifier = 3;
-        const int Wa = 4;
-        const int Symbol = 5;
-        const int Space = 8;
-
-        // 母音側の機能ページのセル番号
-        const int ToggleWidth = 0;
-        const int NumberPage = 2;
-        const int CursorLeft = 3;
-        const int ToggleCase = 4;
-        const int CursorRight = 5;
-        const int Language = 1;
-
         static readonly string[] NoHints = { "", "", "", "", "", "", "", "", "" };
 
         static void ToEnglish(Rig rig)
         {
-            rig.VowelFunction(Language);
+            rig.VowelFunction(VowelFunctionCells.Language);
         }
 
         [Test]
@@ -65,8 +50,8 @@ namespace VRime.Core.Tests
         public void わと記号は機能ページから入力できる()
         {
             var rig = new Rig();
-            rig.ConsonantFunction(Wa, StickDirection.Left);
-            rig.ConsonantFunction(Symbol, StickDirection.Up);
+            rig.ConsonantFunction(ConsonantFunctionCells.Wa, StickDirection.Left);
+            rig.ConsonantFunction(ConsonantFunctionCells.Symbol, StickDirection.Up);
             Assert.AreEqual("を？", rig.Session.Composition);
         }
 
@@ -115,7 +100,7 @@ namespace VRime.Core.Tests
             rig.Modify();
             Assert.AreEqual("a", rig.Session.Committed);
 
-            rig.VowelFunction(ToggleWidth);
+            rig.VowelFunction(VowelFunctionCells.ToggleWidth);
             rig.Type(2, StickDirection.Center); // ｄ
             rig.Modify();
             Assert.AreEqual("aＤ", rig.Session.Committed);
@@ -128,7 +113,7 @@ namespace VRime.Core.Tests
             rig.Modify();
             Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Invalid));
 
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             rig.Type(0, StickDirection.Center); // 1
             rig.Modify();
             Assert.AreEqual("1", rig.Session.Committed);
@@ -154,14 +139,14 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(3, StickDirection.Up); // つ
-            rig.ConsonantFunction(Modifier);
+            rig.ConsonantFunction(ConsonantFunctionCells.Modifier);
             Assert.AreEqual("っ", rig.Session.Composition);
 
             // 英字を入れてからかなページへ戻ると、直前の英字が対象になる。
             ToEnglish(rig);
             rig.Type(1, StickDirection.Center); // a（未確定の「っ」を先に確定する）
             ToEnglish(rig);
-            rig.ConsonantFunction(Modifier);
+            rig.ConsonantFunction(ConsonantFunctionCells.Modifier);
             Assert.AreEqual("っA", rig.Session.Committed);
         }
 
@@ -173,7 +158,7 @@ namespace VRime.Core.Tests
 
             // 子音側の機能ページを、子音側のトリガーで実行する（切り替えにはならない）。
             rig.SetGrip(rig.Consonant, true);
-            rig.SetStick(rig.Consonant, Sticks.Cell(Space));
+            rig.SetStick(rig.Consonant, Sticks.Cell(ConsonantFunctionCells.Space));
             rig.Tick();
             rig.Pull(rig.Consonant);
             rig.SetGrip(rig.Consonant, false);
@@ -183,7 +168,7 @@ namespace VRime.Core.Tests
 
             // 母音側の機能ページを、母音側のトリガーで実行する。
             rig.SetGrip(rig.Vowel, true);
-            rig.SetStick(rig.Vowel, Sticks.Cell(Language));
+            rig.SetStick(rig.Vowel, Sticks.Cell(VowelFunctionCells.Language));
             rig.Tick();
             rig.Pull(rig.Vowel);
             rig.SetGrip(rig.Vowel, false);
@@ -198,9 +183,9 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
             rig.Type(0, StickDirection.Left);
-            rig.ConsonantFunction(Erase);
+            rig.ConsonantFunction(ConsonantFunctionCells.Erase);
             Assert.AreEqual("あ", rig.Session.Composition);
-            rig.ConsonantFunction(Erase);
+            rig.ConsonantFunction(ConsonantFunctionCells.Erase);
             Assert.AreEqual("", rig.Session.Composition);
         }
 
@@ -208,7 +193,7 @@ namespace VRime.Core.Tests
         public void 消去する文字がなければ振動で知らせる()
         {
             var rig = new Rig();
-            rig.ConsonantFunction(Erase);
+            rig.ConsonantFunction(ConsonantFunctionCells.Erase);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
         }
 
@@ -218,12 +203,12 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.Type(0, StickDirection.Center); // あ
             rig.Type(0, StickDirection.Left);   // い
-            rig.VowelFunction(CursorLeft);
+            rig.VowelFunction(VowelFunctionCells.CursorLeft);
             Assert.AreEqual(1, rig.Session.CompositionCursor);
             rig.Type(0, StickDirection.Up);     // う をカーソル位置に挿入
             Assert.AreEqual("あうい", rig.Session.Composition);
             Assert.AreEqual(2, rig.Session.CompositionCursor);
-            rig.VowelFunction(CursorRight);
+            rig.VowelFunction(VowelFunctionCells.CursorRight);
             Assert.AreEqual(3, rig.Session.CompositionCursor);
         }
 
@@ -232,7 +217,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(CursorRight);
+            rig.VowelFunction(VowelFunctionCells.CursorRight);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
         }
 
@@ -241,7 +226,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.ConsonantFunction(Space);
+            rig.ConsonantFunction(ConsonantFunctionCells.Space);
             Assert.AreEqual("あ　", rig.Session.Committed);
             Assert.AreEqual("", rig.Session.Composition);
         }
@@ -291,12 +276,12 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             ToEnglish(rig);
-            rig.VowelFunction(ToggleCase);
+            rig.VowelFunction(VowelFunctionCells.ToggleCase);
             Assert.IsTrue(rig.Session.GripInput.IsUpperCase);
             rig.Type(1, StickDirection.Left);
             rig.Type(8, StickDirection.Down);
             Assert.AreEqual("B9", rig.Session.Committed);
-            rig.VowelFunction(ToggleCase);
+            rig.VowelFunction(VowelFunctionCells.ToggleCase);
             rig.Type(1, StickDirection.Left);
             Assert.AreEqual("B9b", rig.Session.Committed);
         }
@@ -305,7 +290,7 @@ namespace VRime.Core.Tests
         public void 大文字の切り替えはかなページでは無効()
         {
             var rig = new Rig();
-            rig.VowelFunction(ToggleCase);
+            rig.VowelFunction(VowelFunctionCells.ToggleCase);
             Assert.IsFalse(rig.Session.GripInput.IsUpperCase);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
         }
@@ -315,7 +300,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             ToEnglish(rig);
-            rig.VowelFunction(ToggleWidth);
+            rig.VowelFunction(VowelFunctionCells.ToggleWidth);
             Assert.IsTrue(rig.Session.GripInput.IsFullWidth);
             rig.Type(1, StickDirection.Center);
             rig.Type(0, StickDirection.Center); // .
@@ -327,8 +312,8 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             ToEnglish(rig);
-            rig.VowelFunction(ToggleCase);
-            rig.VowelFunction(ToggleWidth);
+            rig.VowelFunction(VowelFunctionCells.ToggleCase);
+            rig.VowelFunction(VowelFunctionCells.ToggleWidth);
             rig.Type(1, StickDirection.Left);
             Assert.AreEqual("Ｂ", rig.Session.Committed);
         }
@@ -338,9 +323,9 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             ToEnglish(rig);
-            rig.ConsonantFunction(Space);
-            rig.VowelFunction(ToggleWidth);
-            rig.ConsonantFunction(Space);
+            rig.ConsonantFunction(ConsonantFunctionCells.Space);
+            rig.VowelFunction(VowelFunctionCells.ToggleWidth);
+            rig.ConsonantFunction(ConsonantFunctionCells.Space);
             Assert.AreEqual(" 　", rig.Session.Committed);
         }
 
@@ -348,7 +333,7 @@ namespace VRime.Core.Tests
         public void 全半角の切り替えはかなページでは無効()
         {
             var rig = new Rig();
-            rig.VowelFunction(ToggleWidth);
+            rig.VowelFunction(VowelFunctionCells.ToggleWidth);
             Assert.IsFalse(rig.Session.GripInput.IsFullWidth);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
         }
@@ -358,7 +343,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             ToEnglish(rig);
-            rig.VowelFunction(ToggleCase);
+            rig.VowelFunction(VowelFunctionCells.ToggleCase);
             ToEnglish(rig);
             ToEnglish(rig);
             Assert.IsTrue(rig.Session.GripInput.IsUpperCase);
@@ -368,7 +353,7 @@ namespace VRime.Core.Tests
         public void 数字ページは確定済みへ中央の数字を入れる()
         {
             var rig = new Rig();
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             Assert.IsTrue(rig.Session.GripInput.IsNumberPage);
             Assert.AreEqual(GripPage.Number, rig.Session.GripInput.Page);
             for (int cell = 0; cell < 9; cell++) rig.Type(cell, StickDirection.Center);
@@ -379,7 +364,7 @@ namespace VRime.Core.Tests
         public void 数字ページの中央以外の方向は何も入らない()
         {
             var rig = new Rig();
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             rig.Effects.ClearAll();
             rig.Type(0, StickDirection.Left);
             rig.Type(0, StickDirection.Up);
@@ -394,7 +379,7 @@ namespace VRime.Core.Tests
         public void 数字ページの機能ページから記号と0を入れる()
         {
             var rig = new Rig();
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             rig.ConsonantFunction(4, StickDirection.Center); // 0
             rig.ConsonantFunction(4, StickDirection.Left);   // (
             rig.ConsonantFunction(3, StickDirection.Up);     // *
@@ -406,8 +391,8 @@ namespace VRime.Core.Tests
         public void 数字ページは全角にできる()
         {
             var rig = new Rig();
-            rig.VowelFunction(NumberPage);
-            rig.VowelFunction(ToggleWidth);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.ToggleWidth);
             rig.Type(0, StickDirection.Center);
             Assert.AreEqual("１", rig.Session.Committed);
         }
@@ -416,8 +401,8 @@ namespace VRime.Core.Tests
         public void 数字ページでは大文字の切り替えが無効()
         {
             var rig = new Rig();
-            rig.VowelFunction(NumberPage);
-            rig.VowelFunction(ToggleCase);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.ToggleCase);
             Assert.IsFalse(rig.Session.GripInput.IsUpperCase);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
         }
@@ -426,13 +411,13 @@ namespace VRime.Core.Tests
         public void 数字ページをもう一度押すと元のページに戻る()
         {
             var rig = new Rig();
-            rig.VowelFunction(NumberPage);
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             Assert.AreEqual(GripPage.Kana, rig.Session.GripInput.Page);
 
             ToEnglish(rig);
-            rig.VowelFunction(NumberPage);
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             Assert.AreEqual(GripPage.Alpha, rig.Session.GripInput.Page);
         }
 
@@ -440,7 +425,7 @@ namespace VRime.Core.Tests
         public void 数字ページで言語を切り替えると数字ページを閉じて切り替える()
         {
             var rig = new Rig();
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             ToEnglish(rig);
             Assert.IsFalse(rig.Session.GripInput.IsNumberPage);
             Assert.AreEqual(GripPage.Alpha, rig.Session.GripInput.Page);
@@ -451,7 +436,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             rig.Type(0, StickDirection.Center);
             Assert.AreEqual("あ1", rig.Session.Committed);
             Assert.AreEqual("", rig.Session.Composition);
@@ -509,7 +494,7 @@ namespace VRime.Core.Tests
             // 一度離して握り直せば機能ページになる。
             rig.SetGrip(rig.Consonant, false);
             rig.Tick();
-            rig.ConsonantFunction(Space);
+            rig.ConsonantFunction(ConsonantFunctionCells.Space);
             Assert.AreEqual("は　", rig.Session.Committed);
         }
 
@@ -539,7 +524,7 @@ namespace VRime.Core.Tests
 
             // 母音側の機能ページを子音側のトリガーで実行すると、子音側に出る。
             rig.Effects.ClearAll();
-            rig.VowelFunction(CursorLeft);
+            rig.VowelFunction(VowelFunctionCells.CursorLeft);
             Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Input));
             Assert.AreEqual(0, rig.Effects.CountHaptics(rig.Vowel, HapticKind.Input));
         }
@@ -571,7 +556,7 @@ namespace VRime.Core.Tests
             rig.Tick();
             GripViewState view = rig.Session.GripView;
             Assert.IsTrue(view.ConsonantFunctionPage);
-            Assert.AreEqual(GripLayout.GetConsonantCell(GripPage.Kana, true, Modifier).Label, view.ConsonantCells[Modifier].Label);
+            Assert.AreEqual(GripLayout.GetConsonantCell(GripPage.Kana, true, ConsonantFunctionCells.Modifier).Label, view.ConsonantCells[ConsonantFunctionCells.Modifier].Label);
 
             rig.SetGrip(rig.Consonant, false);
             rig.SetGrip(rig.Vowel, true);
@@ -589,18 +574,18 @@ namespace VRime.Core.Tests
             rig.SetGrip(rig.Vowel, true);
             rig.Tick();
             // かなページでは全/半と大文字が無効
-            Assert.IsTrue(rig.Session.GripView.VowelCells[ToggleWidth].Disabled);
-            Assert.IsTrue(rig.Session.GripView.VowelCells[ToggleCase].Disabled);
+            Assert.IsTrue(rig.Session.GripView.VowelCells[VowelFunctionCells.ToggleWidth].Disabled);
+            Assert.IsTrue(rig.Session.GripView.VowelCells[VowelFunctionCells.ToggleCase].Disabled);
             rig.SetGrip(rig.Vowel, false);
             rig.Tick();
 
             ToEnglish(rig);
-            rig.VowelFunction(ToggleCase);
+            rig.VowelFunction(VowelFunctionCells.ToggleCase);
             rig.SetGrip(rig.Vowel, true);
             rig.Tick();
-            Assert.IsFalse(rig.Session.GripView.VowelCells[ToggleCase].Disabled);
-            Assert.IsTrue(rig.Session.GripView.VowelCells[ToggleCase].Lit);
-            Assert.IsFalse(rig.Session.GripView.VowelCells[ToggleWidth].Lit);
+            Assert.IsFalse(rig.Session.GripView.VowelCells[VowelFunctionCells.ToggleCase].Disabled);
+            Assert.IsTrue(rig.Session.GripView.VowelCells[VowelFunctionCells.ToggleCase].Lit);
+            Assert.IsFalse(rig.Session.GripView.VowelCells[VowelFunctionCells.ToggleWidth].Lit);
         }
 
         [Test]
@@ -608,9 +593,9 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             ToEnglish(rig);
-            rig.VowelFunction(ToggleCase);
+            rig.VowelFunction(VowelFunctionCells.ToggleCase);
             Assert.AreEqual("A", rig.Session.GripView.ConsonantCells[1].Label);
-            rig.VowelFunction(ToggleWidth);
+            rig.VowelFunction(VowelFunctionCells.ToggleWidth);
             Assert.AreEqual("Ａ", rig.Session.GripView.ConsonantCells[1].Label);
         }
 
@@ -621,7 +606,7 @@ namespace VRime.Core.Tests
             GripViewState view = rig.Session.GripView;
             string[] consonant = { "", "", "消", "小", "わ", "記", "", "", "空" };
             // 貼り付けモードを使えない間（既定）は、「貼付」のヒントを示さない。
-            string[] vowel = { "全", "言", "数", "←", "↑", "→", "", "変", "確" };
+            string[] vowel = { "全", "言", "数", "←", "確", "→", "↑", "変", "" };
             CollectionAssert.AreEqual(consonant, view.ConsonantHints);
             CollectionAssert.AreEqual(vowel, view.VowelHints);
         }
@@ -634,13 +619,13 @@ namespace VRime.Core.Tests
             rig.Tick();
             GripViewState view = rig.Session.GripView;
             CollectionAssert.AreEqual(NoHints, view.ConsonantHints);
-            Assert.AreEqual("確", view.VowelHints[8]);
+            Assert.AreEqual("確", view.VowelHints[VowelFunctionCells.Commit]);
 
             rig.SetGrip(rig.Consonant, false);
             rig.SetGrip(rig.Vowel, true);
             rig.Tick();
             view = rig.Session.GripView;
-            Assert.AreEqual("消", view.ConsonantHints[Erase]);
+            Assert.AreEqual("消", view.ConsonantHints[ConsonantFunctionCells.Erase]);
             CollectionAssert.AreEqual(NoHints, view.VowelHints);
         }
 
@@ -649,14 +634,14 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             ToEnglish(rig);
-            Assert.AreEqual("", rig.Session.GripView.ConsonantHints[Modifier]);
-            Assert.AreEqual(",", rig.Session.GripView.ConsonantHints[Symbol]);
-            rig.VowelFunction(ToggleWidth);
-            Assert.AreEqual("，", rig.Session.GripView.ConsonantHints[Symbol]);
+            Assert.AreEqual("", rig.Session.GripView.ConsonantHints[ConsonantFunctionCells.Modifier]);
+            Assert.AreEqual(",", rig.Session.GripView.ConsonantHints[ConsonantFunctionCells.Symbol]);
+            rig.VowelFunction(VowelFunctionCells.ToggleWidth);
+            Assert.AreEqual("，", rig.Session.GripView.ConsonantHints[ConsonantFunctionCells.Symbol]);
 
-            rig.VowelFunction(NumberPage);
-            Assert.AreEqual("－", rig.Session.GripView.ConsonantHints[Modifier]);
-            Assert.AreEqual("０", rig.Session.GripView.ConsonantHints[Wa]);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
+            Assert.AreEqual("－", rig.Session.GripView.ConsonantHints[ConsonantFunctionCells.Modifier]);
+            Assert.AreEqual("０", rig.Session.GripView.ConsonantHints[ConsonantFunctionCells.Wa]);
         }
 
         static string[] DirectionHintsOf(GripCellView cell)
@@ -686,9 +671,9 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             ToEnglish(rig);
             CollectionAssert.AreEqual(new[] { "b", "c", "#", "2" }, DirectionHintsOf(rig.Session.GripView.ConsonantCells[1]));
-            rig.VowelFunction(ToggleCase);
+            rig.VowelFunction(VowelFunctionCells.ToggleCase);
             CollectionAssert.AreEqual(new[] { "B", "C", "#", "2" }, DirectionHintsOf(rig.Session.GripView.ConsonantCells[1]));
-            rig.VowelFunction(ToggleWidth);
+            rig.VowelFunction(VowelFunctionCells.ToggleWidth);
             CollectionAssert.AreEqual(new[] { "Ｂ", "Ｃ", "＃", "２" }, DirectionHintsOf(rig.Session.GripView.ConsonantCells[1]));
         }
 
@@ -699,10 +684,10 @@ namespace VRime.Core.Tests
             rig.SetGrip(rig.Consonant, true);
             rig.Tick();
             GripViewState view = rig.Session.GripView;
-            CollectionAssert.AreEqual(new[] { "を", "ん", "ー", "〜" }, DirectionHintsOf(view.ConsonantCells[Wa]));
-            CollectionAssert.AreEqual(new[] { "。", "？", "！", "…" }, DirectionHintsOf(view.ConsonantCells[Symbol]));
-            CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[Modifier]));
-            CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[Erase]));
+            CollectionAssert.AreEqual(new[] { "を", "ん", "ー", "〜" }, DirectionHintsOf(view.ConsonantCells[ConsonantFunctionCells.Wa]));
+            CollectionAssert.AreEqual(new[] { "。", "？", "！", "…" }, DirectionHintsOf(view.ConsonantCells[ConsonantFunctionCells.Symbol]));
+            CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[ConsonantFunctionCells.Modifier]));
+            CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[ConsonantFunctionCells.Erase]));
             CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[0]));
         }
 
@@ -714,7 +699,7 @@ namespace VRime.Core.Tests
             foreach (GripCellView cell in view.VowelCells)
                 CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(cell));
 
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             view = rig.Session.GripView;
             CollectionAssert.AreEqual(NoDirectionHints, DirectionHintsOf(view.ConsonantCells[0]));
 
@@ -743,7 +728,7 @@ namespace VRime.Core.Tests
         public void 数字ページのビューは中央以外の方向が空になる()
         {
             var rig = new Rig();
-            rig.VowelFunction(NumberPage);
+            rig.VowelFunction(VowelFunctionCells.NumberPage);
             Assert.AreEqual("1", rig.Session.GripView.ConsonantCells[0].Label);
             rig.SetStick(rig.Consonant, Sticks.Cell(0));
             rig.Tick();
@@ -914,7 +899,7 @@ namespace VRime.Core.Tests
             rig.Type(0, StickDirection.Left);
             rig.Effects.ClearAll();
 
-            HoldFunction(rig, rig.Consonant, Erase);
+            HoldFunction(rig, rig.Consonant, ConsonantFunctionCells.Erase);
             Assert.AreEqual("あ", rig.Session.Composition);
             rig.Tick(0.52);
             Assert.AreEqual("", rig.Session.Composition);
@@ -928,7 +913,7 @@ namespace VRime.Core.Tests
         public void 空白は連続入力される()
         {
             var rig = RepeatRig();
-            HoldFunction(rig, rig.Consonant, Space);
+            HoldFunction(rig, rig.Consonant, ConsonantFunctionCells.Space);
             rig.Tick(0.52);
             Assert.AreEqual("　　", rig.Session.Committed);
         }
@@ -937,7 +922,7 @@ namespace VRime.Core.Tests
         public void 機能ページの文字は連続入力される()
         {
             var rig = RepeatRig();
-            HoldFunction(rig, rig.Consonant, Wa);
+            HoldFunction(rig, rig.Consonant, ConsonantFunctionCells.Wa);
             rig.Tick(0.52);
             Assert.AreEqual("わわ", rig.Session.Composition);
         }
@@ -950,7 +935,7 @@ namespace VRime.Core.Tests
             rig.Type(0, StickDirection.Left);
             rig.Type(0, StickDirection.Up);
 
-            HoldFunction(rig, rig.Vowel, CursorLeft);
+            HoldFunction(rig, rig.Vowel, VowelFunctionCells.CursorLeft);
             Assert.AreEqual(2, rig.Session.CompositionCursor);
             rig.Tick(0.52);
             Assert.AreEqual(1, rig.Session.CompositionCursor);
@@ -961,7 +946,7 @@ namespace VRime.Core.Tests
         {
             var rig = RepeatRig();
             rig.Type(1, StickDirection.Center); // か
-            HoldFunction(rig, rig.Consonant, Modifier);
+            HoldFunction(rig, rig.Consonant, ConsonantFunctionCells.Modifier);
             rig.Tick(1.0);
             Assert.AreEqual("が", rig.Session.Composition);
             rig.SetTrigger(rig.Vowel, false);
@@ -969,7 +954,7 @@ namespace VRime.Core.Tests
             rig.SetStick(rig.Consonant, StickValue.Zero);
             rig.Tick();
 
-            HoldFunction(rig, rig.Vowel, NumberPage);
+            HoldFunction(rig, rig.Vowel, VowelFunctionCells.NumberPage);
             rig.Tick(1.0);
             Assert.IsTrue(rig.Session.GripInput.IsNumberPage);
         }

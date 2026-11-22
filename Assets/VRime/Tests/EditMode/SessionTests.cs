@@ -9,9 +9,6 @@ namespace VRime.Core.Tests
     /// <summary>開閉・ダッシュボード・入力バッファの制限・確定キー。</summary>
     public class SessionTests
     {
-        const int Commit = 8;
-        const int Language = 1;
-
         // 左右のグリップを gap 秒の差で押して離す（左が先）。
         static void Chord(Rig rig, double gap, double lead = 0.0625)
         {
@@ -288,7 +285,7 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.Session.SetLengthLimit(3);
             rig.Type(0, StickDirection.Center);       // 未確定 あ
-            rig.VowelFunction(Language);              // 英字へ
+            rig.VowelFunction(VowelFunctionCells.Language); // 英字へ
             rig.Type(1, StickDirection.Center);       // a（先に あ が確定される）
             rig.Type(1, StickDirection.Center);       // a
             Assert.AreEqual("あaa", rig.Session.Committed);
@@ -334,11 +331,11 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
             rig.Type(0, StickDirection.Left);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             rig.Session.SetLengthLimit(1);
             rig.Effects.ClearAll();
 
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual(0, rig.Effects.Sends.Count);
             Assert.AreEqual("あい", rig.Session.Committed);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
@@ -346,7 +343,7 @@ namespace VRime.Core.Tests
 
             // 上限以内に戻せば送信できる。
             rig.ConsonantFunction(2);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
         }
 
@@ -359,7 +356,7 @@ namespace VRime.Core.Tests
             rig.Session.SetLengthLimit(1);
             rig.Effects.ClearAll();
 
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual("あい", rig.Session.Committed);
             Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
         }
@@ -401,10 +398,22 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual("あ", rig.Session.Committed);
             Assert.AreEqual("", rig.Session.Composition);
             Assert.AreEqual(0, rig.Effects.Sends.Count);
+        }
+
+        [Test]
+        public void 母音側のグリップを握ってスティックを倒さずにトリガーを引くと確定する()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.SetGrip(rig.Vowel, true);
+            rig.Tick();
+            rig.Pull(rig.Vowel);
+            Assert.AreEqual("あ", rig.Session.Committed);
+            Assert.AreEqual("", rig.Session.Composition);
         }
 
         [Test]
@@ -412,8 +421,8 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Commit);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
             Assert.AreEqual("", rig.Session.Committed);
             Assert.AreEqual(0, rig.Session.CommittedCursor);
@@ -425,10 +434,10 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             rig.Effects.SendSucceeds = false;
             rig.Effects.Haptics.Clear();
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
             Assert.AreEqual("あ", rig.Session.Committed);
             Assert.AreEqual(1, rig.Session.CommittedCursor);
@@ -441,11 +450,11 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             rig.Effects.SendSucceeds = false;
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             rig.Effects.SendSucceeds = true;
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             CollectionAssert.AreEqual(new[] { "あ", "あ" }, rig.Effects.Sends);
             Assert.AreEqual("", rig.Session.Committed);
         }
@@ -454,7 +463,7 @@ namespace VRime.Core.Tests
         public void 確定キーはバッファが空なら何もせず振動で知らせる()
         {
             var rig = new Rig();
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual(0, rig.Effects.Sends.Count);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
         }
@@ -464,11 +473,11 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Commit);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             rig.Type(0, StickDirection.Left);
-            rig.VowelFunction(Commit);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             CollectionAssert.AreEqual(new[] { "あ", "い" }, rig.Effects.Sends);
         }
 
@@ -476,9 +485,9 @@ namespace VRime.Core.Tests
         public void 確定済みの英字も確定キーで送信できる()
         {
             var rig = new Rig();
-            rig.VowelFunction(Language);
+            rig.VowelFunction(VowelFunctionCells.Language);
             rig.Type(1, StickDirection.Center);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             CollectionAssert.AreEqual(new[] { "a" }, rig.Effects.Sends);
         }
 
@@ -521,7 +530,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Session.SetNotice("通知");
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
             Assert.AreEqual("通知", rig.Session.Notice);
         }
@@ -556,13 +565,13 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.Effects.SendSucceeds = false;
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             rig.Session.SetNotice("送信できません");
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual("送信できません", rig.Session.Notice);
 
             rig.Effects.SendSucceeds = true;
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual(2, rig.Effects.Sends.Count);
             Assert.AreEqual(string.Empty, rig.Session.Committed);
             Assert.AreEqual(string.Empty, rig.Session.Notice);
@@ -574,9 +583,9 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.Effects.SendSucceeds = false;
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             rig.Session.SetNotice("送信できません");
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual("送信できません", rig.Session.Notice);
             Assert.AreEqual("あ", rig.Session.Committed);
         }
@@ -594,14 +603,11 @@ namespace VRime.Core.Tests
     /// <summary>貼り付けモード（docs/spec/output.md「貼り付けモード」）と「貼付」キー。</summary>
     public class PasteModeTests
     {
-        const int PasteMode = 6;
-        const int Commit = 8;
-
         static GripCellView PasteCell(Rig rig)
         {
             rig.SetGrip(rig.Vowel, true);
             rig.Tick();
-            GripCellView cell = rig.Session.GripView.VowelCells[PasteMode];
+            GripCellView cell = rig.Session.GripView.VowelCells[VowelFunctionCells.PasteMode];
             rig.SetGrip(rig.Vowel, false);
             rig.Tick();
             return cell;
@@ -610,8 +616,8 @@ namespace VRime.Core.Tests
         static void TypeAndSend(Rig rig)
         {
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Commit);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
         }
 
         [Test]
@@ -619,10 +625,10 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             Assert.AreEqual("・", PasteCell(rig).Label);
-            Assert.AreEqual("", rig.Session.GripView.VowelHints[PasteMode]);
+            Assert.AreEqual("", rig.Session.GripView.VowelHints[VowelFunctionCells.PasteMode]);
 
             rig.Effects.Haptics.Clear();
-            rig.VowelFunction(PasteMode);
+            rig.VowelFunction(VowelFunctionCells.PasteMode);
             Assert.IsFalse(rig.Session.IsPasteMode);
             Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
             Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
@@ -633,18 +639,18 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Session.SetPasteModeAvailable(true);
-            Assert.AreEqual("貼", rig.Session.GripView.VowelHints[PasteMode]);
+            Assert.AreEqual("貼", rig.Session.GripView.VowelHints[VowelFunctionCells.PasteMode]);
             GripCellView off = PasteCell(rig);
             Assert.AreEqual("貼付", off.Label);
             Assert.IsFalse(off.Lit);
 
             rig.Effects.Haptics.Clear();
-            rig.VowelFunction(PasteMode);
+            rig.VowelFunction(VowelFunctionCells.PasteMode);
             Assert.IsTrue(rig.Session.IsPasteMode);
             Assert.IsTrue(PasteCell(rig).Lit);
             Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Input));
 
-            rig.VowelFunction(PasteMode);
+            rig.VowelFunction(VowelFunctionCells.PasteMode);
             Assert.IsFalse(rig.Session.IsPasteMode);
             Assert.IsFalse(PasteCell(rig).Lit);
         }
@@ -654,7 +660,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Session.SetPasteModeAvailable(true);
-            rig.VowelFunction(PasteMode);
+            rig.VowelFunction(VowelFunctionCells.PasteMode);
 
             rig.Session.SetPasteModeAvailable(false);
             Assert.IsTrue(rig.Session.IsPasteMode);
@@ -681,7 +687,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Session.SetPasteModeAvailable(true);
-            rig.VowelFunction(PasteMode);
+            rig.VowelFunction(VowelFunctionCells.PasteMode);
             TypeAndSend(rig);
             CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
             Assert.IsFalse(rig.Session.IsPasteMode);
@@ -692,7 +698,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig(new KeyboardSettings(resetPasteModeAfterSend: false));
             rig.Session.SetPasteModeAvailable(true);
-            rig.VowelFunction(PasteMode);
+            rig.VowelFunction(VowelFunctionCells.PasteMode);
             TypeAndSend(rig);
             Assert.IsTrue(rig.Session.IsPasteMode);
         }
@@ -703,7 +709,7 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.Session.ApplySettings(new KeyboardSettings(resetPasteModeAfterSend: false));
             rig.Session.SetPasteModeAvailable(true);
-            rig.VowelFunction(PasteMode);
+            rig.VowelFunction(VowelFunctionCells.PasteMode);
             TypeAndSend(rig);
             Assert.IsTrue(rig.Session.IsPasteMode);
         }
@@ -713,7 +719,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Session.SetPasteModeAvailable(true);
-            rig.VowelFunction(PasteMode);
+            rig.VowelFunction(VowelFunctionCells.PasteMode);
             rig.Effects.SendSucceeds = false;
             TypeAndSend(rig);
             Assert.IsTrue(rig.Session.IsPasteMode);
@@ -724,7 +730,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Session.SetPasteModeAvailable(true);
-            rig.VowelFunction(PasteMode);
+            rig.VowelFunction(VowelFunctionCells.PasteMode);
             rig.Session.SetPasteModeAvailable(false);
             TypeAndSend(rig);
             CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
@@ -735,10 +741,6 @@ namespace VRime.Core.Tests
     /// <summary>変換の流れ（docs/spec/conversion.md「候補欄」）。</summary>
     public class ConversionFlowTests
     {
-        const int Convert = 7;
-        const int Language = 1;
-        const int Commit = 8;
-
         static ConversionSegment Segment(string reading, params string[] candidates)
         {
             return new ConversionSegment(reading, candidates);
@@ -758,7 +760,7 @@ namespace VRime.Core.Tests
         {
             rig.Type(0, StickDirection.Center);
             rig.Type(0, StickDirection.Left);
-            rig.VowelFunction(Convert);
+            rig.VowelFunction(VowelFunctionCells.Convert);
             Assert.AreEqual(KeyboardMode.WaitingConversion, rig.Session.Mode);
             return rig.Effects.ConversionRequests[rig.Effects.ConversionRequests.Count - 1].Key;
         }
@@ -864,7 +866,7 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
             rig.SetGrip(rig.Vowel, true);
-            rig.SetStick(rig.Vowel, Sticks.Cell(Convert)); // 下に倒した状態でトリガーを引く
+            rig.SetStick(rig.Vowel, Sticks.Cell(VowelFunctionCells.Convert)); // 下に倒した状態でトリガーを引く
             rig.SetStick(rig.Consonant, Sticks.Dir(StickDirection.Down));
             rig.Tick();
             rig.Pull(rig.Consonant);
@@ -881,7 +883,7 @@ namespace VRime.Core.Tests
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
             rig.SetGrip(rig.Vowel, true);
-            rig.SetStick(rig.Vowel, Sticks.Cell(Convert));
+            rig.SetStick(rig.Vowel, Sticks.Cell(VowelFunctionCells.Convert));
             rig.Tick();
             rig.Pull(rig.Consonant);
             Assert.AreEqual(KeyboardMode.WaitingConversion, rig.Session.Mode);
@@ -951,7 +953,7 @@ namespace VRime.Core.Tests
             Assert.AreEqual(KeyboardMode.Input, rig.Session.Mode);
             Assert.IsNull(rig.Session.CurrentConversion);
 
-            rig.VowelFunction(Convert);
+            rig.VowelFunction(VowelFunctionCells.Convert);
             Assert.AreEqual(KeyboardMode.WaitingConversion, rig.Session.Mode);
             int second = rig.Effects.ConversionRequests[1].Key;
             Assert.AreNotEqual(first, second);
@@ -1034,7 +1036,7 @@ namespace VRime.Core.Tests
         public void 未確定がなければ変換は何もせず振動で知らせる()
         {
             var rig = new Rig();
-            rig.VowelFunction(Convert);
+            rig.VowelFunction(VowelFunctionCells.Convert);
             Assert.AreEqual(KeyboardMode.Input, rig.Session.Mode);
             Assert.AreEqual(0, rig.Effects.ConversionRequests.Count);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
@@ -1045,9 +1047,9 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
             rig.Effects.ClearAll();
-            rig.VowelFunction(Convert);
+            rig.VowelFunction(VowelFunctionCells.Convert);
             Assert.AreEqual(0, rig.Effects.ConversionRequests.Count);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
         }
@@ -1076,12 +1078,12 @@ namespace VRime.Core.Tests
         public void 変換の確定は未確定の位置の確定済みへ入る()
         {
             var rig = new Rig();
-            rig.VowelFunction(Language);
+            rig.VowelFunction(VowelFunctionCells.Language);
             rig.Type(1, StickDirection.Center);  // a（確定済み）
-            rig.VowelFunction(Language);
+            rig.VowelFunction(VowelFunctionCells.Language);
             rig.Type(0, StickDirection.Center);
             rig.Type(0, StickDirection.Left);
-            rig.VowelFunction(Convert);
+            rig.VowelFunction(VowelFunctionCells.Convert);
             int id = rig.Effects.ConversionRequests[0].Key;
             rig.Session.CompleteConversion(id, Sample());
             rig.Pull(rig.Consonant);
@@ -1143,8 +1145,6 @@ namespace VRime.Core.Tests
     /// <summary>トリガーのしきい値と、実行中の設定の差し替え。</summary>
     public class SettingsApplyTests
     {
-        const int Convert = 7;
-
         static void SelectA(Rig rig)
         {
             rig.SetStick(rig.Consonant, Sticks.Cell(0));
@@ -1227,14 +1227,14 @@ namespace VRime.Core.Tests
             var rig = new Rig(new KeyboardSettings(conversionEnabled: false));
             rig.Type(0, StickDirection.Center);
             rig.Effects.ClearAll();
-            rig.VowelFunction(Convert);
+            rig.VowelFunction(VowelFunctionCells.Convert);
             Assert.IsEmpty(rig.Effects.ConversionRequests);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
             Assert.AreEqual(KeyboardMode.Input, rig.Session.Mode);
             Assert.AreEqual("あ", rig.Session.Composition);
 
             rig.SetGrip(rig.Vowel, true); rig.Tick();
-            Assert.IsTrue(rig.Session.GripView.VowelCells[Convert].Disabled);
+            Assert.IsTrue(rig.Session.GripView.VowelCells[VowelFunctionCells.Convert].Disabled);
         }
 
         [Test]
@@ -1245,11 +1245,11 @@ namespace VRime.Core.Tests
             int version = rig.Session.ViewVersion;
             rig.Session.ApplySettings(new KeyboardSettings(conversionEnabled: false));
             Assert.Greater(rig.Session.ViewVersion, version);
-            rig.VowelFunction(Convert);
+            rig.VowelFunction(VowelFunctionCells.Convert);
             Assert.IsEmpty(rig.Effects.ConversionRequests);
 
             rig.Session.ApplySettings(new KeyboardSettings(conversionEnabled: true));
-            rig.VowelFunction(Convert);
+            rig.VowelFunction(VowelFunctionCells.Convert);
             Assert.AreEqual(1, rig.Effects.ConversionRequests.Count);
         }
 
@@ -1267,9 +1267,6 @@ namespace VRime.Core.Tests
     /// <summary>展開・収納とパネルの切り替えを別のボタンに割り当てたとき（docs/spec/grip-input.md「コントローラーの割り当て」）。</summary>
     public class SeparatedBindingTests
     {
-        const int Convert = 7;
-        const int Space = 8;
-
         static void OpenCloseTwice(Rig rig)
         {
             for (int i = 0; i < 2; i++)
@@ -1363,7 +1360,7 @@ namespace VRime.Core.Tests
             Assert.IsFalse(rig.Session.GripView.ConsonantFunctionPage, "開く前から押しているボタンでは機能ページにならない");
 
             rig.SetPanel(rig.Consonant, false); rig.Tick();
-            rig.ConsonantFunction(Space);
+            rig.ConsonantFunction(ConsonantFunctionCells.Space);
             Assert.AreEqual("　", rig.Session.Committed);
         }
 
@@ -1372,7 +1369,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Type(0, StickDirection.Center);
-            rig.VowelFunction(Convert);
+            rig.VowelFunction(VowelFunctionCells.Convert);
             Assert.AreEqual(KeyboardMode.WaitingConversion, rig.Session.Mode);
 
             rig.SetOpenClose(rig.Consonant, true); rig.Tick();
