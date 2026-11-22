@@ -5,6 +5,7 @@
         "VRime.Core",
         "VRime.App",
         "Valve.OpenVR",
+        "Unity.TextMeshPro",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
