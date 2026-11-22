@@ -1,6 +1,6 @@
 namespace VRime.Core.Grip
 {
-    public enum GripPage
+    public enum GripInputMode
     {
         Kana,
         Alpha,

@@ -98,7 +98,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
                                └─ InputBuffer ←── Text/*（CharacterModifier・CharacterWidth・Katakana）
 ```
 
-- `KeyboardSession` がモード（入力 / 応答待ち / 変換中）を持ち、入力中は `GripInputMethod`、変換中は `ConversionController` に操作を振り分ける。
+- `KeyboardSession` が `KeyboardMode`（`Input` / `WaitingConversion` / `Converting`）を持ち、入力中は `GripInputMethod`、変換中は `ConversionController` に操作を振り分ける。
 - 変換・送信のようにバッファだけでは完結しない操作は、`GripInputMethod` が要求（`GripRequest`）として返し、`KeyboardSession` が `IKeyboardEffects` で App に依頼する。変換の結果は、リクエスト ID を付けて `CompleteConversion` / `FailConversion` で戻る
 - 表示用の状態は、`KeyboardSession.ViewVersion` と各クラスの `Version` で変化を検出できる。App は変化したときだけ再描画する。描画用の状態（`GripViewState`）は Core が作り、App はそれを描画するだけ
 
@@ -167,7 +167,7 @@ App ──Tick(ControllerFrame, 時刻)──→ KeyboardSession ──IKeyboard
 - 描画するのは表示が変わったときだけ。`KeyboardView.RefreshIfChanged()` が `ViewVersion` などの変化を検出したときに `OverlayRenderTarget.Render()` を呼ぶ。キーボードは開いている間と位置の確認用に表示している間だけ描画し、表示し始めたフレームではバージョンが変わっていなくても描画する。設定画面は `SettingsView.RefreshIfChanged()` が true のときに描画する。
 - `Render()` は `Canvas.ForceUpdateCanvases()` でレイアウトと TMP のメッシュを確定してから、`RenderPipeline.SubmitRenderRequest`（URP の `SingleCameraRequest`）で、常に無効にしてあるカメラを 1回描画する。`Camera.Render()` と違い、出力先を要求に含められ、対応していないパイプラインでは例外にできる。
 - 背景を透明にするため、カメラは Solid Color (0,0,0,0) でクリアし、ポストプロセス・HDR・MSAA を無効にする。
-- 描画先ごとのレイヤー `VRimeKeyboard`（キーボード）と `VRimeSettings`（設定画面）を Tags and Layers に登録し、各カメラは自分のレイヤーだけを描画する（同じ位置にある別の描画先の uGUI を描画しないため）。
+- 描画先ごとの Unity のレイヤー `VRimeKeyboard`（キーボード）と `VRimeSettings`（設定画面）を Tags and Layers に登録し、各カメラは自分のレイヤーだけを描画する（同じ位置にある別の描画先の uGUI を描画しないため）。
 - TMP の `Mobile/Distance Field` シェーダーを Always Included Shaders に登録している（ビルドで除外されないため）。
 - 文字は起動時に、実行用の Dynamic SDF フォントアセットへ差し替える（`KeyboardFonts`）。最初の描画より前に差し替えるため、編集用のアセットは書き換わらない。
 - TMP の `Ellipsis` は、レイアウトで幅が決まる文字では描画されなくなるため、幅に収める文字は `TextFitting` で切り詰めて省略記号を付ける。

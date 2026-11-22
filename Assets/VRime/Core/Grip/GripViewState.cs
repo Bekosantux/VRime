@@ -62,9 +62,9 @@ namespace VRime.Core.Grip
     public sealed class GripViewState
     {
         public GripViewState(
-            GripPage page,
-            bool consonantFunctionPage,
-            bool vowelFunctionPage,
+            GripInputMode mode,
+            bool consonantFunctionLayer,
+            bool vowelFunctionLayer,
             IReadOnlyList<GripCellView> consonantCells,
             int consonantSelected,
             IReadOnlyList<GripCellView> vowelCells,
@@ -72,9 +72,9 @@ namespace VRime.Core.Grip
             IReadOnlyList<string> consonantHints,
             IReadOnlyList<string> vowelHints)
         {
-            Page = page;
-            ConsonantFunctionPage = consonantFunctionPage;
-            VowelFunctionPage = vowelFunctionPage;
+            InputMode = mode;
+            ConsonantFunctionLayer = consonantFunctionLayer;
+            VowelFunctionLayer = vowelFunctionLayer;
             ConsonantCells = consonantCells ?? throw new ArgumentNullException(nameof(consonantCells));
             ConsonantSelected = consonantSelected;
             VowelCells = vowelCells ?? throw new ArgumentNullException(nameof(vowelCells));
@@ -94,13 +94,13 @@ namespace VRime.Core.Grip
             return hints;
         }
 
-        public GripPage Page { get; }
+        public GripInputMode InputMode { get; }
 
-        /// <summary>子音側のパネルの切り替えのボタンを押していて、子音パネルが機能ページを表示している。</summary>
-        public bool ConsonantFunctionPage { get; }
+        /// <summary>子音側のパネルの切り替えのボタンを押していて、子音パネルが機能レイヤーを表示している。</summary>
+        public bool ConsonantFunctionLayer { get; }
 
-        /// <summary>母音側のパネルの切り替えのボタンを押していて、母音パネルが機能ページ（3×3）を表示している。</summary>
-        public bool VowelFunctionPage { get; }
+        /// <summary>母音側のパネルの切り替えのボタンを押していて、母音パネルが機能レイヤー（3×3）を表示している。</summary>
+        public bool VowelFunctionLayer { get; }
 
         /// <summary>子音パネルの9つのセル（行優先）。</summary>
         public IReadOnlyList<GripCellView> ConsonantCells { get; }
@@ -109,23 +109,23 @@ namespace VRime.Core.Grip
         public int ConsonantSelected { get; }
 
         /// <summary>
-        /// 母音パネルのセル。機能ページでは9つのセル（行優先）、それ以外は5方向（中央・左・上・右・下）で、
+        /// 母音パネルのセル。機能レイヤーでは9つのセル（行優先）、それ以外は5方向（中央・左・上・右・下）で、
         /// 文字のないセルのラベルは空文字列。
         /// </summary>
         public IReadOnlyList<GripCellView> VowelCells { get; }
 
-        /// <summary>選択中のセル。機能ページでは 0..8、それ以外は StickDirection の値。</summary>
+        /// <summary>選択中のセル。機能レイヤーでは 0..8、それ以外は StickDirection の値。</summary>
         public int VowelSelected { get; }
 
         /// <summary>
-        /// 子音パネルが通常のページのとき、各セル（行優先の9つのセル）に重ねて示す、同じ位置の機能ページのキーの頭文字（1文字）。
-        /// 機能ページの空きセルと、機能ページを表示している間は空文字列。
+        /// 子音パネルが基本レイヤーのとき、各セル（行優先の9つのセル）に重ねて示す、同じ位置の機能レイヤーのキーの頭文字（1文字）。
+        /// 機能レイヤーの空きセルと、機能レイヤーを表示している間は空文字列。
         /// </summary>
         public IReadOnlyList<string> ConsonantHints { get; }
 
         /// <summary>
-        /// 母音パネルが通常のページのとき、3×3 の各位置（行優先の9つのセル。5方向のセルがない四隅を含む）に示す、
-        /// 同じ位置の機能ページのキーの頭文字（1文字）。機能ページの空きセルと、機能ページを表示している間は空文字列。
+        /// 母音パネルが基本レイヤーのとき、3×3 の各位置（行優先の9つのセル。5方向のセルがない四隅を含む）に示す、
+        /// 同じ位置の機能レイヤーのキーの頭文字（1文字）。機能レイヤーの空きセルと、機能レイヤーを表示している間は空文字列。
         /// </summary>
         public IReadOnlyList<string> VowelHints { get; }
     }

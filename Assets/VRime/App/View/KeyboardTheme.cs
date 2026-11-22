@@ -74,7 +74,7 @@ namespace VRime.App.View
         [Tooltip("無効なセルと、文字のないセルを選んでいるときの文字。")]
         [SerializeField] Color _cellTextDisabledSelected = new Color(0.737f, 0.827f, 0.969f, 1f);
 
-        [Tooltip("セルに重ねるヒント（方向の文字と、機能ページのキーの頭文字）。メインの文字を妨げないよう薄くする。")]
+        [Tooltip("セルに重ねるヒント（方向の文字と、機能レイヤーのキーの頭文字）。メインの文字を妨げないよう薄くする。")]
         [FormerlySerializedAs("_keyboardHint")]
         [SerializeField] Color _cellHint = new Color(0.96f, 0.97f, 0.98f, 0.5f);
 
@@ -84,7 +84,7 @@ namespace VRime.App.View
         [Tooltip("1文字のラベル。")]
         [SerializeField] float _cellFontSize = 54f;
 
-        [Tooltip("2文字以上のラベル（機能ページのキー）。")]
+        [Tooltip("2文字以上のラベル（機能レイヤーのキー）。")]
         [SerializeField] float _cellFunctionFontSize = 38f;
 
         [Tooltip("変換中など、パネルが操作を受けない間の不透明度。")]
@@ -95,16 +95,16 @@ namespace VRime.App.View
         [Tooltip("役割（子音・母音）。")]
         [SerializeField] Color _captionRole = new Color(0.96f, 0.97f, 0.98f, 1f);
 
-        [Tooltip("機能ページを開いている間の役割。")]
+        [Tooltip("機能レイヤーを表示している間の役割。")]
         [SerializeField] Color _captionRoleFunction = new Color(0.451f, 0.780f, 1.00f, 1f);
 
-        [Header("ページ行（ページ・全角/半角・大文字/小文字）")]
+        [Header("モード行（入力モード・全角/半角・大文字/小文字）")]
         [Tooltip("作用しないチップ。チップを並べた背景が見えるよう、既定は透明。")]
         [SerializeField] Color _chip = new Color(0f, 0f, 0f, 0f);
 
         [SerializeField] Color _chipSelected = new Color(0.14f, 0.50f, 0.95f, 1f);
 
-        [Tooltip("いまのページで作用する全角/半角・大文字/小文字。")]
+        [Tooltip("いまの入力モードで作用する全角/半角・大文字/小文字。")]
         [SerializeField] Color _chipActive = new Color(0.20f, 0.34f, 0.52f, 1f);
 
         [SerializeField] Color _chipText = new Color(0.96f, 0.97f, 0.98f, 1f);

@@ -43,6 +43,30 @@ namespace VRime.Core.Tests
         }
     }
 
+    /// <summary>子音側の機能レイヤーのセル番号（docs/spec/grip-input.md「子音側の機能レイヤー」）。かなモードのセルの名前で呼ぶ。</summary>
+    public static class ConsonantFunctionCells
+    {
+        public const int Erase = 2;
+        public const int Modifier = 3;
+        public const int Wa = 4;
+        public const int Symbol = 5;
+        public const int Space = 8;
+    }
+
+    /// <summary>母音側の機能レイヤーのセル番号（docs/spec/grip-input.md「母音側の機能レイヤー」）。</summary>
+    public static class VowelFunctionCells
+    {
+        public const int ToggleWidth = 0;
+        public const int Language = 1;
+        public const int Number = 2;
+        public const int CursorLeft = 3;
+        public const int Commit = 4;
+        public const int CursorRight = 5;
+        public const int ToggleCase = 6;
+        public const int Convert = 7;
+        public const int PasteMode = 8;
+    }
+
     public static class Sticks
     {
         /// <summary>セル番号（0..8）の方向に最大まで倒した値。</summary>
@@ -170,7 +194,7 @@ namespace VRime.Core.Tests
             SetTrigger(hand, false); Tick();
         }
 
-        /// <summary>通常ページ: 子音のセルと母音の方向を選んで、母音側のトリガーで入力する。</summary>
+        /// <summary>基本レイヤー: 子音のセルと母音の方向を選んで、母音側のトリガーで入力する。</summary>
         public void Type(int cell, StickDirection direction)
         {
             SetStick(Consonant, Sticks.Cell(cell));
@@ -182,13 +206,13 @@ namespace VRime.Core.Tests
             Tick();
         }
 
-        /// <summary>通常ページ: 子音側のトリガーで直前の文字を切り替える。</summary>
+        /// <summary>基本レイヤー: 子音側のトリガーで直前の文字を切り替える。</summary>
         public void Modify()
         {
             Pull(Consonant);
         }
 
-        /// <summary>子音側の機能ページ: 子音側のグリップを握ったまま、セルと母音の方向を選んでトリガーで実行する。</summary>
+        /// <summary>子音側の機能レイヤー: 子音側のグリップを握ったまま、セルと母音の方向を選んでトリガーで実行する。</summary>
         public void ConsonantFunction(int cell, StickDirection direction = StickDirection.Center)
         {
             SetGrip(Consonant, true);
@@ -202,7 +226,7 @@ namespace VRime.Core.Tests
             Tick();
         }
 
-        /// <summary>母音側の機能ページ: 母音側のグリップを握ったまま、セルを選んでトリガーで実行する。</summary>
+        /// <summary>母音側の機能レイヤー: 母音側のグリップを握ったまま、セルを選んでトリガーで実行する。</summary>
         public void VowelFunction(int cell)
         {
             SetGrip(Vowel, true);

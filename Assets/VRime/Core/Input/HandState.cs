@@ -23,7 +23,7 @@ namespace VRime.Core.Input
         /// <summary>展開・収納のボタン。両手で2回続けて同時押しすると開閉する（docs/spec/keyboard.md「開閉」）。</summary>
         public bool OpenClose { get; }
 
-        /// <summary>パネルの切り替えのボタン。押している間、その手のパネルが機能ページになる（docs/spec/grip-input.md）。</summary>
+        /// <summary>パネルの切り替えのボタン。押している間、その手のパネルが機能レイヤーになる（docs/spec/grip-input.md）。</summary>
         public bool Panel { get; }
 
         public HandState WithPanel(bool panel)

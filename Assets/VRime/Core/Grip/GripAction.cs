@@ -1,6 +1,6 @@
 namespace VRime.Core.Grip
 {
-    /// <summary>機能ページのキーの動作。</summary>
+    /// <summary>機能レイヤーのキーの動作。</summary>
     public enum GripAction
     {
         /// <summary>消去。</summary>
@@ -15,8 +15,8 @@ namespace VRime.Core.Grip
         /// <summary>全/半。</summary>
         ToggleWidth,
 
-        /// <summary>数字ページの開閉。</summary>
-        NumberPage,
+        /// <summary>数字モードの切り替え。</summary>
+        ToggleNumber,
 
         CursorLeft,
         CursorRight,
