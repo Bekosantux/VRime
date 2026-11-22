@@ -15,7 +15,7 @@ namespace VRime.App.Output
 
     /// <summary>
     /// VRChat のチャットボックスへ OSC（UDP）で送る（docs/spec/output.md「VRChat」）。
-    /// <see cref="Send"/>・<see cref="Clear"/>・<see cref="SetPreview"/> は予約だけを行い、毎フレーム呼ぶ <see cref="Update"/> が 1秒以上の間隔を空けて実際に送る。
+    /// <see cref="Send"/>・<see cref="Clear"/>・<see cref="SetPreview"/> は予約だけを行い、毎フレーム呼ぶ <see cref="Update"/> が <see cref="MinSendIntervalSeconds"/> 以上の間隔を空けて実際に送る。
     /// 送信の失敗（ソケットの例外）は <see cref="Update"/> / <see cref="SetTyping"/> から送出される。
     /// </summary>
     public sealed class VRChatChatbox : IChatboxOutput, IDisposable
@@ -23,8 +23,14 @@ namespace VRime.App.Output
         /// <summary>チャットボックスに表示できる文字数（UTF-16 単位）。</summary>
         public const int MaxLength = 144;
 
+        /// <summary>
+        /// <c>/chatbox/input</c> の送信間隔（秒）。値の根拠は docs/spec/output.md「VRChat」の送信間隔の行。
+        /// VRChat に反映されなかったメッセージは検出できず再送もしないため、測定で取りこぼしのなかった値を使う。
+        /// </summary>
+        public const double MinSendIntervalSeconds = 2.0;
+
         readonly AppSettings _settings;
-        readonly ChatboxOutbox _outbox = new ChatboxOutbox();
+        readonly ChatboxOutbox _outbox = new ChatboxOutbox(MinSendIntervalSeconds);
 
         // 接続しない UDP ソケットにする。接続済みだと、宛先が未起動のときの ICMP 到達不能が次の送信の例外になる。
         UdpClient _udp;

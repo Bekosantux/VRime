@@ -587,11 +587,11 @@ namespace VRime.App.Tests
                 chatbox.Update(10.0);
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "あ", true, true), Receive());
 
-                chatbox.Update(10.5);
+                chatbox.Update(10.0 + VRChatChatbox.MinSendIntervalSeconds - 0.01);
                 Assert.IsFalse(HasPending());
                 Assert.AreEqual(1, chatbox.PendingSendCount);
 
-                chatbox.Update(11.0);
+                chatbox.Update(10.0 + VRChatChatbox.MinSendIntervalSeconds);
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "い", true, true), Receive());
                 Assert.AreEqual(0, chatbox.PendingSendCount);
             }
@@ -634,7 +634,7 @@ namespace VRime.App.Tests
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "あい", true, false), Receive());
 
                 chatbox.SetPreview(null);
-                chatbox.Update(2.0);
+                chatbox.Update(1.0 + VRChatChatbox.MinSendIntervalSeconds);
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "", true, false), Receive());
             }
         }
@@ -666,7 +666,7 @@ namespace VRime.App.Tests
                 chatbox.Send("a");
                 chatbox.Send("b");
                 Assert.DoesNotThrow(() => chatbox.Update(1.0));
-                Assert.DoesNotThrow(() => chatbox.Update(3.0));
+                Assert.DoesNotThrow(() => chatbox.Update(1.0 + VRChatChatbox.MinSendIntervalSeconds));
                 Assert.DoesNotThrow(() => chatbox.SetTyping(true));
             }
             _receiver = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));

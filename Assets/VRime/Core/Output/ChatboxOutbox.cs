@@ -42,7 +42,7 @@ namespace VRime.Core.Output
         string _desiredPreview;
         string _shownPreview;
 
-        public ChatboxOutbox(double minIntervalSeconds = 1.0)
+        public ChatboxOutbox(double minIntervalSeconds)
         {
             if (!(minIntervalSeconds >= 0.0))
                 throw new ArgumentOutOfRangeException(nameof(minIntervalSeconds), minIntervalSeconds, "0 以上である必要があります。");
