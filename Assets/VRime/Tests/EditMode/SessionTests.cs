@@ -901,6 +901,35 @@ namespace VRime.Core.Tests
         }
 
         [Test]
+        public void 変換を押したとき握っていたグリップは確定すると機能レイヤーを表示する()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.SetGrip(rig.Vowel, true);
+            rig.SetStick(rig.Vowel, Sticks.Cell(VowelFunctionCells.Convert));
+            rig.Tick();
+            rig.Pull(rig.Consonant);
+            int id = rig.Effects.ConversionRequests[0].Key;
+            rig.Session.CompleteConversion(id, Sample());
+            rig.SetStick(rig.Vowel, StickValue.Zero);
+            rig.Tick();
+
+            rig.SetTrigger(rig.Consonant, true);
+            rig.Tick();
+            Assert.AreEqual(KeyboardMode.Input, rig.Session.Mode);
+            Assert.AreEqual("愛雨", rig.Session.Committed);
+            Assert.IsTrue(rig.Session.GripView.VowelFunctionLayer, "確定した直後から機能レイヤーを表示する");
+
+            rig.TickMany(60);
+            Assert.AreEqual(0, rig.Effects.Sends.Count, "確定に使ったトリガーを引いたままでは送信しない");
+
+            rig.SetTrigger(rig.Consonant, false);
+            rig.Tick();
+            rig.Pull(rig.Consonant);
+            CollectionAssert.AreEqual(new[] { "愛雨" }, rig.Effects.Sends, "トリガーを引き直すと中央の「確定」で送信する");
+        }
+
+        [Test]
         public void グリップで変換を取り消すと未確定に戻り機能レイヤーには切り替わらない()
         {
             var rig = new Rig();
