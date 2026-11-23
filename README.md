@@ -22,7 +22,7 @@ VRime（ブイライム）は、SteamVR 上で動作する日本語入力用の�
 
 ### おすすめ設定
 - 「外部連携」から「SteamVRと同時に起動」を有効化
-- 「個人情報」から「Google API」を有効化
+- 「プライバシー」から「Google API」を有効化
 
 詳細なガイドは、[ドキュメントを参照してください。](https://bekosantux.github.io/shop-document/vrime/how-to-use)
 

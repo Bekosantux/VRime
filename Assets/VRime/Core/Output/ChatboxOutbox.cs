@@ -10,6 +10,9 @@ namespace VRime.Core.Output
 
         /// <summary>入力中の文字の表示。通知音を鳴らさない。空文字列は表示を消す。</summary>
         Preview,
+
+        /// <summary>入力バッファが空のときの確定キーによる表示の消去。空文字列を通知音なしで出す。</summary>
+        Clear,
     }
 
     public readonly struct ChatboxMessage
@@ -26,26 +29,27 @@ namespace VRime.Core.Output
 
     /// <summary>
     /// VRChat のチャットボックスへ出すメッセージの順序と間隔の制御（docs/spec/output.md「VRChat」）。
-    /// 送信は順にすべて出し、入力中の表示は最新の 1 件だけを出す。送信を優先し、両者で最小間隔を共有する。
+    /// 送信と消去は順にすべて出し、入力中の表示は最新の 1 件だけを出す。送信と消去を優先し、すべてで最小間隔を共有する。
     /// 時刻は呼び出し側が渡す（秒）。
     /// </summary>
     public sealed class ChatboxOutbox
     {
         readonly double _minIntervalSeconds;
-        readonly Queue<string> _sends = new Queue<string>();
+        readonly Queue<ChatboxMessage> _sends = new Queue<ChatboxMessage>();
         double _lastSentAt = double.NegativeInfinity;
 
         // 入力中の表示として出したい文字列と、出した文字列。null は表示なし。
         string _desiredPreview;
         string _shownPreview;
 
-        public ChatboxOutbox(double minIntervalSeconds = 1.0)
+        public ChatboxOutbox(double minIntervalSeconds)
         {
             if (!(minIntervalSeconds >= 0.0))
                 throw new ArgumentOutOfRangeException(nameof(minIntervalSeconds), minIntervalSeconds, "0 以上である必要があります。");
             _minIntervalSeconds = minIntervalSeconds;
         }
 
+        /// <summary>出していない送信と消去の件数。</summary>
         public int PendingSendCount => _sends.Count;
 
         /// <summary>出していない入力中の表示（消去を含む）があるか。</summary>
@@ -57,6 +61,20 @@ namespace VRime.Core.Output
         public void EnqueueSend(string message)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message.Length == 0) throw new ArgumentException("表示の消去は EnqueueClear で指定します。", nameof(message));
+            Enqueue(new ChatboxMessage(ChatboxMessageKind.Send, message));
+        }
+
+        /// <summary>
+        /// 表示の消去を加える。送信と同じ順序で出す。消去が入力中の表示も消すため、入力中の表示は出していないものも含めて取り下げる。
+        /// </summary>
+        public void EnqueueClear()
+        {
+            Enqueue(new ChatboxMessage(ChatboxMessageKind.Clear, string.Empty));
+        }
+
+        void Enqueue(ChatboxMessage message)
+        {
             _sends.Enqueue(message);
             _desiredPreview = null;
             _shownPreview = null;
@@ -93,7 +111,7 @@ namespace VRime.Core.Output
             if (nowSeconds - _lastSentAt < _minIntervalSeconds) return false;
             if (_sends.Count > 0)
             {
-                message = new ChatboxMessage(ChatboxMessageKind.Send, _sends.Dequeue());
+                message = _sends.Dequeue();
             }
             else if (HasPendingPreview)
             {

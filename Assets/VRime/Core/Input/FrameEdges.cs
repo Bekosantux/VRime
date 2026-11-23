@@ -30,10 +30,5 @@ namespace VRime.Core.Input
                 default: throw new ArgumentOutOfRangeException(nameof(hand), hand, null);
             }
         }
-
-        public FrameEdges WithoutTriggers()
-        {
-            return new FrameEdges(false, false, LeftPanel, RightPanel);
-        }
     }
 }

@@ -460,12 +460,36 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 確定キーはバッファが空なら何もせず振動で知らせる()
+        public void 確定キーはバッファが空なら送信先の表示の消去を要求する()
         {
             var rig = new Rig();
             rig.VowelFunction(VowelFunctionCells.Commit);
+            Assert.AreEqual(1, rig.Effects.ClearCount);
             Assert.AreEqual(0, rig.Effects.Sends.Count);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Input));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+        }
+
+        [Test]
+        public void 表示を消せない送信先ならバッファが空の確定キーは振動で知らせる()
+        {
+            var rig = new Rig();
+            rig.Effects.ClearSucceeds = false;
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            Assert.AreEqual(1, rig.Effects.ClearCount);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
+        }
+
+        [Test]
+        public void バッファが空でなければ確定キーで表示の消去を要求しない()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            rig.VowelFunction(VowelFunctionCells.Commit);
+            CollectionAssert.AreEqual(new[] { "あ" }, rig.Effects.Sends);
+            Assert.AreEqual(0, rig.Effects.ClearCount);
         }
 
         [Test]
@@ -530,6 +554,7 @@ namespace VRime.Core.Tests
         {
             var rig = new Rig();
             rig.Session.SetNotice("通知");
+            rig.Effects.ClearSucceeds = false;
             rig.VowelFunction(VowelFunctionCells.Commit);
             Assert.AreEqual(1, rig.Effects.CountHaptics(HapticKind.Invalid));
             Assert.AreEqual("通知", rig.Session.Notice);
@@ -898,6 +923,35 @@ namespace VRime.Core.Tests
             rig.SetGrip(rig.Vowel, true);
             rig.Tick();
             Assert.AreEqual(KeyboardMode.Input, rig.Session.Mode, "離してから押し直すと取り消し");
+        }
+
+        [Test]
+        public void 変換を押したとき握っていたグリップは確定すると機能レイヤーを表示する()
+        {
+            var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.SetGrip(rig.Vowel, true);
+            rig.SetStick(rig.Vowel, Sticks.Cell(VowelFunctionCells.Convert));
+            rig.Tick();
+            rig.Pull(rig.Consonant);
+            int id = rig.Effects.ConversionRequests[0].Key;
+            rig.Session.CompleteConversion(id, Sample());
+            rig.SetStick(rig.Vowel, StickValue.Zero);
+            rig.Tick();
+
+            rig.SetTrigger(rig.Consonant, true);
+            rig.Tick();
+            Assert.AreEqual(KeyboardMode.Input, rig.Session.Mode);
+            Assert.AreEqual("愛雨", rig.Session.Committed);
+            Assert.IsTrue(rig.Session.GripView.VowelFunctionLayer, "確定した直後から機能レイヤーを表示する");
+
+            rig.TickMany(60);
+            Assert.AreEqual(0, rig.Effects.Sends.Count, "確定に使ったトリガーを引いたままでは送信しない");
+
+            rig.SetTrigger(rig.Consonant, false);
+            rig.Tick();
+            rig.Pull(rig.Consonant);
+            CollectionAssert.AreEqual(new[] { "愛雨" }, rig.Effects.Sends, "トリガーを引き直すと中央の「確定」で送信する");
         }
 
         [Test]
@@ -1316,38 +1370,30 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 両手の展開_収納のボタンを押している間はトリガーを受け付けない()
+        public void 両手の展開_収納のボタンを押している間もトリガーを受け付ける()
         {
             var rig = new Rig();
             rig.TickMany(50);
             rig.SetStick(rig.Consonant, Sticks.Cell(0));
             rig.SetOpenClose(Hand.Left, true); rig.SetOpenClose(Hand.Right, true); rig.Tick();
             rig.Pull(rig.Vowel);
-            rig.Pull(rig.Consonant);
-            Assert.AreEqual("", rig.Session.Composition);
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
-
-            // 片手だけなら受け付ける。
-            rig.SetOpenClose(rig.Consonant, false); rig.Tick();
-            rig.Pull(rig.Vowel);
             Assert.AreEqual("あ", rig.Session.Composition);
+            rig.Pull(rig.Consonant);
+            Assert.AreEqual("ぁ", rig.Session.Composition);
         }
 
         [Test]
-        public void 両手のパネルの切り替えのボタンを押している間はトリガーを受け付けない()
+        public void 両手のパネルの切り替えのボタンを押している間は母音側のトリガーで確定する()
         {
             var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
             rig.TickMany(50);
             rig.SetPanel(Hand.Left, true); rig.SetPanel(Hand.Right, true); rig.Tick();
             Assert.IsTrue(rig.Session.GripView.ConsonantFunctionLayer);
             Assert.IsTrue(rig.Session.GripView.VowelFunctionLayer);
             rig.Pull(rig.Vowel);
-            rig.Pull(rig.Consonant);
             Assert.AreEqual("", rig.Session.Composition);
-            Assert.AreEqual("", rig.Session.Committed);
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+            Assert.AreEqual("あ", rig.Session.Committed);
         }
 
         [Test]

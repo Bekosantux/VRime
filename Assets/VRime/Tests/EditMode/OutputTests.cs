@@ -70,10 +70,13 @@ namespace VRime.Core.Tests
 
     public class ChatboxOutboxTests
     {
+        // 順序と間隔の規則だけを確かめるため、VRChat に送るときの値とは独立にする。
+        const double Interval = 1.0;
+
         [Test]
         public void 最初の送信は待たない()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.EnqueueSend("a");
             Assert.IsTrue(outbox.TryDequeue(0.0, out ChatboxMessage message));
             Assert.AreEqual(ChatboxMessageKind.Send, message.Kind);
@@ -83,14 +86,14 @@ namespace VRime.Core.Tests
         [Test]
         public void 何もなければ取り出せない()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             Assert.IsFalse(outbox.TryDequeue(100.0, out _));
         }
 
         [Test]
-        public void 前回から1秒未満の送信は待たせる()
+        public void 前回から間隔未満の送信は待たせる()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.EnqueueSend("a");
             outbox.EnqueueSend("b");
             Assert.IsTrue(outbox.TryDequeue(10.0, out _));
@@ -104,7 +107,7 @@ namespace VRime.Core.Tests
         [Test]
         public void 時間が来たら順に取り出す()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.EnqueueSend("a");
             outbox.EnqueueSend("b");
             outbox.EnqueueSend("c");
@@ -114,7 +117,7 @@ namespace VRime.Core.Tests
         [Test]
         public void 間隔が空いていれば直ちに送る()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.EnqueueSend("a");
             outbox.TryDequeue(0.0, out _);
             outbox.EnqueueSend("b");
@@ -125,7 +128,7 @@ namespace VRime.Core.Tests
         [Test]
         public void 入力中の表示は最新の1件だけを出す()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.SetPreview("あ");
             Assert.IsTrue(outbox.TryDequeue(0.0, out ChatboxMessage first));
             Assert.AreEqual(ChatboxMessageKind.Preview, first.Kind);
@@ -140,7 +143,7 @@ namespace VRime.Core.Tests
         [Test]
         public void 出したものと同じ入力中の表示は出さない()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.SetPreview("あ");
             outbox.TryDequeue(0.0, out _);
             outbox.SetPreview("あ");
@@ -156,7 +159,7 @@ namespace VRime.Core.Tests
         [Test]
         public void 表示中の入力中の表示は空文字列で消す()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.SetPreview("あ");
             outbox.TryDequeue(0.0, out _);
             outbox.SetPreview(null);
@@ -169,7 +172,7 @@ namespace VRime.Core.Tests
         [Test]
         public void 何も表示していなければ消去を出さない()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.SetPreview(null);
             Assert.IsFalse(outbox.TryDequeue(0.0, out _));
         }
@@ -177,7 +180,7 @@ namespace VRime.Core.Tests
         [Test]
         public void 送信は入力中の表示より先に出す()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.SetPreview("あ");
             outbox.TryDequeue(0.0, out _);
             outbox.EnqueueSend("a");
@@ -189,7 +192,7 @@ namespace VRime.Core.Tests
         [Test]
         public void 送信すると入力中の表示を取り下げ_消去も出さない()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             outbox.SetPreview("あ");
             outbox.TryDequeue(0.0, out _);
             outbox.SetPreview("あい");
@@ -200,9 +203,22 @@ namespace VRime.Core.Tests
         }
 
         [Test]
+        public void 表示の消去は送信と同じ順序で出し入力中の表示を取り下げる()
+        {
+            var outbox = new ChatboxOutbox(Interval);
+            outbox.SetPreview("あ");
+            outbox.TryDequeue(0.0, out _);
+            outbox.EnqueueSend("あ");
+            outbox.EnqueueClear();
+            Assert.IsFalse(outbox.HasPendingPreview);
+            Assert.AreEqual(2, outbox.PendingSendCount);
+            CollectionAssert.AreEqual(new[] { "Send:あ@1", "Clear:@2" }, Drain(outbox, 0.25, 5.0));
+        }
+
+        [Test]
         public void 表示中の入力中の表示だけを直ちに消す()
         {
-            var outbox = new ChatboxOutbox();
+            var outbox = new ChatboxOutbox(Interval);
             Assert.IsFalse(outbox.TryClearPreviewNow());
 
             outbox.SetPreview("あ");
@@ -218,8 +234,9 @@ namespace VRime.Core.Tests
         public void 不正な引数は例外()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new ChatboxOutbox(-1.0));
-            Assert.Throws<ArgumentNullException>(() => new ChatboxOutbox().EnqueueSend(null));
-            Assert.Throws<ArgumentException>(() => new ChatboxOutbox().SetPreview(""));
+            Assert.Throws<ArgumentNullException>(() => new ChatboxOutbox(Interval).EnqueueSend(null));
+            Assert.Throws<ArgumentException>(() => new ChatboxOutbox(Interval).EnqueueSend(""));
+            Assert.Throws<ArgumentException>(() => new ChatboxOutbox(Interval).SetPreview(""));
         }
 
         static string[] Drain(ChatboxOutbox outbox, double from, double to)

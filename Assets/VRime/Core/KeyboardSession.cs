@@ -42,6 +42,7 @@ namespace VRime.Core
         KeyboardMode _mode = KeyboardMode.Input;
 
         // 開いたとき・変換を押したとき・取り消したときに押されていたパネルの切り替えのボタンは、離すまで押されていないものとして扱う。
+        // 変換を確定したときは解除する（docs/spec/conversion.md「操作」）。
         bool _ignoreLeftPanel;
         bool _ignoreRightPanel;
         ControllerFrame _lastFrame;
@@ -150,8 +151,6 @@ namespace VRime.Core
 
             ControllerFrame effective = ApplyPanelIgnore(frame);
             FrameEdges edges = UpdateEdges(effective);
-            // 両手の展開・収納のボタンを押している間は、開閉の操作と区別するためトリガーを受け付けない。
-            if (frame.Left.OpenClose && frame.Right.OpenClose) edges = edges.WithoutTriggers();
 
             _haptics.Clear();
             switch (_mode)
@@ -318,6 +317,7 @@ namespace VRime.Core
         }
 
         // 確定キー（docs/spec/output.md「入力バッファ」）: 未確定があればそのまま確定し、なければ送信を要求する。
+        // バッファが空なら送信先の表示の消去を要求する。
         // 文字数の上限を超えている間は送信を要求しない。送信に失敗したらバッファを残す。
         void PressCommitKey(Hand hand)
         {
@@ -326,7 +326,11 @@ namespace VRime.Core
                 _buffer.CommitComposition();
                 _haptics.Add(new HapticEvent(hand, HapticKind.Input));
             }
-            else if (_buffer.Committed.Length > 0 && !_buffer.IsOverLengthLimit)
+            else if (_buffer.Length == 0)
+            {
+                _haptics.Add(new HapticEvent(hand, _effects.OnClearRequested() ? HapticKind.Input : HapticKind.Invalid));
+            }
+            else if (!_buffer.IsOverLengthLimit)
             {
                 if (_effects.OnSendRequested(_buffer.Committed))
                 {
@@ -379,7 +383,11 @@ namespace VRime.Core
                     if (_buffer.CommitConverted(_conversion.Result) == EditResult.Done)
                     {
                         EndConversion();
-                        _grip.Reset(ApplyPanelIgnore(raw));
+                        // 変換を押したときから握り続けているボタンを有効に戻し、すぐに機能レイヤーを表示する（続けて「確定」で送信できるようにするため）。
+                        // 確定に使ったトリガーの押下はこのフレームで処理済みのため、引き直すまで実行されない。
+                        _ignoreLeftPanel = false;
+                        _ignoreRightPanel = false;
+                        _grip.Reset(raw);
                         _haptics.Add(new HapticEvent(hand, HapticKind.Input));
                     }
                     else

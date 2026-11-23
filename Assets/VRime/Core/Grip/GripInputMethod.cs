@@ -173,7 +173,7 @@ namespace VRime.Core.Grip
 
         /// <summary>
         /// 1フレーム分を処理する。振動は haptics に追加する。
-        /// edges は、両手の展開・収納のボタンを押している間のトリガーの抑止などを済ませたもの。
+        /// frame と edges は、パネルの切り替えのボタンの無視（開いたとき・変換の後に押していたボタン）を反映したもの。
         /// </summary>
         public GripRequest Update(ControllerFrame frame, FrameEdges edges, double timeSeconds, List<HapticEvent> haptics)
         {
@@ -224,10 +224,27 @@ namespace VRime.Core.Grip
                 return default;
             }
 
-            // 両手の機能レイヤーを表示している間は、どちらのパネルのセルを実行するか定まらないためトリガーを受け付けない。
-            if (!edges.AnyTrigger || (consonantFunction && vowelFunction)) return default;
+            if (!edges.AnyTrigger) return default;
 
-            // 機能レイヤーでは、左右どちらのトリガーでもセルを実行する。
+            // 両手の機能レイヤーでは、引いた手のパネルのセルを実行する。
+            // 同じフレームで両方を引いたときは、子音側、母音側の順に実行し、連続入力しない。
+            // 母音側の確定・変換は要求としてセッションが最後に処理するため、この順にそろえる。
+            if (consonantFunction && vowelFunction)
+            {
+                bool consonantPressed = edges.TriggerPressed(consonantHand);
+                bool vowelPressed = edges.TriggerPressed(vowelHand);
+                if (consonantPressed && vowelPressed)
+                {
+                    Press(consonantHand, haptics, out _);
+                    return Press(vowelHand, haptics, out _);
+                }
+                Hand bothLayerHand = consonantPressed ? consonantHand : vowelHand;
+                GripRequest bothLayerRequest = Press(bothLayerHand, haptics, out bool bothLayerRepeatable);
+                if (bothLayerRepeatable) _repeater.Start(bothLayerHand, timeSeconds, _settings.RepeatDelaySeconds);
+                return bothLayerRequest;
+            }
+
+            // 片方の機能レイヤーでは、左右どちらのトリガーでもセルを実行する。
             if (consonantFunction || vowelFunction)
             {
                 Hand pressedHand = edges.LeftTrigger ? Hand.Left : Hand.Right;
@@ -260,20 +277,29 @@ namespace VRime.Core.Grip
         }
 
         /// <summary>
+        /// 引いた手のトリガーで実行するセルを持つパネルが母音パネルか。
+        /// 両手の機能レイヤーでは引いた手のパネル、片方の機能レイヤーではそのパネル、基本レイヤーでは子音パネル（文字は母音の方向で選ぶ）。
+        /// </summary>
+        bool TargetsVowelPanel(Hand pressedHand)
+        {
+            if (_consonantFunction && _vowelFunction) return pressedHand == _settings.VowelHand;
+            return _vowelFunction;
+        }
+
+        /// <summary>
+        /// 両手の機能レイヤーを表示している間は、母音パネルに文字の方向を表示しないため、子音側の機能レイヤーの文字のセルを無効にする。
+        /// </summary>
+        bool ConsonantCharactersDisabled => _consonantFunction && _vowelFunction;
+
+        /// <summary>
         /// 選択中のセルを実行する。repeatable は、連続入力の対象（文字・消去・空白・カーソル移動）のセルを実行できたか。
         /// </summary>
         GripRequest Press(Hand pressedHand, List<HapticEvent> haptics, out bool repeatable)
         {
             repeatable = false;
-            GripCell cell;
-            if (_vowelFunction)
-            {
-                cell = ResolveVowelFunctionCell(_vowelCell);
-            }
-            else
-            {
-                cell = GripLayout.GetConsonantCell(InputMode, _consonantFunction, _cell);
-            }
+            GripCell cell = TargetsVowelPanel(pressedHand)
+                ? ResolveVowelFunctionCell(_vowelCell)
+                : GripLayout.GetConsonantCell(InputMode, _consonantFunction, _cell);
 
             switch (cell.Kind)
             {
@@ -282,6 +308,11 @@ namespace VRime.Core.Grip
 
                 case GripCellKind.Characters:
                 {
+                    if (ConsonantCharactersDisabled)
+                    {
+                        Invalid(pressedHand, haptics);
+                        return default;
+                    }
                     string character = cell.CharacterAt(_direction);
                     if (character == null) return default; // 未割り当て
                     repeatable = Report(InsertCharacter(character), pressedHand, haptics);
@@ -493,9 +524,10 @@ namespace VRime.Core.Grip
             {
                 case GripCellKind.Characters:
                     // 表示名が決まっていないセルは、入力される文字（中央）をそのまま表示する。
-                    return new GripCellView(cell.Label ?? ApplyDisplayOptions(cell.CharacterAt(StickDirection.Center)), false, false, DirectionHints(cell));
+                    return new GripCellView(cell.Label ?? ApplyDisplayOptions(cell.CharacterAt(StickDirection.Center)),
+                        IsDisabled(cell), false, DirectionHints(cell));
                 default:
-                    return new GripCellView(cell.Label, false, false);
+                    return new GripCellView(cell.Label, IsDisabled(cell), false);
             }
         }
 
@@ -518,13 +550,22 @@ namespace VRime.Core.Grip
 
         bool IsDisabled(GripCell cell)
         {
-            if (cell.Kind != GripCellKind.Action) return false;
-            switch (cell.Action)
+            switch (cell.Kind)
             {
-                case GripAction.ToggleWidth: return InputMode == GripInputMode.Kana;
-                case GripAction.ToggleCase: return InputMode != GripInputMode.Alpha;
-                case GripAction.Convert: return !_settings.ConversionEnabled;
-                default: return false;
+                case GripCellKind.Empty:
+                    return true;
+                case GripCellKind.Characters:
+                    return ConsonantCharactersDisabled;
+                case GripCellKind.Action:
+                    switch (cell.Action)
+                    {
+                        case GripAction.ToggleWidth: return InputMode == GripInputMode.Kana;
+                        case GripAction.ToggleCase: return InputMode != GripInputMode.Alpha;
+                        case GripAction.Convert: return !_settings.ConversionEnabled;
+                        default: return false;
+                    }
+                default:
+                    throw new InvalidOperationException("未知のセルの種類: " + cell.Kind);
             }
         }
 

@@ -178,7 +178,7 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void ほかの値を変えても個人情報の設定は変わらない()
+        public void ほかの値を変えてもプライバシーの設定は変わらない()
         {
             var privacy = new PrivacySettings(true);
             UserSettings settings = UserSettings.Default.WithPrivacy(privacy)
@@ -467,7 +467,7 @@ namespace VRime.App.Tests
         readonly SettingsLayout _layout = TestSettingsLayout.Create();
 
         static SettingsCategory Display => SettingsCatalog.FindCategory("display");
-        static SettingsCategory Grip => SettingsCatalog.FindCategory("grip");
+        static SettingsCategory InputCategory => SettingsCatalog.FindCategory("input");
         static SettingsCategory Integration => SettingsCatalog.FindCategory("integration");
         static SettingsCategory Privacy => SettingsCatalog.FindCategory("privacy");
 
@@ -507,9 +507,9 @@ namespace VRime.App.Tests
             Assert.AreEqual(SettingsHit.Slider(down.Item), _layout.HitTest(down.Slider.center, Display, null, null));
             Assert.AreEqual(SettingsHit.Toggle(typing.Item), _layout.HitTest(down.Slider.center, Integration, null, null));
 
-            // grip のページは 3 行のため、display の最後の行の位置には対象がない。
+            // input のページは 3 行のため、display の最後の行の位置には対象がない。
             SettingsRowLayout width = _layout.PageOf(Display).Rows[4];
-            Assert.AreEqual(SettingsHit.None, _layout.HitTest(width.Increase.center, Grip, null, null));
+            Assert.AreEqual(SettingsHit.None, _layout.HitTest(width.Increase.center, InputCategory, null, null));
         }
 
         [Test]
@@ -534,7 +534,7 @@ namespace VRime.App.Tests
         [Test]
         public void 同じページの操作の対象が重なると例外()
         {
-            var page = new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), new List<SettingsRowLayout>
+            var page = new SettingsPageLayout(InputCategory, TestSettingsLayout.Tab(0), new List<SettingsRowLayout>
             {
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("triggerThreshold"), 144f),
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("stickThreshold"), 184f),
@@ -560,15 +560,15 @@ namespace VRime.App.Tests
         public void タブどうしが重なると例外()
         {
             SettingsPageLayout display = TestSettingsLayout.Page(Display, 0);
-            var grip = new SettingsPageLayout(Grip, new Rect(48f, 180f, 220f, 64f), TestSettingsLayout.Page(Grip, 1).Rows,
+            var input = new SettingsPageLayout(InputCategory, new Rect(48f, 180f, 220f, 64f), TestSettingsLayout.Page(InputCategory, 1).Rows,
                 Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>());
-            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(display, grip));
+            Assert.Throws<ArgumentException>(() => TestSettingsLayout.Create(display, input));
         }
 
         [Test]
         public void 操作の対象が画面の外にあると例外()
         {
-            var page = new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), new List<SettingsRowLayout>
+            var page = new SettingsPageLayout(InputCategory, TestSettingsLayout.Tab(0), new List<SettingsRowLayout>
             {
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("triggerThreshold"), 144f),
                 TestSettingsLayout.Row(SettingsCatalog.FindNumber("stickThreshold"), 216f),
@@ -630,7 +630,7 @@ namespace VRime.App.Tests
             Assert.IsTrue(down.Slider.Overlaps(dropdown.Options[0]));
             Assert.AreEqual(SettingsHit.DropdownDismiss, _layout.HitTest(new Vector2(down.Slider.center.x, dropdown.Options[1].yMax + 4f), Display, null, theme));
             Assert.AreEqual(SettingsHit.DropdownDismiss, _layout.HitTest(dropdown.Button.center, Display, null, theme));
-            Assert.AreEqual(SettingsHit.DropdownDismiss, _layout.HitTest(_layout.PageOf(Grip).Tab.center, Display, null, theme));
+            Assert.AreEqual(SettingsHit.DropdownDismiss, _layout.HitTest(_layout.PageOf(InputCategory).Tab.center, Display, null, theme));
             Assert.AreEqual(SettingsHit.DropdownDismiss, _layout.HitTest(_layout.Reset.center, Display, null, theme));
         }
 
@@ -640,7 +640,7 @@ namespace VRime.App.Tests
             ChoiceSettingItem theme = SettingsCatalog.FindChoice("theme");
             ToggleSettingItem google = SettingsCatalog.FindToggle("useGoogleConversion");
             Assert.Throws<ArgumentException>(() => _layout.HitTest(Vector2.zero, Privacy, google, theme));
-            Assert.Throws<ArgumentException>(() => _layout.HitTest(Vector2.zero, Grip, null, theme));
+            Assert.Throws<ArgumentException>(() => _layout.HitTest(Vector2.zero, InputCategory, null, theme));
         }
 
         [Test]
@@ -691,11 +691,11 @@ namespace VRime.App.Tests
         public void 同意が必要な項目の同意の画面の過不足は例外()
         {
             SettingsPageLayout privacy = TestSettingsLayout.Page(Privacy, 0);
-            SettingsPageLayout grip = TestSettingsLayout.Page(Grip, 1);
+            SettingsPageLayout input = TestSettingsLayout.Page(InputCategory, 1);
             SettingsConsentLayout consent = TestSettingsLayout.Consent((ToggleSettingItem)privacy.Toggles[0].Item);
             Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { privacy }, TestSettingsLayout.Reset, TestSettingsLayout.Quit,
                 Array.Empty<SettingsConsentLayout>()));
-            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { grip }, TestSettingsLayout.Reset, TestSettingsLayout.Quit,
+            Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { input }, TestSettingsLayout.Reset, TestSettingsLayout.Quit,
                 new[] { consent }));
             Assert.Throws<ArgumentException>(() => new SettingsLayout(TestSettingsLayout.Size, new[] { privacy }, TestSettingsLayout.Reset, TestSettingsLayout.Quit,
                 new[] { consent, consent }));
@@ -720,22 +720,22 @@ namespace VRime.App.Tests
         public void 同じ項目の行が重複すると例外()
         {
             NumberSettingItem trigger = SettingsCatalog.FindNumber("triggerThreshold");
-            var rows = new List<SettingsRowLayout>(TestSettingsLayout.Page(Grip, 0).Rows) { TestSettingsLayout.Row(trigger, 400f) };
-            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>()));
+            var rows = new List<SettingsRowLayout>(TestSettingsLayout.Page(InputCategory, 0).Rows) { TestSettingsLayout.Row(trigger, 400f) };
+            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(InputCategory, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>()));
         }
 
         [Test]
         public void ページにカテゴリの項目の行が欠けていると例外()
         {
             var rows = new List<SettingsRowLayout> { TestSettingsLayout.Row(SettingsCatalog.FindNumber("triggerThreshold"), 144f) };
-            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>()));
+            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(InputCategory, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>()));
         }
 
         [Test]
         public void ほかのカテゴリの項目の行は例外()
         {
-            var rows = new List<SettingsRowLayout>(TestSettingsLayout.Page(Grip, 0).Rows) { TestSettingsLayout.Row(SettingsCatalog.FindNumber("downMeters"), 400f) };
-            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(Grip, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>()));
+            var rows = new List<SettingsRowLayout>(TestSettingsLayout.Page(InputCategory, 0).Rows) { TestSettingsLayout.Row(SettingsCatalog.FindNumber("downMeters"), 400f) };
+            Assert.Throws<ArgumentException>(() => new SettingsPageLayout(InputCategory, TestSettingsLayout.Tab(0), rows, Array.Empty<SettingsToggleLayout>(), Array.Empty<SettingsDropdownLayout>()));
         }
 
         [Test]
@@ -751,8 +751,8 @@ namespace VRime.App.Tests
         {
             SettingsLayout layout = TestSettingsLayout.Create(TestSettingsLayout.Page(Display, 0));
             Assert.Throws<ArgumentException>(() => layout.RowOf(SettingsCatalog.FindNumber("triggerThreshold")));
-            Assert.Throws<ArgumentException>(() => layout.PageOf(Grip));
-            Assert.Throws<ArgumentException>(() => layout.HitTest(Vector2.zero, Grip, null, null));
+            Assert.Throws<ArgumentException>(() => layout.PageOf(InputCategory));
+            Assert.Throws<ArgumentException>(() => layout.HitTest(Vector2.zero, InputCategory, null, null));
         }
 
         [Test]
@@ -878,11 +878,11 @@ namespace VRime.App.Tests
         [Test]
         public void カテゴリの並びと項目()
         {
-            CollectionAssert.AreEqual(new[] { "display", "grip", "integration", "privacy" }, Keys(SettingsCatalog.Categories, c => c.Key));
+            CollectionAssert.AreEqual(new[] { "display", "input", "integration", "privacy" }, Keys(SettingsCatalog.Categories, c => c.Key));
             CollectionAssert.AreEqual(new[] { "theme", "downMeters", "forwardMeters", "rightMeters", "tiltDegrees", "widthMeters" },
                 Keys(SettingsCatalog.FindCategory("display").Items, i => i.Key));
             CollectionAssert.AreEqual(new[] { "triggerThreshold", "stickThreshold", "repeatDelaySeconds" },
-                Keys(SettingsCatalog.FindCategory("grip").Items, i => i.Key));
+                Keys(SettingsCatalog.FindCategory("input").Items, i => i.Key));
             CollectionAssert.AreEqual(new[] { "focusOnStartup", "showTypingText", "resetPasteModeAfterSend", "autoLaunch" },
                 Keys(SettingsCatalog.FindCategory("integration").Items, i => i.Key));
             CollectionAssert.AreEqual(new[] { "useGoogleConversion" },
@@ -930,13 +930,13 @@ namespace VRime.App.Tests
             UserSettings display = SettingsCatalog.FindCategory("display").ResetToDefault(changed);
             Assert.AreEqual(changed.WithPlacement(KeyboardPlacement.Default).WithTheme(ColorTheme.Lime), display);
 
-            UserSettings grip = SettingsCatalog.FindCategory("grip").ResetToDefault(changed);
-            Assert.AreEqual(UserSettings.Default.StickThreshold, grip.StickThreshold);
-            Assert.AreEqual(UserSettings.Default.RepeatDelaySeconds, grip.RepeatDelaySeconds);
-            Assert.AreEqual(changed.Placement, grip.Placement);
-            Assert.AreEqual(changed.Theme, grip.Theme);
-            Assert.AreEqual(changed.VRChat, grip.VRChat);
-            Assert.AreEqual(changed.Privacy, grip.Privacy);
+            UserSettings input = SettingsCatalog.FindCategory("input").ResetToDefault(changed);
+            Assert.AreEqual(UserSettings.Default.StickThreshold, input.StickThreshold);
+            Assert.AreEqual(UserSettings.Default.RepeatDelaySeconds, input.RepeatDelaySeconds);
+            Assert.AreEqual(changed.Placement, input.Placement);
+            Assert.AreEqual(changed.Theme, input.Theme);
+            Assert.AreEqual(changed.VRChat, input.VRChat);
+            Assert.AreEqual(changed.Privacy, input.Privacy);
 
             UserSettings vrchat = SettingsCatalog.FindCategory("integration").ResetToDefault(changed);
             Assert.AreEqual(changed.WithVRChat(VRChatSettings.Default), vrchat);
@@ -1030,26 +1030,37 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void タブを押して離すと表示するカテゴリが変わり確定しない()
+        public void タブを押した時点で表示するカテゴリが変わり確定しない()
         {
-            SettingsCategory grip = SettingsCatalog.FindCategory("grip");
-            Rect tab = _layout.PageOf(grip).Tab;
-            _form.PointerDown(tab.center);
-            Assert.AreEqual("display", _form.Category.Key, "押しただけでは変わらない");
-            Assert.AreEqual(SettingsHit.Tab(grip), _form.Pressed);
-
+            SettingsCategory input = SettingsCatalog.FindCategory("input");
+            Rect tab = _layout.PageOf(input).Tab;
             int version = _form.Version;
-            _form.PointerUp(tab.center);
-            Assert.AreSame(grip, _form.Category);
+            _form.PointerDown(tab.center);
+            Assert.AreSame(input, _form.Category, "離す前に変わる");
+            Assert.AreEqual(SettingsHit.None, _form.Pressed);
             Assert.Greater(_form.Version, version);
+
+            _form.PointerUp(tab.center);
+            Assert.AreSame(input, _form.Category);
             Assert.AreEqual(0, _changed.Count);
             Assert.AreEqual(0, _committed.Count);
         }
 
         [Test]
+        public void タブを押した後にほかのタブの上で離しても押したタブのカテゴリを表示する()
+        {
+            SettingsCategory input = SettingsCatalog.FindCategory("input");
+            Rect other = _layout.PageOf(SettingsCatalog.FindCategory("privacy")).Tab;
+            _form.PointerDown(_layout.PageOf(input).Tab.center);
+            _form.PointerMove(other.center);
+            _form.PointerUp(other.center);
+            Assert.AreSame(input, _form.Category);
+        }
+
+        [Test]
         public void 表示していないページの項目は操作できない()
         {
-            SelectCategory(_form, "grip");
+            SelectCategory(_form, "input");
             Click(_form, Row("widthMeters").Increase.center);
             Assert.AreEqual(UserSettings.Default, _form.Settings);
             Assert.AreEqual(0, _committed.Count);
@@ -1072,7 +1083,7 @@ namespace VRime.App.Tests
         [Test]
         public void 減らすボタンで刻み1つ分減る()
         {
-            SelectCategory(_form, "grip");
+            SelectCategory(_form, "input");
             Click(_form, Row("triggerThreshold").Decrease.center);
             Assert.AreEqual(0.65f, _form.Settings.TriggerThreshold);
         }
@@ -1093,7 +1104,7 @@ namespace VRime.App.Tests
             var form = new SettingsForm(_layout, UserSettings.Default.WithTriggerThreshold(UserSettings.TriggerThresholdRange.Max));
             int committed = 0;
             form.Committed += _ => committed++;
-            SelectCategory(form, "grip");
+            SelectCategory(form, "input");
             Click(form, Row("triggerThreshold").Increase.center);
             Assert.AreEqual(0, committed);
         }
@@ -1175,7 +1186,7 @@ namespace VRime.App.Tests
             Assert.AreEqual(SettingsCatalog.AutoLaunch.DefaultValue, requests[0].value);
 
             // 表示していないカテゴリの「既定に戻す」では求めない。
-            SelectCategory(_form, "grip");
+            SelectCategory(_form, "input");
             Click(_form, _layout.Reset.center);
             Assert.AreEqual(1, requests.Count);
         }
@@ -1183,7 +1194,7 @@ namespace VRime.App.Tests
         [Test]
         public void 配置にない外の項目の値を読み書きすると例外()
         {
-            var form = new SettingsForm(TestSettingsLayout.Create(TestSettingsLayout.Page(SettingsCatalog.FindCategory("grip"), 0)), UserSettings.Default);
+            var form = new SettingsForm(TestSettingsLayout.Create(TestSettingsLayout.Page(SettingsCatalog.FindCategory("input"), 0)), UserSettings.Default);
             Assert.Throws<ArgumentException>(() => form.GetExternalValue(SettingsCatalog.AutoLaunch));
             Assert.Throws<ArgumentException>(() => form.SetExternalValue(SettingsCatalog.AutoLaunch, true));
         }
@@ -1271,7 +1282,7 @@ namespace VRime.App.Tests
             UserSettings committed = null;
             form.Committed += s => committed = s;
 
-            SelectCategory(form, "grip");
+            SelectCategory(form, "input");
             Click(form, _layout.Reset.center);
             UserSettings expected = initial.WithStickThreshold(UserSettings.Default.StickThreshold);
             Assert.AreEqual(expected, form.Settings);
@@ -1462,7 +1473,7 @@ namespace VRime.App.Tests
             Assert.IsNull(_form.OpenDropdown);
 
             Click(_form, dropdown.Button.center);
-            Click(_form, _layout.PageOf(SettingsCatalog.FindCategory("grip")).Tab.center);
+            Click(_form, _layout.PageOf(SettingsCatalog.FindCategory("input")).Tab.center);
             Assert.IsNull(_form.OpenDropdown);
             Assert.AreEqual("display", _form.Category.Key);
             Assert.AreEqual(UserSettings.Default, _form.Settings);

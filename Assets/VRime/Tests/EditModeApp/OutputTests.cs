@@ -76,7 +76,9 @@ namespace VRime.App.Tests
         sealed class FakeChatbox : IChatboxOutput
         {
             public readonly List<string> Sent = new List<string>();
+            public int ClearCount;
             public void Send(string text) { Sent.Add(text); }
+            public void Clear() { ClearCount++; }
         }
 
         sealed class FakeDesktop : IDesktopOutput
@@ -114,6 +116,30 @@ namespace VRime.App.Tests
             OutputResult result = Router(new AppSettings(), chatbox, desktop, Window(200, "vrchat")).Send("こんにちは");
             Assert.IsTrue(result.Success);
             CollectionAssert.AreEqual(new[] { "こんにちは" }, chatbox.Sent);
+            Assert.AreEqual(0, desktop.Sent.Count);
+        }
+
+        [Test]
+        public void VRChatが前面ならチャットボックスの表示を消せる()
+        {
+            var chatbox = new FakeChatbox();
+            var desktop = new FakeDesktop();
+            Assert.IsTrue(Router(new AppSettings(), chatbox, desktop, Window(200, "vrchat")).Clear());
+            Assert.AreEqual(1, chatbox.ClearCount);
+            Assert.AreEqual(0, chatbox.Sent.Count);
+            Assert.AreEqual(0, desktop.Sent.Count);
+        }
+
+        [Test]
+        public void チャットボックス以外の送信先では表示を消さない()
+        {
+            var chatbox = new FakeChatbox();
+            var desktop = new FakeDesktop();
+            Assert.IsFalse(Router(new AppSettings(), chatbox, desktop, Window(200, "vrchat"), pasteMode: true).Clear(), "貼り付けモード");
+            Assert.IsFalse(Router(new AppSettings(), chatbox, desktop, Window(300, "notepad")).Clear(), "デスクトップのアプリ");
+            Assert.IsFalse(Router(new AppSettings(), chatbox, desktop, Window(OwnPid, "VRime")).Clear(), "本アプリ自身");
+            Assert.IsFalse(Router(new AppSettings(), chatbox, desktop, null).Clear(), "前面のウィンドウなし");
+            Assert.AreEqual(0, chatbox.ClearCount);
             Assert.AreEqual(0, desktop.Sent.Count);
         }
 
@@ -561,11 +587,11 @@ namespace VRime.App.Tests
                 chatbox.Update(10.0);
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "あ", true, true), Receive());
 
-                chatbox.Update(10.5);
+                chatbox.Update(10.0 + VRChatChatbox.MinSendIntervalSeconds - 0.01);
                 Assert.IsFalse(HasPending());
                 Assert.AreEqual(1, chatbox.PendingSendCount);
 
-                chatbox.Update(11.0);
+                chatbox.Update(10.0 + VRChatChatbox.MinSendIntervalSeconds);
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "い", true, true), Receive());
                 Assert.AreEqual(0, chatbox.PendingSendCount);
             }
@@ -608,7 +634,7 @@ namespace VRime.App.Tests
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "あい", true, false), Receive());
 
                 chatbox.SetPreview(null);
-                chatbox.Update(2.0);
+                chatbox.Update(1.0 + VRChatChatbox.MinSendIntervalSeconds);
                 CollectionAssert.AreEqual(OscCodec.Encode("/chatbox/input", "", true, false), Receive());
             }
         }
@@ -640,7 +666,7 @@ namespace VRime.App.Tests
                 chatbox.Send("a");
                 chatbox.Send("b");
                 Assert.DoesNotThrow(() => chatbox.Update(1.0));
-                Assert.DoesNotThrow(() => chatbox.Update(3.0));
+                Assert.DoesNotThrow(() => chatbox.Update(1.0 + VRChatChatbox.MinSendIntervalSeconds));
                 Assert.DoesNotThrow(() => chatbox.SetTyping(true));
             }
             _receiver = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));

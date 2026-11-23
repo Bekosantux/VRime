@@ -274,7 +274,7 @@ namespace VRime.App.Settings
                 new NumberSettingItem("widthMeters", KeyboardPlacement.WidthRange,
                     s => s.Placement.WidthMeters, (s, v) => s.WithPlacement(s.Placement.WithWidth(v)), Centimeters),
             }, showsKeyboardPreview: true),
-            new SettingsCategory("grip", new SettingItem[]
+            new SettingsCategory("input", new SettingItem[]
             {
                 new NumberSettingItem("triggerThreshold", UserSettings.TriggerThresholdRange,
                     s => s.TriggerThreshold, (s, v) => s.WithTriggerThreshold(v), Percent),
