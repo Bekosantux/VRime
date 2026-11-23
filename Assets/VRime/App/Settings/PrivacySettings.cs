@@ -1,6 +1,6 @@
 namespace VRime.App.Settings
 {
-    /// <summary>個人情報に関わる設定（docs/spec/conversion.md「プライバシーと同意」）。</summary>
+    /// <summary>プライバシーに関わる設定（docs/spec/conversion.md「プライバシーと同意」）。</summary>
     public sealed class PrivacySettings
     {
         /// <summary>同意を得るまで、外部へは何も送らない。</summary>

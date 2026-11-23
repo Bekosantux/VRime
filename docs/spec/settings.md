@@ -24,12 +24,12 @@ SteamVR ダッシュボードにこのアプリのタブ「VRime」を追加し�
 |---|---|---|
 | 表示 | テーマ（ダーク / ライム） | ライム |
 | | 表示位置の5項目（[keyboard.md](keyboard.md#表示位置)） | |
-| グリップ入力 | トリガーのしきい値・スティックのしきい値・長押しの時間（[grip-input.md](grip-input.md)） | |
+| 入力 | トリガーのしきい値・スティックのしきい値・長押しの時間（[grip-input.md](grip-input.md)） | |
 | 外部連携 | 起動時にVRChatにフォーカス（[output.md](output.md#vrchat)） | オン |
 | | 入力中の文字をテキストボックスに表示（[output.md](output.md#vrchat)） | オン |
 | | 貼り付け成功時に「貼付」キーを戻す（[output.md](output.md#貼り付けモード)） | オン |
 | | SteamVRの起動時に自動で起動（[lifecycle.md](lifecycle.md#steamvr-への登録と自動起動)） | オフ |
-| 個人情報 | 変換に Google API を使用する。オンにするには注意事項への同意が必要（[conversion.md](conversion.md#プライバシーと同意)） | オフ |
+| プライバシー | 変換に Google API を使用する。オンにするには注意事項への同意が必要（[conversion.md](conversion.md#プライバシーと同意)） | オフ |
 
 - テーマは、キーボードと設定画面の色を切り替える。デスクトップの設定ウィンドウの余白の色もテーマに従う。
 - 「表示」のカテゴリを表示している間だけ（ダッシュボードのタブ・デスクトップの設定ウィンドウのどちらでも）、位置の確認用にキーボードを表示する（[keyboard.md](keyboard.md#steamvr-ダッシュボードとの共存)）。

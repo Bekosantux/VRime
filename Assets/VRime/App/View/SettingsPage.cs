@@ -13,7 +13,7 @@ namespace VRime.App.View
     /// </summary>
     public sealed class SettingsPage : MonoBehaviour
     {
-        [Tooltip("カテゴリのキー。display / grip / vrchat / privacy。")]
+        [Tooltip("カテゴリのキー。display / input / integration / privacy。")]
         [SerializeField] string _key;
 
         [Tooltip("このカテゴリを選ぶタブ。ページの外に置く。")]
