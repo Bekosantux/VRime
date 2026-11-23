@@ -7,8 +7,8 @@ namespace VRime.App.Settings
     /// <summary>
     /// 設定画面の状態と操作。ポインターの入力を <see cref="SettingsLayout"/> で当たり判定し、設定値を変える。
     /// スライダーはドラッグしている間、値を随時変える（<see cref="Changed"/>）。離したとき、変わっていれば確定する（<see cref="Committed"/>）。
-    /// ボタン・スイッチ・タブは、押したのと同じものの上で離したときに動作する。値が変わればその場で確定する。
-    /// 表示するページはタブで選ぶ（<see cref="Category"/>）。「既定に戻す」は表示中のカテゴリの項目だけを戻す。「アプリを終了」は確認せずにアプリの終了を求める（<see cref="QuitRequested"/>）。
+    /// ボタン・スイッチは、押したのと同じものの上で離したときに動作する。値が変わればその場で確定する。
+    /// 表示するページはタブで選ぶ（<see cref="Category"/>）。タブは押した時点で切り替わる。「既定に戻す」は表示中のカテゴリの項目だけを戻す。「アプリを終了」は確認せずにアプリの終了を求める（<see cref="QuitRequested"/>）。
     /// オンにする前に同意が必要なスイッチ（<see cref="ToggleSettingItem.RequiresConsentToEnable"/>）は、オフから押すと値を変えずに同意の画面を開く（<see cref="ConsentItem"/>）。
     /// 同意すればオンにして確定し、取り消せば何も変えずに閉じる。開いている間は同意の画面のボタンだけを操作できる。オフにするときと「既定に戻す」では確認しない。
     /// 選択肢の項目（<see cref="ChoiceSettingItem"/>）は、ボタンを押すと選択肢の一覧を開く（<see cref="OpenDropdown"/>）。
@@ -52,7 +52,7 @@ namespace VRime.App.Settings
         /// <summary>ドラッグしているスライダーの項目。ドラッグしていなければ null。</summary>
         public NumberSettingItem DraggingItem { get; private set; }
 
-        /// <summary>押したまま離していないボタン・スイッチ・タブ。</summary>
+        /// <summary>押したまま離していないボタン・スイッチ。</summary>
         public SettingsHit Pressed { get; private set; } = SettingsHit.None;
 
         /// <summary>同意の画面を開いている項目。開いていなければ null。ポインターが画面から離れても閉じない。</summary>
@@ -142,6 +142,8 @@ namespace VRime.App.Settings
                     SetValueAt(DraggingItem, position.x);
                     break;
                 case SettingsTarget.Tab:
+                    SelectCategory(Hover.Category);
+                    break;
                 case SettingsTarget.Decrease:
                 case SettingsTarget.Increase:
                 case SettingsTarget.Toggle:
@@ -194,9 +196,6 @@ namespace VRime.App.Settings
         {
             switch (hit.Target)
             {
-                case SettingsTarget.Tab:
-                    SelectCategory(hit.Category);
-                    return;
                 case SettingsTarget.Decrease:
                     Step(hit.NumberItem, -1);
                     break;

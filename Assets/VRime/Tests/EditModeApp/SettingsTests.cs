@@ -1030,20 +1030,31 @@ namespace VRime.App.Tests
         }
 
         [Test]
-        public void タブを押して離すと表示するカテゴリが変わり確定しない()
+        public void タブを押した時点で表示するカテゴリが変わり確定しない()
         {
             SettingsCategory input = SettingsCatalog.FindCategory("input");
             Rect tab = _layout.PageOf(input).Tab;
-            _form.PointerDown(tab.center);
-            Assert.AreEqual("display", _form.Category.Key, "押しただけでは変わらない");
-            Assert.AreEqual(SettingsHit.Tab(input), _form.Pressed);
-
             int version = _form.Version;
+            _form.PointerDown(tab.center);
+            Assert.AreSame(input, _form.Category, "離す前に変わる");
+            Assert.AreEqual(SettingsHit.None, _form.Pressed);
+            Assert.Greater(_form.Version, version);
+
             _form.PointerUp(tab.center);
             Assert.AreSame(input, _form.Category);
-            Assert.Greater(_form.Version, version);
             Assert.AreEqual(0, _changed.Count);
             Assert.AreEqual(0, _committed.Count);
+        }
+
+        [Test]
+        public void タブを押した後にほかのタブの上で離しても押したタブのカテゴリを表示する()
+        {
+            SettingsCategory input = SettingsCatalog.FindCategory("input");
+            Rect other = _layout.PageOf(SettingsCatalog.FindCategory("privacy")).Tab;
+            _form.PointerDown(_layout.PageOf(input).Tab.center);
+            _form.PointerMove(other.center);
+            _form.PointerUp(other.center);
+            Assert.AreSame(input, _form.Category);
         }
 
         [Test]

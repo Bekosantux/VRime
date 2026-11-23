@@ -6,7 +6,7 @@ using VRime.App.Settings;
 namespace VRime.App.View
 {
     /// <summary>
-    /// 設定画面のカテゴリのタブ。背景の色で、選んでいる・指している・押していることを示す。
+    /// 設定画面のカテゴリのタブ。背景の色で、選んでいる・指していることを示す。押した時点で選ばれるため、押している間は選んでいる色になる。
     /// 当たり判定はこのオブジェクトの矩形を使う。ラベルはシーンに置いたまま変えない。
     /// </summary>
     public sealed class SettingsTab : MonoBehaviour
@@ -35,7 +35,6 @@ namespace VRime.App.View
         public void Refresh(SettingsForm form)
         {
             if (form.Category == _category) _background.color = _theme.Current.SettingsTabSelected;
-            else if (form.Pressed == _hit) _background.color = _theme.Current.SettingsButtonPressed;
             else if (form.Hover == _hit) _background.color = _theme.Current.SettingsButtonHover;
             else _background.color = _theme.Current.SettingsTab;
         }
