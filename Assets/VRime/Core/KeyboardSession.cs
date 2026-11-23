@@ -151,8 +151,6 @@ namespace VRime.Core
 
             ControllerFrame effective = ApplyPanelIgnore(frame);
             FrameEdges edges = UpdateEdges(effective);
-            // 両手の展開・収納のボタンを押している間は、開閉の操作と区別するためトリガーを受け付けない。
-            if (frame.Left.OpenClose && frame.Right.OpenClose) edges = edges.WithoutTriggers();
 
             _haptics.Clear();
             switch (_mode)

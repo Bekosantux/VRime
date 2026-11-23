@@ -56,10 +56,9 @@ namespace VRime.App.View
 
         public void Set(GripCellView cell, bool selected, string hint)
         {
-            bool placeholder = cell.Label == GripCell.Empty.Label;
             // 点灯中の文字は点灯色にする。選択中は背景が変わるため文字の色を保つ。
             Color textColor;
-            if (cell.Disabled || placeholder) textColor = selected ? _theme.Current.CellTextDisabledSelected : _theme.Current.CellTextDisabled;
+            if (cell.Disabled) textColor = selected ? _theme.Current.CellTextDisabledSelected : _theme.Current.CellTextDisabled;
             else if (cell.Lit && !selected) textColor = _theme.Current.CellTextLit;
             else textColor = _theme.Current.CellText;
 

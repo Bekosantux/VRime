@@ -443,35 +443,119 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 両手のグリップを押している間はトリガーを受け付けない()
+        public void 両手のグリップを握っている間は子音側のトリガーで子音側の機能レイヤーのセルを実行する()
         {
             var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
+            rig.Type(1, StickDirection.Center);
             rig.TickMany(50);
-            rig.SetStick(rig.Consonant, Sticks.Cell(0));
             rig.Grips(true, true);
+            rig.SetStick(rig.Consonant, Sticks.Cell(ConsonantFunctionCells.Erase));
             rig.Tick();
             rig.Pull(rig.Consonant);
-            rig.Pull(rig.Vowel);
-            rig.Grips(false, false);
+            Assert.AreEqual("あ", rig.Session.Composition);
+
+            rig.SetStick(rig.Consonant, Sticks.Cell(ConsonantFunctionCells.Space));
             rig.Tick();
-            Assert.AreEqual("", rig.Session.Composition);
-            Assert.AreEqual("", rig.Session.Committed);
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+            rig.Pull(rig.Consonant);
+            Assert.AreEqual("あ　", rig.Session.Committed);
+            Assert.AreEqual(2, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Input));
         }
 
         [Test]
-        public void 両手のグリップを離した後は通常どおり入力できる()
+        public void 両手のグリップを握っている間は母音側のトリガーで母音側の機能レイヤーのセルを実行する()
         {
             var rig = new Rig();
             rig.TickMany(50);
             rig.Grips(true, true);
+            rig.SetStick(rig.Consonant, Sticks.Cell(ConsonantFunctionCells.Erase));
+            rig.SetStick(rig.Vowel, Sticks.Cell(VowelFunctionCells.Number));
             rig.Tick();
+            rig.Pull(rig.Vowel);
+            Assert.AreEqual(GripInputMode.Number, rig.Session.GripInput.InputMode);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Vowel, HapticKind.Input));
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid), "子音側の「消去」は実行しない");
+        }
+
+        [Test]
+        public void 両手の機能レイヤーでは子音側の文字のセルを無効にする()
+        {
+            var rig = new Rig();
+            rig.TickMany(50);
+            rig.Grips(true, true);
+            rig.SetStick(rig.Consonant, Sticks.Cell(ConsonantFunctionCells.Wa));
+            rig.Tick();
+            Assert.IsTrue(rig.Session.GripView.ConsonantCells[ConsonantFunctionCells.Wa].Disabled);
+            Assert.IsTrue(rig.Session.GripView.ConsonantCells[ConsonantFunctionCells.Symbol].Disabled);
+            Assert.IsFalse(rig.Session.GripView.ConsonantCells[ConsonantFunctionCells.Erase].Disabled);
             rig.Pull(rig.Consonant);
-            rig.Grips(false, false);
+            Assert.AreEqual("", rig.Session.Composition);
+            Assert.AreEqual(1, rig.Effects.CountHaptics(rig.Consonant, HapticKind.Invalid));
+
+            // 母音側のグリップを離せば、母音パネルで文字を選べるため有効に戻る。
+            rig.SetGrip(rig.Vowel, false);
             rig.Tick();
-            rig.Type(0, StickDirection.Center);
-            Assert.AreEqual("あ", rig.Session.Composition);
+            Assert.IsFalse(rig.Session.GripView.ConsonantCells[ConsonantFunctionCells.Wa].Disabled);
+            rig.Pull(rig.Consonant);
+            Assert.AreEqual("わ", rig.Session.Composition);
+        }
+
+        [Test]
+        public void 空きセルは無効として表示する()
+        {
+            var rig = new Rig();
+            rig.SetGrip(rig.Consonant, true);
+            rig.Tick();
+            Assert.IsTrue(rig.Session.GripView.ConsonantCells[0].Disabled);
+            Assert.IsFalse(rig.Session.GripView.ConsonantCells[ConsonantFunctionCells.Erase].Disabled);
+
+            // 貼り付けモードを使えない間（既定）の「貼付」は空きセルになる。
+            rig.SetGrip(rig.Consonant, false);
+            rig.SetGrip(rig.Vowel, true);
+            rig.Tick();
+            Assert.AreEqual(GripCell.Empty.Label, rig.Session.GripView.VowelCells[VowelFunctionCells.PasteMode].Label);
+            Assert.IsTrue(rig.Session.GripView.VowelCells[VowelFunctionCells.PasteMode].Disabled);
+            Assert.IsFalse(rig.Session.GripView.VowelCells[VowelFunctionCells.Commit].Disabled);
+        }
+
+        [Test]
+        public void 両手の機能レイヤーで両方のトリガーを同じフレームで引くと子音側から実行し連続入力しない()
+        {
+            var rig = RepeatRig();
+            rig.TickMany(50);
+            rig.Grips(true, true);
+            rig.SetStick(rig.Consonant, Sticks.Cell(ConsonantFunctionCells.Space));
+            rig.SetStick(rig.Vowel, Sticks.Cell(VowelFunctionCells.CursorLeft));
+            rig.Tick();
+            rig.SetTrigger(rig.Consonant, true);
+            rig.SetTrigger(rig.Vowel, true);
+            rig.Tick();
+            // 空白を入れてからカーソルを左へ移動する（逆順なら、カーソルが先頭にあるため移動できない）。
+            Assert.AreEqual("　", rig.Session.Committed);
+            Assert.AreEqual(0, rig.Session.CommittedCursor);
+            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+
+            rig.Tick(1.0);
+            rig.Tick(0.2);
+            Assert.AreEqual("　", rig.Session.Committed);
+            Assert.AreEqual(0, rig.Session.CommittedCursor);
+        }
+
+        [Test]
+        public void 両手の機能レイヤーでも引いた手のパネルのセルを連続入力する()
+        {
+            var rig = RepeatRig();
+            rig.TickMany(50);
+            rig.Grips(true, true);
+            rig.SetStick(rig.Consonant, Sticks.Cell(ConsonantFunctionCells.Space));
+            rig.Tick();
+            rig.SetTrigger(rig.Consonant, true);
+            rig.Tick();
+            Assert.AreEqual("　", rig.Session.Committed);
+            rig.Tick(0.52);
+            Assert.AreEqual("　　", rig.Session.Committed);
+            rig.Tick(0.1);
+            Assert.AreEqual("　　　", rig.Session.Committed);
         }
 
         [Test]

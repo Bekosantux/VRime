@@ -1370,38 +1370,30 @@ namespace VRime.Core.Tests
         }
 
         [Test]
-        public void 両手の展開_収納のボタンを押している間はトリガーを受け付けない()
+        public void 両手の展開_収納のボタンを押している間もトリガーを受け付ける()
         {
             var rig = new Rig();
             rig.TickMany(50);
             rig.SetStick(rig.Consonant, Sticks.Cell(0));
             rig.SetOpenClose(Hand.Left, true); rig.SetOpenClose(Hand.Right, true); rig.Tick();
             rig.Pull(rig.Vowel);
-            rig.Pull(rig.Consonant);
-            Assert.AreEqual("", rig.Session.Composition);
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
-
-            // 片手だけなら受け付ける。
-            rig.SetOpenClose(rig.Consonant, false); rig.Tick();
-            rig.Pull(rig.Vowel);
             Assert.AreEqual("あ", rig.Session.Composition);
+            rig.Pull(rig.Consonant);
+            Assert.AreEqual("ぁ", rig.Session.Composition);
         }
 
         [Test]
-        public void 両手のパネルの切り替えのボタンを押している間はトリガーを受け付けない()
+        public void 両手のパネルの切り替えのボタンを押している間は母音側のトリガーで確定する()
         {
             var rig = new Rig();
+            rig.Type(0, StickDirection.Center);
             rig.TickMany(50);
             rig.SetPanel(Hand.Left, true); rig.SetPanel(Hand.Right, true); rig.Tick();
             Assert.IsTrue(rig.Session.GripView.ConsonantFunctionLayer);
             Assert.IsTrue(rig.Session.GripView.VowelFunctionLayer);
             rig.Pull(rig.Vowel);
-            rig.Pull(rig.Consonant);
             Assert.AreEqual("", rig.Session.Composition);
-            Assert.AreEqual("", rig.Session.Committed);
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Input));
-            Assert.AreEqual(0, rig.Effects.CountHaptics(HapticKind.Invalid));
+            Assert.AreEqual("あ", rig.Session.Committed);
         }
 
         [Test]
